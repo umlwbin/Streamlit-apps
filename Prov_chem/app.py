@@ -38,7 +38,7 @@ def main():
 
     # Clear output data
     main_path=os.path.abspath(os.curdir)
-    full_path=main_path+'/Castaway/'
+    full_path=main_path+'/Prov_chem/'
     for f in os.listdir(main_path):
         if 'output' in f or 'cwout' in f:
             os.remove(os.path.join(full_path, f))

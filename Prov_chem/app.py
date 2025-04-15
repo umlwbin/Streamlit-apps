@@ -8,7 +8,7 @@ import plotly.express as px
 
 #Set page config
 st.set_page_config(page_title=None, page_icon="📖", layout="wide", initial_sidebar_state="expanded", menu_items=None)
-st.session_state.update(st.session_state)
+#st.session_state.update(st.session_state)
 tab1, tab2 = st.tabs(["Data Cleaning", "Data Dashboard"])
 
 def main():

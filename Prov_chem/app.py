@@ -211,7 +211,7 @@ def download_output(path,df_list,filename_list):
     if file_count==1:
         filename=files.pop()
         fp=df_list[0].to_csv().encode("utf-8")
-        st.download_button(
+        left.download_button(
         label="Download CSV",
         data=fp,
         file_name=filename,
@@ -231,7 +231,7 @@ def download_output(path,df_list,filename_list):
                 zipObj.write(filePath, basename(filePath))
         
         with open(filename, "rb") as fp:
-            st.download_button(
+            left.download_button(
             label="Download ZIP",
             data=fp,
             file_name=filename,

@@ -240,7 +240,7 @@ def clean(datafile, df, start_row, end_row):
     st.markdown('##### 1. Add the Latitude (Decimal Degrees), Longitude (Decimal Degrees) and Site ID')
 
     #Create Session states
-    #Clicked1 is for first button. It is set to false at first (not clicked yet)
+    #Clicked2 is for first button. It is set to false at first (not clicked yet)
     if 'clicked2' not in st.session_state:
         st.session_state.clicked2 = False
 

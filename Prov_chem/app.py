@@ -38,10 +38,9 @@ def main():
 
     # Clear output data
     main_path=os.path.abspath(os.curdir)
-    full_path=main_path+'/Prov_chem/'
-    for f in os.listdir(full_path):
+    for f in os.listdir(main_path):
         if 'output' in f or 'cwout' in f:
-            os.remove(os.path.join(full_path, f))
+            os.remove(os.path.join(main_path, f))
 
     fileupload()
 
@@ -193,8 +192,7 @@ def merge_rows(datafiles, vmvCode_row,units_row):
         filename_list.append(file.name[:-4])
 
     # ------------------------------- Download Files ----------------------------------------------- 
-    main_path=os.path.abspath(os.curdir)
-    path=main_path+'/Prov_chem/'
+    path=os.path.abspath(os.curdir)
     download_output(path,df_list,filename_list)
 
 
@@ -369,6 +367,7 @@ def get_vars(sel_file, cols, sel_df, date_col,station):
             left.warning("You did not choose a variable to plot",icon="⚠️")
         else:
             plot(date_col, var, station, station_var, sel_df)
+
 
 
 def plot(date_col, var, station, station_var, sel_df):

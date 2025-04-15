@@ -8,8 +8,8 @@ import plotly.express as px
 
 #Set page config
 st.set_page_config(page_title=None, page_icon="📖", layout="wide", initial_sidebar_state="expanded", menu_items=None)
+st.session_state.update(st.session_state)
 tab1, tab2 = st.tabs(["Data Cleaning", "Data Dashboard"])
-
 
 def main():
     # GEt CanWIN Logo
@@ -38,9 +38,10 @@ def main():
 
     # Clear output data
     main_path=os.path.abspath(os.curdir)
+    full_path=main_path+'/Castaway/'
     for f in os.listdir(main_path):
         if 'output' in f or 'cwout' in f:
-            os.remove(os.path.join(main_path, f))
+            os.remove(os.path.join(full_path, f))
 
     fileupload()
 

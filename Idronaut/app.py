@@ -9,6 +9,7 @@ from datetime import datetime as dt
 
 #Set page config
 st.set_page_config(page_title=None, page_icon="📖", layout="wide", initial_sidebar_state="expanded", menu_items=None)
+st.session_state.update(st.session_state)
 
 def main():
     # GEt CanWIN Logo
@@ -47,10 +48,13 @@ def main():
 
     #Download example files Widget
     main_path=os.path.abspath(os.curdir)
-    _, _, files = next(os.walk(main_path))
-    files=[f for f in files if 'example1' in f]
+    full_path=main_path+'/Idronaut/'
 
-    file_df=pd.read_csv(files[0], sep='\s+')
+    _, _, files = next(os.walk(full_path))
+    files=[f for f in files if 'example1' in f]
+    filepath=os.path.join(full_path,files[0])
+
+    file_df=pd.read_csv(filepath, sep='\s+')
     txt=file_df.to_csv(index=False).encode("utf-8")
 
     st.sidebar.download_button(
@@ -63,7 +67,7 @@ def main():
     
 
     # Clear output data
-    for f in os.listdir(main_path):
+    for f in os.listdir(full_path):
         if 'output' in f or 'example.csv' in f:
             os.remove(os.path.join(main_path, f))
 

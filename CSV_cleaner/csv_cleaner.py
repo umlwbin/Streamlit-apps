@@ -224,7 +224,6 @@ def reorder(datafiles, cols):
         #Call download function
         main_path=os.path.abspath(os.curdir)
         path=main_path+'/CSV_cleaner/'
-
         download_output(path, df_list)
 
 def how_many_vars_widget(datafiles, cols):
@@ -718,6 +717,8 @@ def download_output(path,df_list):
     _, _, files = next(os.walk(path))
     files=[f for f in files if '_cwout' in f]
     file_count = len(files)
+
+    st.write(file_count)
 
     if file_count==1:
         filename=files.pop()

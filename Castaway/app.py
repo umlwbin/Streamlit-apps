@@ -54,10 +54,13 @@ def main():
 
     #Download example files Widget
     main_path=os.path.abspath(os.curdir)
+    full_path=main_path+'/Castaway'
     st.write(main_path)
     
-    _, _, files = next(os.walk(main_path))
+    _, _, files = next(os.walk(full_path))
     files=[f for f in files if 'example' in f]
+
+    st.write(files)
     
     with open(files[0], "rb") as file:
         st.sidebar.download_button(

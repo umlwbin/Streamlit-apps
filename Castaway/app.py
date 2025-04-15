@@ -59,6 +59,7 @@ def main():
     
     _, _, files = next(os.walk(full_path))
     files=[f for f in files if 'example' in f]
+    st.write(files)
     
     with open(files[0], "rb") as file:
         st.sidebar.download_button(

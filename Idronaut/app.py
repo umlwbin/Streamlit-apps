@@ -185,9 +185,9 @@ def read_files(datafile):
             left, right = st.columns(2)
             start_row=left.number_input("Start",value=0, on_change=change_num)# Get the start and end row values from the widgets
             end_row=left.number_input("End",value=0, on_change=change_num)# Get the start and end row values from the widgets
-            Next_button=left.button("Next", type="primary", key='1', on_click=click_button)
+            left.button("Next", type="primary", key='Next_button1', on_click=click_button)
 
-            if st.session_state.clicked1==True: #button is clicked
+            if st.session_state.clicked1: #button is clicked
                 #Call cleaning function and pass the start row, end row, file, and dataframe to it - Go to next cell!
                 clean(datafile, df, start_row, end_row)
 

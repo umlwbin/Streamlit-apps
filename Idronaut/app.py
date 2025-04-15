@@ -258,7 +258,7 @@ def clean(datafile, df, start_row, end_row):
     lat=left.number_input("Lat",value=None, key="lattitude",on_change=change_num)# Get the start and end row values from the widgets
     long=left.number_input("Long",value=None, key="longitude", on_change=change_num)# Get the start and end row values from the widgets
     siteid=left.text_input("Site ID",value=None, key="site", on_change=change_num)# Get the start and end row values from the widgets
-    left.button("Next", type="primary", key='nextbutton2', on_click=click_button)
+    left.button(label="Next", type="primary", key='nextbutton2', on_click=click_button)
 
     if st.session_state.clicked2==True: #button is clicked
         #Call the next function after clicking Next to continue the cleaning (See next Cell)

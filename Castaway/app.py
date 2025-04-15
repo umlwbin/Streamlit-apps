@@ -61,7 +61,7 @@ def main():
     filepath=os.path.join(full_path,files[0])
     st.write(files, filepath)
     
-    with open(files[0], "rb") as file:
+    with open(filepath, "rb") as file:
         st.sidebar.download_button(
             label="Download Example CSV",
             data=file,

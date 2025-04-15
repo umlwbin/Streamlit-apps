@@ -238,7 +238,7 @@ def download_output(path,df_list,filename_list):
             mime="application/zip",
             icon=":material/download:",
             )
-
+    left.markdown('######')
     left.info('Click on the **Dashboard** tab above to make some plots!', icon="ℹ️")
     choose_file(df_list, filename_list)
 

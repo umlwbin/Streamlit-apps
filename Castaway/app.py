@@ -9,6 +9,7 @@ from datetime import datetime as dt
 
 #Set page config
 st.set_page_config(page_title=None, page_icon="📖", layout="wide", initial_sidebar_state="expanded", menu_items=None)
+st.session_state.update(st.session_state)
 
 def main():
     # GEt CanWIN Logo

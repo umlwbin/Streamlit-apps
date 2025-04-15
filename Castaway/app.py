@@ -54,6 +54,8 @@ def main():
 
     #Download example files Widget
     main_path=os.path.abspath(os.curdir)
+    st.write(main_path)
+    
     _, _, files = next(os.walk(main_path))
     files=[f for f in files if 'example' in f]
     

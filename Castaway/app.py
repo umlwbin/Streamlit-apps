@@ -53,8 +53,8 @@ def main():
     st.sidebar.image("https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/master/Apps/Castaway/img/img_example.png?ref_type=heads", use_container_width=True)
 
     #Download example files Widget
-    # main_path=os.path.abspath(os.curdir)
-    # full_path=main_path+'/Castaway'
+    main_path=os.path.abspath(os.curdir)
+    full_path=main_path+'/Castaway'
     # st.write(main_path)
     
     # _, _, files = next(os.walk(full_path))

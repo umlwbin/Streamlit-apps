@@ -369,7 +369,6 @@ def get_vars(sel_file, cols, sel_df, date_col,station):
             plot(date_col, var, station, station_var, sel_df)
 
 
-
 def plot(date_col, var, station, station_var, sel_df):
     #Check the var type
     from pandas.api.types import is_string_dtype

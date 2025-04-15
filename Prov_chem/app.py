@@ -238,16 +238,20 @@ def download_output(path,df_list,filename_list):
             mime="application/zip",
             icon=":material/download:",
             )
+
+    left.info('Click on the **Dashboard** tab above to make some plots!', icon="ℹ️")
     choose_file(df_list, filename_list)
 
 
 def choose_file(df_list,filename_list):
     with tab2:
+
         st.markdown('#####')
         st.markdown('#### Let\'s plot some data! 🕺')
         st.markdown('##### Choose the data file')
 
-        select_file = st.selectbox(label='Select file',options=filename_list, index=None)
+        col1,col2=st.columns(2)
+        select_file = col1.selectbox(label='Select file',options=filename_list, index=None)
 
         if select_file: #if they have chosen a file
             for f, df in zip(filename_list, df_list): #Grab the data frame that corresponds with the filename

@@ -193,7 +193,8 @@ def merge_rows(datafiles, vmvCode_row,units_row):
         filename_list.append(file.name[:-4])
 
     # ------------------------------- Download Files ----------------------------------------------- 
-    path=os.path.abspath(os.curdir)
+    main_path=os.path.abspath(os.curdir)
+    path=main_path+'/Prov_chem/'
     download_output(path,df_list,filename_list)
 
 
@@ -368,7 +369,6 @@ def get_vars(sel_file, cols, sel_df, date_col,station):
             left.warning("You did not choose a variable to plot",icon="⚠️")
         else:
             plot(date_col, var, station, station_var, sel_df)
-
 
 
 def plot(date_col, var, station, station_var, sel_df):

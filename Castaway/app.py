@@ -53,23 +53,23 @@ def main():
     st.sidebar.image("https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/master/Apps/Castaway/img/img_example.png?ref_type=heads", use_container_width=True)
 
     #Download example files Widget
-    main_path=os.path.abspath(os.curdir)
-    full_path=main_path+'/Castaway'
-    st.write(main_path)
+    # main_path=os.path.abspath(os.curdir)
+    # full_path=main_path+'/Castaway'
+    # st.write(main_path)
     
-    _, _, files = next(os.walk(full_path))
-    files=[f for f in files if 'example' in f]
+    # _, _, files = next(os.walk(full_path))
+    # files=[f for f in files if 'example' in f]
 
-    st.write(files)
+    # st.write(files)
     
-    with open(files[0], "rb") as file:
-        st.sidebar.download_button(
-            label="Download Example CSV",
-            data=file,
-            file_name="example.csv",
-            mime="text/csv",
-            icon=":material/download:",
-            )
+    # with open(files[0], "rb") as file:
+    #     st.sidebar.download_button(
+    #         label="Download Example CSV",
+    #         data=file,
+    #         file_name="example.csv",
+    #         mime="text/csv",
+    #         icon=":material/download:",
+    #         )
     
     # Clear output data
     for f in os.listdir(main_path):

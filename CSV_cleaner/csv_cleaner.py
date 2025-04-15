@@ -45,10 +45,10 @@ def main():
 
     # Clear output data
     main_path=os.path.abspath(os.curdir)
-    full_path=main_path+'/CSV_cleaner/'
-    for f in os.listdir(full_path):
+    #full_path=main_path+'/CSV_cleaner/'
+    for f in os.listdir(main_path):
         if 'output' in f or 'cwout' in f:
-            os.remove(os.path.join(full_path, f))
+            os.remove(os.path.join(main_path, f))
 
     what_to_do_widgets()
 
@@ -222,8 +222,7 @@ def reorder(datafiles, cols):
             d.to_csv(csvname, index=False)
 
         #Call download function
-        main_path=os.path.abspath(os.curdir)
-        path=main_path+'/CSV_cleaner/'
+        path=os.path.abspath(os.curdir)
         download_output(path, df_list)
 
 def how_many_vars_widget(datafiles, cols):
@@ -350,8 +349,7 @@ def add_cols(datafiles, cols, var_num):
             d.to_csv(csvname, index=False)
  
         # Call download
-        main_path=os.path.abspath(os.curdir)
-        path=main_path+'/CSV_cleaner/'
+        path=os.path.abspath(os.curdir)
         download_output(path, df_list)
 
 def which_cols(datafiles, cols):
@@ -407,8 +405,7 @@ def remove_cols(datafiles, cols, vars_to_rem):
         d.to_csv(csvname, index=False)
         
     # Call download
-    main_path=os.path.abspath(os.curdir)
-    path=main_path+'/CSV_cleaner/'
+    path=os.path.abspath(os.curdir)
     download_output(path,df_list )
 
 def merge(datafiles, cols):
@@ -449,13 +446,13 @@ def merge(datafiles, cols):
         df_list=[]
         df_list.append(final_df)
 
-        main_path=os.path.abspath(os.curdir)
-        path=main_path+'/CSV_cleaner/'
+        path=os.path.abspath(os.curdir)
         download_output(path,df_list)
     
     else:
         left, right = st.columns([0.8,0.2])
         left.error('Column headers are not the same in all files 👎🏼. Please uplaod files with the same headers.',icon='🚨')
+
 
 def clean_headers(datafiles, cols):
     st.markdown('#####')
@@ -499,9 +496,9 @@ def clean_headers(datafiles, cols):
         left.markdown('<br>')
         left.success('Column headers are cleaned!',icon='✅')    
     
-    main_path=os.path.abspath(os.curdir)
-    path=main_path+'/CSV_cleaner/'
+    path=os.path.abspath(os.curdir)
     download_output(path,df_list)
+
 
 def rename_headers(datafiles, cols):
     st.markdown('#####')
@@ -570,8 +567,7 @@ def rename_headers(datafiles, cols):
 
         if all([set(df_list[0].columns) == set(df.columns) for df in df_list]):
             #Call download function
-            main_path=os.path.abspath(os.curdir)
-            path=main_path+'/CSV_cleaner/'
+            path=os.path.abspath(os.curdir)
             download_output(path,df_list)
 
 def mergedate_time(datafiles, cols):
@@ -651,9 +647,9 @@ def merge_func(date_col,time_col,datafiles, cols):
         df_list.append(rawdata_df)
 
     # Call download
-    main_path=os.path.abspath(os.curdir)
-    path=main_path+'/CSV_cleaner/'
+    path=os.path.abspath(os.curdir)
     download_output(path,df_list)
+
 
 def convert_dateTime(datafiles, cols):
 
@@ -703,8 +699,7 @@ def convert_func(date_time_col,out_format,datafiles):
         df_list.append(rawdata_df)
 
     # Call download
-    main_path=os.path.abspath(os.curdir)
-    path=main_path+'/CSV_cleaner/'
+    path=os.path.abspath(os.curdir)
     download_output(path,df_list)
 
 def download_output(path,df_list):
@@ -717,8 +712,6 @@ def download_output(path,df_list):
     _, _, files = next(os.walk(path))
     files=[f for f in files if '_cwout' in f]
     file_count = len(files)
-
-    st.write(file_count)
 
     if file_count==1:
         filename=files.pop()
@@ -750,5 +743,6 @@ def download_output(path,df_list):
             mime="application/zip",
             icon=":material/download:",
             )
+
 
 main()

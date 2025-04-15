@@ -67,7 +67,7 @@ def main():
     
 
     # Clear output data
-    for f in os.listdir(full_path):
+    for f in os.listdir(main_path):
         if 'output' in f or 'example.csv' in f:
             os.remove(os.path.join(main_path, f))
 

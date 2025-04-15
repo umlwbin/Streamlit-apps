@@ -57,19 +57,17 @@ def main():
     full_path=main_path+'/Castaway'
     # st.write(main_path)
     
-    # _, _, files = next(os.walk(full_path))
-    # files=[f for f in files if 'example' in f]
-
-    # st.write(files)
+    _, _, files = next(os.walk(full_path))
+    files=[f for f in files if 'example' in f]
     
-    # with open(files[0], "rb") as file:
-    #     st.sidebar.download_button(
-    #         label="Download Example CSV",
-    #         data=file,
-    #         file_name="example.csv",
-    #         mime="text/csv",
-    #         icon=":material/download:",
-    #         )
+    with open(files[0], "rb") as file:
+        st.sidebar.download_button(
+            label="Download Example CSV",
+            data=file,
+            file_name="example.csv",
+            mime="text/csv",
+            icon=":material/download:",
+            )
     
     # Clear output data
     for f in os.listdir(full_path):

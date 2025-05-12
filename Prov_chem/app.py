@@ -120,10 +120,13 @@ def merge_rows_widget(datafiles):
     col1,col2, col3=st.columns(3)
     vmvCode_row = col1.selectbox(label='Select the VMV code row',options=['0', '1'],index=0, key='select1', on_change=change_vars)
     units_row = col2.selectbox(label='Select the Units row',options=['0', '1'],index=1,key='select2', on_change=change_vars)
+    
     #Next button
-    st.button("Next", type="primary", key='Next_Button1', on_click=click_button)
+    nextbutton=st.button("Next", type="primary", key='Next_Button1', on_click=click_button)
 
-    if st.session_state.clicked1==True:
+    # nextbutton==True will always check if the button was clicked. So if the user changed the uplaod files, and they don't change the rows, st.session_state.clicked1 
+    #would still be true. So adding the nextbutton= true here will still allow the user to have to click the next button to move on to the rest of the processeing. 
+    if st.session_state.clicked1==True and nextbutton==True: 
         # Call next function
         merge_rows(datafiles, vmvCode_row,units_row)
 

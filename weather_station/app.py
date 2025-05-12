@@ -262,9 +262,17 @@ def grab_data():
 
 
     #Merge data frames with the last curated dfs (this will be an ongoing process so as to reduce cleaning time)
-    eccc_df_curated=pd.read_csv('eccc_df_curated.csv')
-    stl_df_curated=pd.read_csv('stl_avgs_curated.csv')
-    newdf_curated=pd.read_csv('newdf_curated.csv')
+    main_path=os.path.abspath(os.curdir)
+    full_path=main_path+'/weather_station/'
+
+    eccc_saved_file=full_path+'eccc_df_curated.csv'
+    stl_saved_file=full_path+'stl_avgs_curated.csv'
+    newdf_saved_file=full_path+'newdf_curated.csv'
+
+
+    eccc_df_curated=pd.read_csv(eccc_saved_file)
+    stl_df_curated=pd.read_csv(stl_saved_file)
+    newdf_curated=pd.read_csv(newdf_saved_file)
 
     stl_df_curated['Datetime']=pd.to_datetime(stl_df_curated['Datetime'], format='%Y-%m-%d %H:%M:%S')
     eccc_df_curated['Datetime']=pd.to_datetime(eccc_df_curated['Datetime'], format='%Y-%m-%d %H:%M:%S')

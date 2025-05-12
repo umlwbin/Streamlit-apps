@@ -129,7 +129,7 @@ def what_to_do_widgets():
                                              captions=['','','','','Remove spaces and special characters', '','',''], index=None,on_change=click_Rbutton)
 
     left,right=st.columns([0.8,0.2])
-    st.warning('If uploading multiple files, ensure they all have the same column headers', icon="⚠️")
+    left.warning('If uploading multiple files, ensure they all have the same column headers', icon="⚠️")
 
     #If a certain radio button is chosen
     if radiobutton=='Reorder columns':

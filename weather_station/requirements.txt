@@ -1,3 +1,3 @@
-streamlit
 pandas
-requests
+plotly==5.23.0
+streamlit==1.40.1

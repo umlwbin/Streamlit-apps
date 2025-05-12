@@ -128,6 +128,7 @@ def what_to_do_widgets():
                                              'Rename columns','Merge date and time columns', 'Convert DateTime column to ISO format'],
                                              captions=['','','','','Remove spaces and special characters', '','',''], index=None,on_change=click_Rbutton)
 
+    left,right=st.columns([0.8,0.2])
     st.warning('If uploading multiple files, ensure they all have the same column headers', icon="⚠️")
 
     #If a certain radio button is chosen

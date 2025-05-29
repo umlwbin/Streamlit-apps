@@ -7,15 +7,9 @@ import re
 import os
 from datetime import datetime as dt
 
-#PATHS----------------------------------------------------------------------------------------------------------------------------
-#Input_path is where the script and any input files are found, output_path is where the output files are created -the current dir.
-input_path=os.path.abspath(os.curdir)+'/Castaway/' #For Streamlit Directory
-#input_path=os.path.abspath(os.curdir) #For desktop
-output_path=os.path.abspath(os.curdir)
-#----------------------------------------------------------------------------------------------------------------------------------
-
 #Set page config
 st.set_page_config(page_title=None, page_icon="📖", layout="wide", initial_sidebar_state="expanded", menu_items=None)
+#st.session_state.update(st.session_state)
 
 def main():
     # GEt CanWIN Logo
@@ -60,10 +54,14 @@ def main():
     st.sidebar.image("https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/master/Apps/Castaway/img/img_example.png?ref_type=heads", use_container_width=True)
 
     #Download example files Widget
-    _, _, files = next(os.walk(input_path))
-    files=[f for f in files if 'example' in f]
+    main_path=os.path.abspath(os.curdir)
+    full_path=main_path+'/Castaway/'
     
-    with open(files[0], "rb") as file:
+    _, _, files = next(os.walk(full_path))
+    files=[f for f in files if 'example' in f]
+    filepath=os.path.join(full_path,files[0])
+    
+    with open(filepath, "rb") as file:
         st.sidebar.download_button(
             label="Download Example CSV",
             data=file,
@@ -73,26 +71,19 @@ def main():
             )
     
     # Clear output data
-    for f in os.listdir(output_path):
+    for f in os.listdir(main_path):
         if 'output' in f or 'example.csv' in f:
-            os.remove(os.path.join(output_path, f))
+            os.remove(os.path.join(main_path, f))
 
     file_upload()
 
+
 def file_upload(): 
     st.markdown('#### Upload CSV File(s) here')
-    
-    #Set the session state. After downloads, this gets set to False, so that the app returns to the file upload step. 
-    if 'new_upload' not in st.session_state:
-        st.session_state.new_upload=False
 
-    #File uploader widget
-    def newUpload(): #on change fucntion
-        st.session_state.new_upload=True
-    datafiles=st.file_uploader("Choose a CSV file", accept_multiple_files=True, on_change=newUpload)
-    
+    datafiles = st.file_uploader("Choose a CSV file", accept_multiple_files=True)
     #If there are files uplaoded call get header widget function
-    if st.session_state.new_upload:
+    if datafiles!=[]:
         the_filenames=[d.name for d in datafiles if '.csv' in d.name] #check for csv files
 
         if the_filenames:
@@ -164,9 +155,7 @@ def get_header_widget(datafiles):
         
         if header_row!=None:
             st.markdown(f'**The header row seems to be row {header_row+1}:**')
-            head_cols=list(df.columns)
-            head_cols_df=pd.DataFrame(head_cols)
-            st.dataframe(head_cols_df.T,hide_index=True)
+            st.dataframe(df.head(0))
             st.markdown('**If that is incorrect, change it here. Otherwise, click Next**')
 
         else:
@@ -391,13 +380,9 @@ def remove_and_merge(var_list,var_values_list,header_row, metadata_vars, datafil
     plot_df_list=[] 
     f=0
     for file in datafiles:
-        st.write(file.name)
         f=f+1
         file.seek(0) #Go back to beginning of file 
-        df=pd.read_csv(file, header=header_row+1) #Read the file into a dataframe
-        df = df.loc[:, ~df.columns.str.contains('^Unnamed')] #Remove unnamed columns
-
-        st.write(df.head(5))
+        df=pd.read_csv(file, header=header_row+1)
 
         if header_row>0:
             if len(df.columns)>3 or 'Temperature (Celsius)'.casefold() in (name.casefold() for name in list(df.columns)):
@@ -405,14 +390,12 @@ def remove_and_merge(var_list,var_values_list,header_row, metadata_vars, datafil
                 # Grab all the metadata before the actual data
                 file.seek(0) #Go back to beginning of file
                 metadata_df=pd.read_csv(file,nrows=header_row-1)
-                metadata_df = metadata_df.loc[:, ~metadata_df.columns.str.contains('^Unnamed')] #Remove unnamed columns
         else:
-            metadata_df=pd.DataFrame() #Else the metadata is just an empty data frame
+            metadata_df=pd.DataFrame()
 
         if df.empty:
             continue
 
-        st.write(metadata_df)
         if not metadata_df.empty:
             metadata_df.columns=newmcol_list #(col0, col1 etc)
     
@@ -537,27 +520,26 @@ def remove_and_merge(var_list,var_values_list,header_row, metadata_vars, datafil
         final_df=pd.concat(df_list_cleaned)  
         final_plot_df=pd.concat(plot_df_list)
 
+        # Save as csv
+        # csvname='output_cwout.csv'
+        # csvname2='output_file.csv'
+        # final_df.to_csv(csvname, index=False)
+        # final_plot_df.to_csv(csvname2, index=False)
+
     #Call download function
     download_output(final_df, final_plot_df)
 
 def download_output(final_df, final_plot_df):
-    st.markdown('######')
-    st.markdown('#### Data Download')
-    left, right = st.columns([0.6, 0.4])
+    left, right = st.columns([0.8, 0.2])
     left.success('All Done! 🎉', icon="✅")
 
-    def on_download():
-        st.balloons()
-        st.session_state.new_upload=False
-
-    csv=final_df.to_csv(index=False).encode("utf-8")
+    csv=final_df.to_csv().encode("utf-8")
     st.download_button(
         label="Download CSV",
         data=csv,
         file_name="output.csv",
         mime="text/csv",
         icon=":material/download:",
-        on_click=on_download
         )
 
 

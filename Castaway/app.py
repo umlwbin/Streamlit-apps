@@ -392,13 +392,10 @@ def remove_and_merge(var_list,var_values_list,header_row, metadata_vars, datafil
     plot_df_list=[] 
     f=0
     for file in datafiles:
-        st.write(file.name)
         f=f+1
         file.seek(0) #Go back to beginning of file 
         df=pd.read_csv(file, header=header_row+1) #Read the file into a dataframe
         df = df.loc[:, ~df.columns.str.contains('^Unnamed')] #Remove unnamed columns
-
-        st.write(df.head(5))
 
         if header_row>0:
             if len(df.columns)>3 or 'Temperature (Celsius)'.casefold() in (name.casefold() for name in list(df.columns)):
@@ -413,7 +410,6 @@ def remove_and_merge(var_list,var_values_list,header_row, metadata_vars, datafil
         if df.empty:
             continue
 
-        st.write(metadata_df)
         if not metadata_df.empty:
             metadata_df.columns=newmcol_list #(col0, col1 etc)
     

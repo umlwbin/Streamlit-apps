@@ -62,8 +62,9 @@ def main():
     #Download example files Widget
     _, _, files = next(os.walk(input_path))
     files=[f for f in files if 'example' in f]
-    
-    with open(files[0], "rb") as file:
+    filepath=os.path.join(input_path,files[0])   
+
+    with open(filepath, "rb") as file:
         st.sidebar.download_button(
             label="Download Example CSV",
             data=file,

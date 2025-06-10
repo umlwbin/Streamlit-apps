@@ -12,10 +12,28 @@ st.sidebar.image(logo, width=250)
 
 # Title and Description
 st.sidebar.title('CanWIN Standardized Vocabulary 📖')
-st.sidebar.write('Find standardized names for common arctic/marine/freshwater variables')
+st.sidebar.html("""
+                <style>
+                div.s {    
+                    font-size: 20px;
+                    h1{font-size: 22px;}
+                    ul,ol {font-size: 20px; color: #333333; margin-bottom: 24px;}
+                    }
+                </style>
 
-# # Load and display image
-# st.image('NH4.png', width=50)
+                <div class="s">
+                    Find standardized names for common arctic/marine/freshwater variables
+                    <br><br>
+                    <h1>Steps</h1>
+                    <ol>
+                    <li>Find your varibale Category from the dropdown list</li>
+                    <li>Look at each standardized varibale name under that category, and find the defnition that best fits your variable</li>
+                    <li>Add the <b>Source Link</b> for the standardized term to your data dictionary</li>
+                <li>All done!! 🥳</li>
+                    </ol>                
+                </div>
+                    """)
+
 
 # Constants for Google Sheets
 SHEET_ID = '1jodEHgJm6uEpanvpnUqVAFutbWBgGfrISwAyDaaGHI0'
@@ -105,8 +123,8 @@ for k,v in var_dict.items():
 
                 #Give definition
                 st.markdown(' ')
-                st.markdown(f'<span style="font-size: 18px;">**Definition for {csn}**</span>', unsafe_allow_html=True)
-                st.markdown(f'<span style="font-size: 16px;">{d}</span>', unsafe_allow_html=True)
+                st.markdown(f'<span style="font-size: 20px;">**Definition for {csn}**</span>', unsafe_allow_html=True)
+                st.markdown(f'<span style="font-size: 18px;">{d}</span>', unsafe_allow_html=True)
                 #st.markdown(f'')
 
                 #Give the BODC/CF link
@@ -116,12 +134,12 @@ for k,v in var_dict.items():
                     v_long='Climate and Forecast (CF) vocabulary'
                 
                 st.markdown(' ')
-                st.markdown(f'<span style="font-size: 18px;">**Source vocabulary for this term**</span>', unsafe_allow_html=True)
-                st.markdown(f'<span style="font-size: 16px;">{v_long}</span>', unsafe_allow_html=True)
-
-                st.markdown(f'<span style="font-size: 18px;">**{v} preferred label**</span>', unsafe_allow_html=True)
-                st.markdown(f'<span style="font-size: 16px;">{sn}</span>', unsafe_allow_html=True)
-
-                st.markdown(f'<span style="font-size: 18px;">**Source link**</span>', unsafe_allow_html=True)
-                st.markdown(f'<span style="font-size: 16px;">{bl}</span>', unsafe_allow_html=True)
+                st.markdown(f'<span style="font-size: 20px;">**Source vocabulary for this term**</span>', unsafe_allow_html=True)
+                st.markdown(f'<span style="font-size: 18px;">{v_long}</span>', unsafe_allow_html=True)
+                st.markdown(' ')
+                st.markdown(f'<span style="font-size: 20px;">**{v} preferred label**</span>', unsafe_allow_html=True)
+                st.markdown(f'<span style="font-size: 18px;">{sn}</span>', unsafe_allow_html=True)
+                st.markdown(' ')
+                st.markdown(f'<span style="font-size: 20px;">**Source link**</span>', unsafe_allow_html=True)
+                st.markdown(f'<span style="font-size: 18px;">{bl}</span>', unsafe_allow_html=True)
             

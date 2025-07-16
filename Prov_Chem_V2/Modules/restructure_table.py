@@ -1,0 +1,190 @@
+import streamlit as st
+import pandas as pd
+
+def restructure_widgets(cleaned_df_list):
+    st.markdown('-------')
+    st.markdown('##### 🗒️ Pivoting your Data Table')
+    st.markdown('This step cleans a provincial file that contains a column with the variables/parameters and a column with values.')
+
+    if 'begin2' not in st.session_state:
+        st.session_state.begin2 = False
+
+    def click_Begin_button():
+        st.session_state.begin2 = True
+    st.button("Let's Go!", type="primary", key='Begin_Button2', on_click=click_Begin_button)
+
+    if st.session_state.begin2: #Lets go button is pressed
+
+        #Check for the VARIABLE and VALUE columns
+        st.markdown('#####')
+        st.markdown('##### Choose the Variable and the Value columns')
+
+        cols=list(cleaned_df_list[0].columns)
+
+        #Potential variable and value columns
+        ind0=None
+        ind1=None
+        for index, item in enumerate(cols):
+            string1='VARIABLE_NAME'
+            string2='Parameter'
+            string3='VALUE'
+            string4='Result'
+
+            if  string1.lower() in item.lower() or string2.lower() in item.lower():
+                ind0 = index
+            if string3.lower() in item.lower() or string4.lower() in item.lower():
+                ind1= index
+     
+        #Setting States
+        # If the button is clicked, the session state is set to true (button is clicked)
+        def click_button():
+            st.session_state.next2 = True
+
+        # If the number is changed, the session state is set to False (button is unclicked, so user has to click again)
+        def change_vars():
+            st.session_state.next2 = False
+            st.session_state.allDone=False
+
+        col1,col2, col3=st.columns(3, vertical_alignment='bottom')
+        var_col = col1.selectbox(label='Select the Variable column',options=cols, key='selVarCol', on_change=change_vars, index=ind0)
+        value_col = col2.selectbox(label='Select the Value column',options=cols,key='selValCol', on_change=change_vars, index=ind1)
+        
+        #Next button
+        col3.button("Next", type="primary", key='Next_Button02', on_click=click_button)
+
+        if st.session_state.next2==True: #Next button is pressed
+
+            additional_params=combine_values_with_headers_radio_widget(cols)
+            return var_col,value_col, additional_params
+
+def combine_values_with_headers_radio_widget(cols):
+
+    #Are there other columns to add to the variable name?
+    st.markdown('#####')
+    st.markdown('##### Combine values from other columns to the variable names (column headers)')
+    st.markdown('You could add the **Units**, **VMV codes** or **Varibale codes** from corresponding columns (e.g, Temperature_degC_567). ')
+
+    def change_radio():
+        st.session_state.radio2 = True
+        st.session_state.begin3 = False #The clean headers lets go button is deactivated
+        st.session_state.begin4 = False #iso date lets go button is deactivated
+        st.session_state.begin5 = False #parse date lets go button is deactivated
+        st.session_state.begin6 = False #rvq lets go button is deactivated
+
+
+    add_params_radio=st.radio("Would you like to add a column value to the variable header names, e.g, units?", ["Sure! 🤩", "Nah, I'm good 🙃"], on_change=change_radio, index=None)
+
+    if add_params_radio=="Sure! 🤩": #Sure, add the additional parameters to the variable column name
+        additional_params=combine_values_with_headers_widgets(cols)
+        return additional_params
+
+    if add_params_radio=="Nah, I'm good 🙃":
+        st.session_state.next3 = True # It's like they pressed the next button. This has to be true for the next filter function to run.
+        return None
+
+def combine_values_with_headers_widgets(cols):
+        st.markdown('######')
+        st.markdown('###### Great! Choose the column with the value you would like to add to the (variable) header names. These columns will then be removed.')
+        #Setting States
+        # If the button is clicked, the session state is set to true (button is clicked)
+        def click_button():
+            st.session_state.next3 = True
+
+        # If the number is changed, the session state is set to False (button is unclicked, so user has to click again)
+        def change_vars():
+            st.session_state.next3 = False
+
+        #Find potential unit, vmv, and variable codes (typical to add to the column headers)
+        pot_units='UNIT'
+        pot_vmv_codes='VMV'
+        pot_var_codes='VARIABLE_CODE'
+
+        for col in cols:
+            if pot_units.lower() in col.lower():
+                units=col
+            if pot_vmv_codes.lower() in col.lower():
+                vmv_codes=col
+            if pot_var_codes.lower() in col.lower():
+                var_codes=col
+
+        additional_params=st.multiselect("Select one or more columns",cols, [units, vmv_codes, var_codes], on_change= change_vars)
+        st.button("Next", type="primary", key='Next_Button3', on_click=click_button)
+
+        if st.session_state.next3:
+            return additional_params
+
+def filter_df_for_each_variable(cleaned_df_list,var_col,value_col, additional_params):
+    temp_workin_list=[]
+    for df in cleaned_df_list:
+
+        unique_vars=df[var_col].unique() #Extract strings and find unique ones
+        unique_vars = [item for item in unique_vars if item==item] #nan!=nan, removes nans
+        
+        # Filter the DataFrame for each Variable. Create a filtered data frame for each and then concatenate all dataframes
+        c=0
+        filtered_dfs=[]
+        for var in unique_vars:
+            c=c+1
+            filtered_df=df.copy()
+            filtered_df = filtered_df[filtered_df[var_col].isin([var])] #filter the dataframe for only the rows where the variable is var
+            filtered_df = filtered_df.rename(columns={value_col: var}) #Change the name 'VALUE' to the variable name (df is now filtered to one variable)
+            filtered_df=filtered_df.drop(var_col, axis=1) #remove 'the Varibale_Name column'
+
+            #Move variable column to end
+            extracted_column = filtered_df[var]# Extract the variable column
+            filtered_df = filtered_df.drop(columns=[var])#Drop the column from its original position
+            filtered_df[var]=extracted_column
+
+            filtered_df=filtered_df.reset_index(drop=True) #reset the index
+
+            #call add variable code and vmv code fuction
+            filtered_dfs=add_vmv_and_variable_code(var, filtered_df, filtered_dfs, additional_params)
+        
+        df_merged=merge_filtered_dfs(filtered_dfs) #concatenate all the filtered variable dataframes
+        temp_workin_list.append(df_merged)
+
+    cleaned_df_list=temp_workin_list
+    return cleaned_df_list
+
+def add_vmv_and_variable_code(var, filtered_df, filtered_dfs, additional_params):
+
+    if additional_params==None:
+        #Dont add any additional parameters to the variable name, just add the filtered df to list and return
+        filtered_dfs.append(filtered_df) #append the filtered data frame to data frame list
+        return filtered_dfs
+    
+    else:
+
+        if not filtered_df.empty:
+
+            # Get the values from the first row of the additional parameters columns
+            first_row_values = list(filtered_df.loc[0, additional_params])
+
+            # Combine them with underscores
+            combined_str = "_".join(str(x) for x in first_row_values)
+
+            filtered_df.rename(columns={var: f"{var}_{combined_str}"}, inplace=True)# Rename the variable column to include the additional parameters, for e.g temp_C_78595
+            filtered_df=filtered_df.drop(additional_params, axis=1) #remove the parameters columns
+            filtered_dfs.append(filtered_df) #append the filtered data frame to data frame list
+            return filtered_dfs
+
+
+    # units='UNIT_CODE'
+    # vmv_codes='VMV_CODE'
+    # var_codes='VARIABLE_CODE'
+    # if not filtered_df.empty:
+        # # Get the value of the units, we just take the first cell under the UNIT_CODE column
+        # unit = filtered_df.loc[0,units]  # Gets the unit            
+        # vmv_code = filtered_df.loc[0, vmv_codes]  # Gets the VMV code 
+        # var_code = filtered_df.loc[0, var_codes]  # Gets the VAR code
+
+        # filtered_df.rename(columns={var: f"{var}_{unit}_{vmv_code}_{var_code}"}, inplace=True)# Rename the variable column to include the codes
+        # filtered_df=filtered_df.drop([units,vmv_codes,var_codes], axis=1) #remove the codes columns
+
+        # filtered_dfs.append(filtered_df) #append the filtered data frame to data frame list
+        # return filtered_dfs
+
+def merge_filtered_dfs(filtered_dfs):
+    # MERGE all the filtered dataframes together
+    df_merged=pd.concat(filtered_dfs, ignore_index=True) #merge all variables into one dataframe
+    return df_merged

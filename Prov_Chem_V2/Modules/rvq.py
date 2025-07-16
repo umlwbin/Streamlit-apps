@@ -109,7 +109,7 @@ def match_rvq_to_user_codes_widgets():
         rvqcodes.append(RVQ)  #Add each selection to the list
 
     #Next button
-    st.button("Next", type="primary", key='Next_Button3', on_click=click_button)
+    st.button("Next", type="primary", key='Next_Button7', on_click=click_button)
 
     if st.session_state.next7==True:
 

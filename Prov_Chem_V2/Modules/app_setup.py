@@ -1,7 +1,7 @@
 import streamlit as st
 
 #Set page config
-st.set_page_config(page_title=None, page_icon="📖", layout="wide", initial_sidebar_state="expanded", menu_items=None)
+st.set_page_config(page_title="Provincial Chemistry App", page_icon="📖", layout="wide", initial_sidebar_state="expanded", menu_items=None)
 
 
 def app_intro_sidebar():

@@ -7,6 +7,9 @@ import os
 import plotly.express as px
 import sys
 
+#Set page config
+st.set_page_config(page_title="Provincial Chemistry App", page_icon="📖", layout="wide", initial_sidebar_state="expanded", menu_items=None)
+
 #PATHS----------------------------------------------------------------------------------------------------------------------------
 #Input_path is where the script and any input files are found, output_path is where the output files are created -the current dir.
 #input_path=os.path.abspath(os.curdir)+'/Prov_chem/' #For Streamlit Directory

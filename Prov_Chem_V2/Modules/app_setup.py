@@ -1,9 +1,5 @@
 import streamlit as st
 
-#Set page config
-st.set_page_config(page_title="Provincial Chemistry App", page_icon="📖", layout="wide", initial_sidebar_state="expanded", menu_items=None)
-
-
 def app_intro_sidebar():
     # GEt CanWIN Logo
     logo='https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/master/Apps/Vocab%20app/UM-EarthObservationScience-cmyk-left.png?ref_type=heads'

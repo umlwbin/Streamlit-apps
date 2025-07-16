@@ -1,10 +1,7 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-from io import StringIO
-import re
 import os
-import plotly.express as px
+
 
 #PATHS----------------------------------------------------------------------------------------------------------------------------
 #Input_path is where the script and any input files are found, output_path is where the output files are created -the current dir.
@@ -41,7 +38,6 @@ def fileupload_Widget():
         st.session_state.next7=False
         st.session_state.allDone=False
 
-
     datafiles = st.file_uploader("Choose CSV files", accept_multiple_files=True, on_change=newUpload, type="csv", key='fileupload')
 
     #If there are files uploaded retrun them
@@ -55,7 +51,7 @@ def example_file_widget():
 
     def on_toggle():
         st.session_state.toggleChange=True
-
+  
     example_on=st.toggle("Yep, use an example", on_change=on_toggle, key=st.session_state.toggleChange)
 
     if example_on and st.session_state.toggleChange==True:

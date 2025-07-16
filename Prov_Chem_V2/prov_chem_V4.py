@@ -79,10 +79,6 @@ def errors(msg):
 def successes(msg):
     #left, right = st.columns([0.8, 0.2])
     st.success(f'Success! {msg}', icon="✅",)
-    # if show_df==True:
-    #     with st.expander('See a snippet of the updated table'):
-    #         st.write(cleaned_df_list[0].head())
-
 
 #Global variables
 inconsistent_cols_error=False
@@ -95,8 +91,6 @@ app_setup.app_intro_sidebar()#Set up APP Page and session states
 
 
 #WORKFLOW
-
-
 with tab1: #File Upload Tab
     datafiles=file_uploads.fileupload_Widget() #Get all the files
     example_file=file_uploads.example_file_widget() #Use exmaple file instead

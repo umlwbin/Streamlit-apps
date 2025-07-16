@@ -6,13 +6,21 @@ mvlDict={'result_value_qualifier': ["SSI","ADL",'BDL','FD','LD','EFAI','FEF','FE
             'FFS','H','ISP', 'ITNA','ITNM','JCW', 'NaN','NC','ND','NR', 'NS',
             'OC', 'P', 'prob_good', 'Interpolated', 'Q','Standardized to 25C']}
 
+
+def display_rvq_df_from_file():
+    with st.expander("Expand to see the list of RVQ codes and their meanings."):
+        rvq_data_frame=pd.read_csv('rvq_dict.csv')
+        st.table(rvq_data_frame)
+
 def choose_RVQs_Widgets(cleaned_df_list):
 
     # Allow users to choose starting RVQs and exceptions
     #********************************************************************************************************************************   
     st.markdown('#### 🌡️ Add RVQs')
     st.markdown('This step adds Result Value Qualifiers to cells in your files where the data might be atypical, erroneous, or missing.')
-    st.markdown('It allows to you to specify that a certain code  in your data (we call this the user code), or perhaps even blank spaces, means a certain error or event (defined by an RVQ code) has occurred.')
+    st.markdown('It allows to you to specify that a certain code  in your data (we call this the **User Code**), or perhaps even blank spaces, means a certain error or event (defined by an **RVQ code**) has occurred.')
+
+    display_rvq_df_from_file()
 
     def click_Begin_button():
         st.session_state.begin6 = True
@@ -153,7 +161,6 @@ def save_rvq_df_as_csv(supplementary_df_list,usercodes,rvqcodes):
 
 #-------------------------------------------------------------------------------------------------------
 
-
 def add_RVQs_to_files(cleaned_df_list, starting_rvq_var, exceptions, usercodes,rvqcodes):
 
     temp_workin_list=[]
@@ -265,15 +272,3 @@ def create_RVQ_columns_for_Variables(rvq_dict_per_Variable_List, df):
             df[var_rvq_name].iloc[row]=rvqCode_string
 
     return df
-
-
-#-------------------------------------------------------------------------------------------------------
-# def filter_actual_RVQ_variables(rvq_dict_per_Variable_List):
-
-#     final_RVQ_Variable_list=[]
-#     for rvq_dict in rvq_dict_per_Variable_List:
-#         for key, value in rvq_dict.items():
-
-#             if key=='Variable':
-#                 final_RVQ_Variable_list.append(value) 
-#     return final_RVQ_Variable_list

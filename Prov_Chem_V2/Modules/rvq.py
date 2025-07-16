@@ -12,6 +12,7 @@ def choose_RVQs_Widgets(cleaned_df_list):
     #********************************************************************************************************************************   
     st.markdown('#### 🌡️ Add RVQs')
     st.markdown('This step adds Result Value Qualifiers to cells in your files where the data might be atypical, erroneous, or missing.')
+    st.markdown('It allows to you to specify that a certain code  in your data (we call this the user code), or perhaps even blank spaces, means a certain error or event (defined by an RVQ code) has occurred.')
 
     def click_Begin_button():
         st.session_state.begin6 = True
@@ -19,9 +20,10 @@ def choose_RVQs_Widgets(cleaned_df_list):
 
     if st.session_state.begin6:
         st.markdown('##### ')
-        st.markdown('##### Choose starting variable')
-        st.markdown('From the first dropdown list, choose the starting variable for adding RVQs. RVQs will be added to each variable after, starting with the selected variable. ')
-        st.markdown('If there are any varibales **after** this starting variable that should **not** have an RVQ, select these variables in the **Exceptions** list.')
+        st.markdown('##### Choose the starting variable')
+        st.markdown('From the first dropdown list, choose the starting variable that should be checked for codes in your file(s). '
+        'If no codes are found, no RVQ codes will be added for that variable, so no worries!')
+        st.markdown('If there are any varibales **after** this starting variable that you specifically want to exclude from the check, select these variables in the **Exceptions** list.')
 
         headers_list=list(cleaned_df_list[0].columns) #Updated cols
 
@@ -39,7 +41,7 @@ def choose_RVQs_Widgets(cleaned_df_list):
 
         col1,col2, col3=st.columns(3)
         starting_rvq_var = col1.selectbox(label='Starting Variable',options=list(headers_list),index=None, on_change=change_vars, key='rvqVar')#select widget
-        exceptions = col2.multiselect(label='Exception',options=list(headers_list), on_change=change_vars, key='rvqEx')#select widget. Exceptions are variables that wont have RVQs added
+        exceptions = col2.multiselect(label='Exceptions',options=list(headers_list), on_change=change_vars, key='rvqEx')#select widget. Exceptions are variables that wont have RVQs added
 
         #Next button
         st.button("Next", type="primary", key='Next_Button6', on_click=click_button)
@@ -53,7 +55,7 @@ def match_rvq_to_user_codes_widgets():
 
     st.markdown('######')
     st.write('##### Match any Data codes to RVQ codes.')
-    st.html('See the <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSckbimCcTEfNbIPlRAglNKadV4elz8AICViwNusOd_oKFEbjaelslDfehjo7A1IUHn3cukt7DeVCsS/pubhtml?gid=518408190&single=true" target="_blank">Master Validation List for a list of RVQs and thier meanings.</a> ')
+    st.html('See the <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vTRYQRkFl-FoFojsgcU6TUdW5_kBMN2iQM6Gsw5T7mLyuuwgpBEkRPNM9syCdVhPpYPrlRSd5-vMhpD/pubhtml?gid=1100594007&single=true" target="_blank">Master Validation List for a list of RVQs and thier meanings.</a> ')
     st.html("""
             <style>
             div.s {    
@@ -113,14 +115,22 @@ def match_rvq_to_user_codes_widgets():
 
     if st.session_state.next7==True:
 
-        #Remove NUll values
-        usercodes=[uc for uc in usercodes if uc is not None]
-        rvqcodes=[rvqc for rvqc in rvqcodes if rvqc is not None ]
+        #Remove NUll values and remove blank spaces
+        usercodes=[uc for uc in usercodes if uc is not None and uc.strip()]
+        rvqcodes=[rvqc for rvqc in rvqcodes if rvqc is not None and rvqc.strip() ]
 
-        return usercodes,rvqcodes
+        #User pressed enter but entered nothing
+        if usercodes==[] and rvqcodes==[]:
+            st.warning('Looks, like you entered nothing! No work for me 😌 ',icon="⚠️", )
+        else:
+            #If the num of data codes is not equal to the num of rvq codes (user forgot to enter one)
+            if len(usercodes)!=len(rvqcodes):
+                st.error('Sorry, I think you forgot to enter a RVQ or User code',icon="🚨" )
+            else:
+                return usercodes,rvqcodes
 
 #-------------------------------------------------------------------------------------------------------
-def create_rvq_dictionary_from_user_input(supplementary_df_list,usercodes,rvqcodes):
+def save_rvq_df_as_csv(supplementary_df_list,usercodes,rvqcodes):
     rvqdict={} #create an empty rvq dict
 
     #create a rvq dictionary
@@ -142,10 +152,6 @@ def create_rvq_dictionary_from_user_input(supplementary_df_list,usercodes,rvqcod
     return supplementary_df_list
 
 #-------------------------------------------------------------------------------------------------------
-def save_rvq_dict_tocsv(rvqdict):   
-    # save dict to dataframe and save as csv
-    rvqdf=pd.DataFrame(rvqdict.items(), columns=['Data code', "CanWIN's Result Value Qualifier"])
-    rvqdf.to_csv('DataCodes_RVQ_curated.csv', index=False)
 
 
 def add_RVQs_to_files(cleaned_df_list, starting_rvq_var, exceptions, usercodes,rvqcodes):

@@ -143,7 +143,7 @@ if datafiles and inconsistent_cols_error==False: #All is good to begin cleaning!
             # STEP--- Restructure table and Extract Variables-------------------------------------------
             #Streamlit Widget Functions -- Start of section
             var_col,value_col, additional_params=restructure_table.restructure_widgets(cleaned_df_list) or (None,None, None)
-            
+
             if st.session_state.radio2 and st.session_state.next3:
                 #Processing Functions - Pure Python
                 cleaned_df_list=restructure_table.filter_df_for_each_variable(cleaned_df_list,var_col,value_col, additional_params) or None #Extract variables as their own columns and add the VMV and Variable codes to the variable names (column headers)
@@ -207,11 +207,9 @@ if datafiles and inconsistent_cols_error==False: #All is good to begin cleaning!
             if starting_rvq_var != None: # A starting RVQ was selected, thus there ARE RVQ cols
                 usercodes,rvqcodes=rvq.match_rvq_to_user_codes_widgets() or (None,None) #Allow user to match the User codes to rvq codes
 
-            if st.session_state.next7:
+            if st.session_state.next7 and usercodes and rvqcodes:
                 #Processing Functions - Pure Python
-                supplementary_df_list=rvq.create_rvq_dictionary_from_user_input(supplementary_df_list, usercodes,rvqcodes) #Create an RVQ dictionary
-                #rvq.save_rvq_dict_tocsv(rvqdict) #Save this RVQ dictionary as a CSV file e.g, 999:NC, L:BDL
-                
+                supplementary_df_list=rvq.save_rvq_df_as_csv(supplementary_df_list, usercodes,rvqcodes) #Create an RVQ df and save as csv                
                 cleaned_df_list=rvq.add_RVQs_to_files(cleaned_df_list, starting_rvq_var, exceptions, usercodes,rvqcodes) #Add RVQ columns and codes to appropriate variable columns
 
                 #Streamlit Widget Functions -- End of section

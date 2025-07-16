@@ -70,11 +70,12 @@ def combine_values_with_headers_radio_widget(cols):
         st.session_state.begin4 = False #iso date lets go button is deactivated
         st.session_state.begin5 = False #parse date lets go button is deactivated
         st.session_state.begin6 = False #rvq lets go button is deactivated
+        st.session_state.next3 = False # So they have to press the next button again
 
 
-    add_params_radio=st.radio("Would you like to add a column value to the variable header names, e.g, units?", ["Sure! 🤩", "Nah, I'm good 🙃"], on_change=change_radio, index=None)
+    add_params_radio=st.radio("Would you like to add a column value to the variable header names, e.g, units?", ["Sure! 🤩", "Nah, I'm good 🙃"], on_change=change_radio,args=() , index=None)
 
-    if add_params_radio=="Sure! 🤩": #Sure, add the additional parameters to the variable column name
+    if add_params_radio=="Sure! 🤩": # Sure, add the additional parameters to the variable column name
         additional_params=combine_values_with_headers_widgets(cols)
         return additional_params
 

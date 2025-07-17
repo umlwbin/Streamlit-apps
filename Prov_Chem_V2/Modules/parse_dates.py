@@ -12,7 +12,7 @@ def parse_date_time_Widgets():
     st.button("Let's Go!", type="primary", key='Begin_Button5', on_click=click_Begin_button)
 
 
-def select_date_time_column(cleaned_df_list):
+def select_date_time_column_Widgets(cleaned_df_list):
     st.markdown('##### ')
     st.markdown('##### Select your ISO date-time column')
 
@@ -44,22 +44,30 @@ def select_date_time_column(cleaned_df_list):
 
 def extract_yr_mn_day_time(cleaned_df_list, dt_col): 
     temp_workin_list=[]
+    date_time_error=False
+
     for df in cleaned_df_list:   
         cleaned_dt_col=dt_col #Date_time_column that was inserted 
-        #Ensure your datetime column is in datetime format using pd.to_datetime()
-        df[cleaned_dt_col] = pd.to_datetime(df[cleaned_dt_col])
+        #Test first to see if it is actually a datetime value (maybe user selected the wrong column)
+        try:
+            #Ensure your datetime column is in datetime format using pd.to_datetime()
+            df[cleaned_dt_col] = pd.to_datetime(df[cleaned_dt_col])
 
-        #Use the .dt accessor to extract the year, month, day, and time components. Create new columns for each component.
-        df['Year'] = df[cleaned_dt_col].dt.year
-        df['Month'] = df[cleaned_dt_col].dt.month
-        df['Day'] = df[cleaned_dt_col].dt.day
-        df['Time'] = df[cleaned_dt_col].dt.time
+            #Use the .dt accessor to extract the year, month, day, and time components. Create new columns for each component.
+            df['Year'] = df[cleaned_dt_col].dt.year
+            df['Month'] = df[cleaned_dt_col].dt.month
+            df['Day'] = df[cleaned_dt_col].dt.day
+            df['Time'] = df[cleaned_dt_col].dt.time
 
-        df=move_cols_to_front_of_dataframe(df, dt_col)
+            df=move_cols_to_front_of_dataframe(df, dt_col)
+
+        except ValueError: #Error in the date column
+            st.error('Unknown datetime string format! Please check your Date-time column.',icon="🚨" )
+            date_time_error=True
         temp_workin_list.append(df) #update the list for this processing
 
     cleaned_df_list=temp_workin_list
-    return cleaned_df_list
+    return cleaned_df_list, date_time_error
 
 
 def move_cols_to_front_of_dataframe(df, dt_col):

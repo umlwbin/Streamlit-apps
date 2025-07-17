@@ -199,14 +199,16 @@ if datafiles and inconsistent_cols_error==False:
         parse_dates.parse_date_time_Widgets()
 
         if st.session_state.begin5:
-            dt_col=parse_dates.select_date_time_column(cleaned_df_list)
+            dt_col=parse_dates.select_date_time_column_Widgets(cleaned_df_list)
         
         #Processing Functions - Pure Python
-        if st.session_state.ParseNextButton:
-            cleaned_df_list=df_merged=parse_dates.extract_yr_mn_day_time(cleaned_df_list, dt_col) #extract the Year, motnh, day and time
+        
+        if st.session_state.ParseNextButton==True:
+            cleaned_df_list, date_time_error=df_merged=parse_dates.extract_yr_mn_day_time(cleaned_df_list, dt_col) #extract the Year, motnh, day and time
 
-            #Streamlit Widget Functions -- End of section
-            successes('Parsed the Date time column!')
+            if date_time_error==False:
+                #Streamlit Widget Functions -- End of section
+                successes('Parsed the Date time column!')
 
     with tab7:
     #STEP--- # Result Value Qualifier (RVQ) Management-------------------------------------------

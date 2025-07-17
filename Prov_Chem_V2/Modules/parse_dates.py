@@ -11,10 +11,32 @@ def parse_date_time_Widgets():
         st.session_state.allDone=False
     st.button("Let's Go!", type="primary", key='Begin_Button5', on_click=click_Begin_button)
 
-def extract_yr_mn_day_time(cleaned_df_list): 
+
+def select_date_time_column(cleaned_df_list):
+    st.markdown('##### ')
+    st.markdown('##### Select yoour ISO date-time column')
+
+    def change_vars():
+        st.session_state.ParseNextButton = False
+        st.session_state.allDone=False
+
+    def click_Next_button():
+        st.session_state.ParseNextButton = True
+
+    cols=list(cleaned_df_list[0].columns)
+    col1, col2=st.columns(2)
+
+    dt_col=col1.selectbox('Date-Time column', options=cols, on_change=change_vars)
+    st.button("Next", type="primary", key='NextButton_Parse', on_click=click_Next_button)
+
+    if st.session_state.ParseNextButton:
+        return dt_col
+    
+
+def extract_yr_mn_day_time(cleaned_df_list, dt_col): 
     temp_workin_list=[]
     for df in cleaned_df_list:   
-        cleaned_dt_col='Date_Time' #Date_time_column that was inserted 
+        cleaned_dt_col=dt_col #Date_time_column that was inserted 
         #Ensure your datetime column is in datetime format using pd.to_datetime()
         df[cleaned_dt_col] = pd.to_datetime(df[cleaned_dt_col])
 
@@ -24,15 +46,15 @@ def extract_yr_mn_day_time(cleaned_df_list):
         df['Day'] = df[cleaned_dt_col].dt.day
         df['Time'] = df[cleaned_dt_col].dt.time
 
-        df=move_cols_to_front_of_dataframe(df)
+        df=move_cols_to_front_of_dataframe(df, dt_col)
         temp_workin_list.append(df) #update the list for this processing
 
     cleaned_df_list=temp_workin_list
     return cleaned_df_list
 
 
-def move_cols_to_front_of_dataframe(df):
-    cleaned_dt_col='Date_Time' #Date_time_column that was inserted
+def move_cols_to_front_of_dataframe(df, dt_col):
+    cleaned_dt_col=dt_col #Date_time_column that was inserted
     year_col=df.pop('Year')     # pop the column from the data frame
     month_col=df.pop('Month')   # pop the column from the data frame
     day_col=df.pop('Day')       # pop the column from the data frame

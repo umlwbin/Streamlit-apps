@@ -4,14 +4,14 @@ import pandas as pd
 
 def Choose_One_Or_Two_DateTime_Columns_Widgets():
 
+    st.markdown('#### ⏰ Convert date-time column to ISO standard format')
+    st.markdown('This step converts either one datetime column or two Date and Time columns to ISO format.')
+
     # If the selections are changed, the session state is set to False (button is unclicked, so user has to click NExt again)
     def change_vars():
         st.session_state.next4 = False
         st.session_state.next5 = False
         st.session_state.allDone=False
-
-    st.markdown('#### ⏰ Convert date-time column to ISO standard format')
-    st.markdown('This step converts either one datetime column or two Date and Time columns to ISO format.')
 
     def click_Begin_button():
         st.session_state.begin4 = True
@@ -23,7 +23,6 @@ def Choose_One_Or_Two_DateTime_Columns_Widgets():
         st.markdown('##### Is there one date-time column, or separate date and time columns?')
         date_structure=st.radio("Choose one",options=["Just one Date-time column", "Separate Date and Time columns"], index=None, on_change=change_vars) #radio buttons to choose
         return date_structure
-
 
 def one_dateTime_col_Widgets(cleaned_df_list, date_structure_radioButton):
     if date_structure_radioButton!="Just one Date-time column":

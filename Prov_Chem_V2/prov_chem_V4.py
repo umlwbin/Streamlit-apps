@@ -56,6 +56,9 @@ if 'next6' not in st.session_state:
 if 'next7' not in st.session_state:
     st.session_state.next7 = False
 
+if 'ParseNextButton' not in st.session_state:
+    st.session_state.ParseNextButton = False
+
 if 'allDone' not in st.session_state:
     st.session_state.allDone = False
 
@@ -181,14 +184,17 @@ if datafiles and inconsistent_cols_error==False: #All is good to begin cleaning!
         if (st.session_state.next4 or st.session_state.next5) and date_time_error==False:
             successes('Created Date-Time column in ISO format!')
 
-    with tab6:
-        #STEP--- #Parse ISO Date-Time column into yr, month, day, time-------------------------------------------
+    with tab6:#STEP--- #Parse ISO Date-Time column into yr, month, day, time-------------------------------------------
+        
         # Streamlit Widget Functions -- Start of section
         parse_dates.parse_date_time_Widgets()
+
+        if st.session_state.begin5:
+            dt_col=parse_dates.select_date_time_column(cleaned_df_list)
         
         #Processing Functions - Pure Python
-        if st.session_state.begin5:
-            cleaned_df_list=df_merged=parse_dates.extract_yr_mn_day_time(cleaned_df_list) #extract the Year, motnh, day and time
+        if st.session_state.ParseNextButton:
+            cleaned_df_list=df_merged=parse_dates.extract_yr_mn_day_time(cleaned_df_list, dt_col) #extract the Year, motnh, day and time
 
             #Streamlit Widget Functions -- End of section
             successes('Parsed the Date time column!')

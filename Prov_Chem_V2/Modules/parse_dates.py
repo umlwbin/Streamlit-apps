@@ -14,7 +14,7 @@ def parse_date_time_Widgets():
 
 def select_date_time_column(cleaned_df_list):
     st.markdown('##### ')
-    st.markdown('##### Select yoour ISO date-time column')
+    st.markdown('##### Select your ISO date-time column')
 
     def change_vars():
         st.session_state.ParseNextButton = False

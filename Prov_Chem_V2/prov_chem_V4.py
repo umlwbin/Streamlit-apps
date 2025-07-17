@@ -82,6 +82,7 @@ def successes(msg):
 
 #Global variables
 inconsistent_cols_error=False
+date_time_error=False
 cleaned_df_list=[]
 supplementary_df_list=[]
 placeholder=st.empty()
@@ -138,7 +139,7 @@ if datafiles and inconsistent_cols_error==False: #All is good to begin cleaning!
             #Streamlit Widget Functions -- Start of section
             var_col,value_col, additional_params=restructure_table.restructure_widgets(cleaned_df_list) or (None,None, None)
 
-            if st.session_state.radio2 and st.session_state.next3:
+            if st.session_state.radio2 and st.session_state.next2 and st.session_state.next3:
                 #Processing Functions - Pure Python
                 cleaned_df_list=restructure_table.filter_df_for_each_variable(cleaned_df_list,var_col,value_col, additional_params) or None #Extract variables as their own columns and add the VMV and Variable codes to the variable names (column headers)
                 
@@ -171,13 +172,13 @@ if datafiles and inconsistent_cols_error==False: #All is good to begin cleaning!
 
         #Processing Functions - Pure Python
         if st.session_state.next4 == True: #If button is clicked from one_dateTime_col_Widgets:
-            cleaned_df_list=iso_dates.convert_one_dateTime_col_to_iso(cleaned_df_list,date_time_col)# Convert dt col to ISO   
+            cleaned_df_list, date_time_error=iso_dates.convert_one_dateTime_col_to_iso(cleaned_df_list,date_time_col)# Convert dt col to ISO   
 
         if st.session_state.next5 == True: #If button is clicked from separate_dateTime_cols_Widgets:
-            cleaned_df_list=iso_dates.convert_date_and_time_cols_to_iso(date_col,time_col,cleaned_df_list) # Convert both cols to ISO  
+            cleaned_df_list, date_time_error=iso_dates.convert_date_and_time_cols_to_iso(date_col,time_col,cleaned_df_list) # Convert both cols to ISO  
 
         #Streamlit Widget Functions -- End of section
-        if st.session_state.next4 or st.session_state.next5:
+        if (st.session_state.next4 or st.session_state.next5) and date_time_error==False:
             successes('Created Date-Time column in ISO format!')
 
     with tab6:

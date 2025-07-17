@@ -85,7 +85,7 @@ def combine_values_with_headers_radio_widget(cols):
 
 def combine_values_with_headers_widgets(cols):
         st.markdown('######')
-        st.markdown('###### Great! Choose the column with the value you would like to add to the (variable) header names. These columns will then be removed.')
+        st.markdown('###### Great! Choose the column(s) with the value you would like to add to the variable header names. These columns will then be removed.')
         #Setting States
         # If the button is clicked, the session state is set to true (button is clicked)
         def click_button():
@@ -100,6 +100,8 @@ def combine_values_with_headers_widgets(cols):
         pot_vmv_codes='VMV'
         pot_var_codes='VARIABLE_CODE'
 
+        units, vmv_codes, var_codes= None, None, None
+
         for col in cols:
             if pot_units.lower() in col.lower():
                 units=col
@@ -108,8 +110,17 @@ def combine_values_with_headers_widgets(cols):
             if pot_var_codes.lower() in col.lower():
                 var_codes=col
 
-        additional_params=st.multiselect("Select one or more columns",cols, [units, vmv_codes, var_codes], on_change= change_vars)
-        st.button("Next", type="primary", key='Next_Button3', on_click=click_button)
+        #Check if any of the default have been found
+        if all(v is None for v in [units, vmv_codes, var_codes]):
+            default_value=None
+
+        else:
+            default_value=[v for v in [units, vmv_codes, var_codes] if v!=None ]
+
+        col1,col2, col3=st.columns(3, vertical_alignment='bottom')
+
+        additional_params=col1.multiselect("Select one or more columns",cols, default=default_value, on_change= change_vars)
+        col2.button("Next", type="primary", key='Next_Button3', on_click=click_button)
 
         if st.session_state.next3:
             return additional_params

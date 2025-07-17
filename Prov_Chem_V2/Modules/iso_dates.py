@@ -44,7 +44,10 @@ def one_dateTime_col_Widgets(cleaned_df_list, date_structure_radioButton):
     cols=list(cleaned_df_list[0].columns) #Updated columns
 
     potential_date_col = [string for string in cols if ('DATE' in string) or ('date' in string)]#get potential date column
-    potential_date_col_inex=cols.index(potential_date_col[0])#get index of first date element, ideally its just one
+    try:
+        potential_date_col_inex=cols.index(potential_date_col[0])#get index of first date element, ideally its just one
+    except IndexError:
+        potential_date_col_inex=None
     
     #Select Widget and Next Button
     date_time_col= col1.selectbox(label='Column',options=cols,index=potential_date_col_inex, key='select0', on_change=change_vars)# get name of the date_time column

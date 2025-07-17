@@ -19,58 +19,58 @@ output_path=os.path.abspath(os.curdir)
 
 sys.path.append(f'{input_path}/Modules') #adding the Modules directory to Python's search path at runtime.
 
-#Setting States
-if 'new_upload' not in st.session_state:
-    st.session_state.new_upload=False
-if 'toggleChange' not in st.session_state:
-    st.session_state.toggleChange=False
+# #Setting States
+# if 'new_upload' not in st.session_state:
+#     st.session_state.new_upload=False
+# if 'toggleChange' not in st.session_state:
+#     st.session_state.toggleChange=False
 
-if 'begin1' not in st.session_state:
-    st.session_state.begin1 = False
-if 'begin2' not in st.session_state:
-    st.session_state.begin2 = False
-if 'begin3' not in st.session_state:
-    st.session_state.begin3 = False
-if 'begin4' not in st.session_state:
-    st.session_state.begin4 = False
-if 'begin5' not in st.session_state:
-    st.session_state.begin5 = False
+# if 'begin1' not in st.session_state:
+#     st.session_state.begin1 = False
+# if 'begin2' not in st.session_state:
+#     st.session_state.begin2 = False
+# if 'begin3' not in st.session_state:
+#     st.session_state.begin3 = False
+# if 'begin4' not in st.session_state:
+#     st.session_state.begin4 = False
+# if 'begin5' not in st.session_state:
+#     st.session_state.begin5 = False
 
-if 'begin6' not in st.session_state:
-    st.session_state.begin6 = False
+# if 'begin6' not in st.session_state:
+#     st.session_state.begin6 = False
 
-if 'next1' not in st.session_state:
-    st.session_state.next1 = False
-if 'next2' not in st.session_state:
-    st.session_state.next2 = False
-if 'next3' not in st.session_state:
-    st.session_state.next3 = False
-if 'radio2' not in st.session_state:
-    st.session_state.radio2 = False
-if 'next4' not in st.session_state:
-    st.session_state.next4 = False
-if 'next5' not in st.session_state:
-    st.session_state.next5 = False
-if 'next6' not in st.session_state:
-    st.session_state.next6 = False
-if 'next7' not in st.session_state:
-    st.session_state.next7 = False
+# if 'mergeRowsNext1' not in st.session_state:
+#     st.session_state.mergeRowsNext1 = False
+# if 'next2' not in st.session_state:
+#     st.session_state.next2 = False
+# if 'next3' not in st.session_state:
+#     st.session_state.next3 = False
+# if 'radio2' not in st.session_state:
+#     st.session_state.radio2 = False
+# if 'next4' not in st.session_state:
+#     st.session_state.next4 = False
+# if 'next5' not in st.session_state:
+#     st.session_state.next5 = False
+# if 'next6' not in st.session_state:
+#     st.session_state.next6 = False
+# if 'next7' not in st.session_state:
+#     st.session_state.next7 = False
 
-if 'ParseNextButton' not in st.session_state:
-    st.session_state.ParseNextButton = False
+# if 'ParseNextButton' not in st.session_state:
+#     st.session_state.ParseNextButton = False
 
-if 'allDone' not in st.session_state:
-    st.session_state.allDone = False
+# if 'allDone' not in st.session_state:
+#     st.session_state.allDone = False
 
 
 #Module Imports for the different sections
-import  app_setup, file_uploads, file_structure, restructure_table, headers, iso_dates, parse_dates, rvq, save_and_download, units_vmv_merge
+import  states, app_setup, file_uploads, file_structure, restructure_table, headers, iso_dates, parse_dates, rvq, save_and_download, units_vmv_merge
 
-tab1, tabStructure, tab4, tab5, tab6, tab7, tabDownload= st.tabs(['File Upload','Restructure Files', 
+tab1, structureTab, tab4, tab5, tab6, tab7, tabDownload= st.tabs(['File Upload','Restructure Files', 
                                                                 'Clean Headers', 'Create ISO Date-Time', 'Parse Date','Manage RVQs',
                                                                 'Download Data'])
 
-#MESSAGES
+#MESSAGES-----------------------------------------------
 def warnings(msg):
     left, right = st.columns([0.8, 0.2])
     left.warning(f'{msg}', icon="⚠️")
@@ -83,15 +83,15 @@ def successes(msg):
     #left, right = st.columns([0.8, 0.2])
     st.success(f'Success! {msg}', icon="✅",)
 
-#Global variables
+#Global Variables-----------------------------------------
 inconsistent_cols_error=False
 date_time_error=False
 cleaned_df_list=[]
 supplementary_df_list=[]
 placeholder=st.empty()
 
-#PAGE & SESSION STATES SETUP
-app_setup.app_intro_sidebar()#Set up APP Page and session states
+#PAGE SETUP----------------------------------------------------
+app_setup.app_intro_sidebar()#Set up APP Page
 
 
 #WORKFLOW
@@ -108,27 +108,33 @@ with tab1: #File Upload Tab
     if example_file:
         datafiles=[example_file]
 
-    if st.session_state.new_upload and not datafiles:   #If an upload was done but the files are now removed
+    #If an upload was done but the files are now removed
+    if st.session_state.new_upload and not datafiles:   
         warnings('Please Upload CSV files')
 
-    if datafiles: #If there are files
+    #If there are files, uploaded or example
+    if datafiles: 
         datafiles_dfs,csvfileNames, inconsistent_cols_error=file_uploads.read_dfs(datafiles, inconsistent_cols_error) #Read the data files as dataframes
 
-    if inconsistent_cols_error: #inconsistent columns
+    #inconsistent columns
+    if inconsistent_cols_error: 
         errors('Ooops, I think your file might have inconsistent columns. Each line must have the same number of columns. Please reformat your files and re-upload.')
 
+#All is good to begin cleaning!!!!!🙌🏽-------------------------------------
+if datafiles and inconsistent_cols_error==False: 
+    
+    cleaned_df_list=datafiles_dfs #Initialize cleaned_df_list with the original uploaded files. This will keep changing after each step.
 
-if datafiles and inconsistent_cols_error==False: #All is good to begin cleaning!
-    cleaned_df_list=datafiles_dfs
-    with tabStructure:
-        structure_option=file_structure.choose_file_structure_widgets() or None
+    with structureTab:
+        #Get the option for the file structure from radio buttons
+        structure_option=file_structure.choose_file_structure_widgets() or None 
 
-        if structure_option=="merge_vmv_units":
-            # STEP--- Merge VMV and UNit Rows-------------------------------------------
+        if structure_option=="merge_vmv_units":# STEP--- Merge VMV and UNit Rows-------------------------------------------
+            
             #Streamlit Widget Functions -- Start of section
             vmvCode_row,units_row=units_vmv_merge.merge_rows_widget() or (None, None)
 
-            if st.session_state.next1: #next button from the above widget function is clicked
+            if st.session_state.mergeRowsNext1: #next button from the above widget function is clicked
 
                 #Processing Functions - Pure Python
                 cleaned_df_list=units_vmv_merge.merge_rows(cleaned_df_list, vmvCode_row,units_row)
@@ -137,8 +143,7 @@ if datafiles and inconsistent_cols_error==False: #All is good to begin cleaning!
                     #Streamlit Widget Functions -- End of section
                     successes("Rows have been merged and headers cleaned!") #Streamlit success message
 
-        if structure_option=="pivot":
-            # STEP--- Restructure table and Extract Variables-------------------------------------------
+        if structure_option=="pivot":# STEP--- Restructure table and Extract Variables-------------------------------------------
             #Streamlit Widget Functions -- Start of section
             var_col,value_col, additional_params=restructure_table.restructure_widgets(cleaned_df_list) or (None,None, None)
 
@@ -227,7 +232,7 @@ if datafiles and inconsistent_cols_error==False: #All is good to begin cleaning!
 
 
 
-    #if st.session_state.nextTask and st.session_state.next1: #Go straight to managing the date and time columns
+    #if st.session_state.nextTask and st.session_state.mergeRowsNext1: #Go straight to managing the date and time columns
 
     # STEP--- Merge VMV and UNit Rows-------------------------------------------
     #Streamlit Widget Functions -- Start of section

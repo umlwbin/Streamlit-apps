@@ -11,22 +11,22 @@ def merge_rows_widget():
     '(removes special characters and spaces).' )
 
     def click_Begin_button():
-        st.session_state.begin1 = True
+        st.session_state.mergeRowsBegin = True
     st.button("Let's Go!", type="primary", key='Begin_Button1', on_click=click_Begin_button)
 
     
-    if st.session_state.begin1:
+    if st.session_state.mergeRowsBegin:
         #Setting States
-        if 'next1' not in st.session_state:
-            st.session_state.next1 = False
+        if 'mergeRowsNext1' not in st.session_state:
+            st.session_state.mergeRowsNext1 = False
 
         # If the button is clicked, the session state is set to true (button is clicked)
         def click_button():
-            st.session_state.next1 = True
+            st.session_state.mergeRowsNext1 = True
 
         # If the number is changed, the session state is set to False (button is unclicked, so user has to click again)
         def change_vars():
-            st.session_state.next1 = False
+            st.session_state.mergeRowsNext1 = False
             st.session_state.allDone=False
 
         st.markdown('#####')
@@ -38,7 +38,7 @@ def merge_rows_widget():
         #Next button
         col3.button("Next", type="primary", key='Next_Button5', on_click=click_button)
 
-        if st.session_state.next1:
+        if st.session_state.mergeRowsNext1:
             return vmvCode_row,units_row
        
 

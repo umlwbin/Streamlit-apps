@@ -22,20 +22,22 @@ def fileupload_Widget():
     def newUpload(): #on change fucntion
         st.session_state.new_upload=True
         st.session_state.toggleChange=False
-        st.session_state.begin1 = False
+        st.session_state.mergeRowsBegin = False
+        
         st.session_state.begin2 = False
         st.session_state.begin3 = False
         st.session_state.begin4 = False
         st.session_state.begin5 = False
         st.session_state.begin6 = False
 
-        st.session_state.next1=False
-        st.session_state.next2=False
-        st.session_state.next3=False
-        st.session_state.next4=False
-        st.session_state.next5=False
-        st.session_state.next6=False
-        st.session_state.next7=False
+        # st.session_state.next1=False
+        # st.session_state.next2=False
+        # st.session_state.next3=False
+        # st.session_state.next4=False
+        # st.session_state.next5=False
+        # st.session_state.next6=False
+        # st.session_state.next7=False
+        # st.session_state.NextButton_Parse=False
         st.session_state.allDone=False
 
     datafiles = st.file_uploader("Choose CSV files", accept_multiple_files=True, on_change=newUpload, type="csv", key='fileupload')
@@ -43,7 +45,6 @@ def fileupload_Widget():
     #If there are files uploaded retrun them
     if st.session_state.new_upload:
         return datafiles
-
 
 def example_file_widget():
     st.markdown("##### ")

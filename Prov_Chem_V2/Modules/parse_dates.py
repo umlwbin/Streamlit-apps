@@ -26,7 +26,16 @@ def select_date_time_column(cleaned_df_list):
     cols=list(cleaned_df_list[0].columns)
     col1, col2=st.columns(2)
 
-    dt_col=col1.selectbox('Date-Time column', options=cols, on_change=change_vars)
+    potential_date_col = [string for string in cols if ('DATE' in string) or ('date' in string)]#get potential date column
+    try:
+        potential_date_col_inex=cols.index(potential_date_col[0])#get index of first date element, ideally its just one
+    except IndexError:
+        potential_date_col_inex=None
+
+    #Select widget
+    dt_col=col1.selectbox('Date-Time column', options=cols, index=potential_date_col_inex,on_change=change_vars)
+
+    #Next button
     st.button("Next", type="primary", key='NextButton_Parse', on_click=click_Next_button)
 
     if st.session_state.ParseNextButton:

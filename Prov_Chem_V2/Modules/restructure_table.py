@@ -6,14 +6,14 @@ def restructure_widgets(cleaned_df_list):
     st.markdown('##### 🗒️ Pivoting your Data Table')
     st.markdown('This step cleans a provincial file that contains a column with the variables/parameters and a column with values.')
 
-    if 'begin2' not in st.session_state:
-        st.session_state.begin2 = False
+    if 'pivotBegin' not in st.session_state:
+        st.session_state.pivotBegin = False
 
     def click_Begin_button():
-        st.session_state.begin2 = True
+        st.session_state.pivotBegin = True
     st.button("Let's Go!", type="primary", key='Begin_Button2', on_click=click_Begin_button)
 
-    if st.session_state.begin2: #Lets go button is pressed
+    if st.session_state.pivotBegin: #Lets go button is pressed
 
         #Check for the VARIABLE and VALUE columns
         st.markdown('#####')

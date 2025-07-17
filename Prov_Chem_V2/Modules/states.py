@@ -9,9 +9,9 @@ if 'toggleChange' not in st.session_state:
 
 if 'mergeRowsBegin' not in st.session_state:
     st.session_state.mergeRowsBegin = False
-    
-if 'begin2' not in st.session_state:
-    st.session_state.begin2 = False
+
+if 'pivotBegin' not in st.session_state:
+    st.session_state.pivotBegin = False
 if 'begin3' not in st.session_state:
     st.session_state.begin3 = False
 if 'begin4' not in st.session_state:

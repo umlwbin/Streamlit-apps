@@ -23,8 +23,8 @@ def fileupload_Widget():
         st.session_state.new_upload=True
         st.session_state.toggleChange=False
         st.session_state.mergeRowsBegin = False
+        st.session_state.pivotBegin = False
         
-        st.session_state.begin2 = False
         st.session_state.begin3 = False
         st.session_state.begin4 = False
         st.session_state.begin5 = False

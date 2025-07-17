@@ -19,52 +19,57 @@ output_path=os.path.abspath(os.curdir)
 
 sys.path.append(f'{input_path}/Modules') #adding the Modules directory to Python's search path at runtime.
 
-# #Setting States
-# if 'new_upload' not in st.session_state:
-#     st.session_state.new_upload=False
-# if 'toggleChange' not in st.session_state:
-#     st.session_state.toggleChange=False
+import streamlit as st
 
-# if 'begin1' not in st.session_state:
-#     st.session_state.begin1 = False
-# if 'begin2' not in st.session_state:
-#     st.session_state.begin2 = False
-# if 'begin3' not in st.session_state:
-#     st.session_state.begin3 = False
-# if 'begin4' not in st.session_state:
-#     st.session_state.begin4 = False
-# if 'begin5' not in st.session_state:
-#     st.session_state.begin5 = False
 
-# if 'begin6' not in st.session_state:
-#     st.session_state.begin6 = False
+#Setting States
+if 'new_upload' not in st.session_state:
+    st.session_state.new_upload=False
+if 'toggleChange' not in st.session_state:
+    st.session_state.toggleChange=False
 
-# if 'mergeRowsNext1' not in st.session_state:
-#     st.session_state.mergeRowsNext1 = False
-# if 'next2' not in st.session_state:
-#     st.session_state.next2 = False
-# if 'next3' not in st.session_state:
-#     st.session_state.next3 = False
-# if 'radio2' not in st.session_state:
-#     st.session_state.radio2 = False
-# if 'next4' not in st.session_state:
-#     st.session_state.next4 = False
-# if 'next5' not in st.session_state:
-#     st.session_state.next5 = False
-# if 'next6' not in st.session_state:
-#     st.session_state.next6 = False
-# if 'next7' not in st.session_state:
-#     st.session_state.next7 = False
+if 'mergeRowsBegin' not in st.session_state:
+    st.session_state.mergeRowsBegin = False
 
-# if 'ParseNextButton' not in st.session_state:
-#     st.session_state.ParseNextButton = False
+if 'pivotBegin' not in st.session_state:
+    st.session_state.pivotBegin = False
+if 'begin3' not in st.session_state:
+    st.session_state.begin3 = False
+if 'begin4' not in st.session_state:
+    st.session_state.begin4 = False
+if 'begin5' not in st.session_state:
+    st.session_state.begin5 = False
 
-# if 'allDone' not in st.session_state:
-#     st.session_state.allDone = False
+if 'begin6' not in st.session_state:
+    st.session_state.begin6 = False
+
+if 'next1' not in st.session_state:
+    st.session_state.next1 = False
+if 'next2' not in st.session_state:
+    st.session_state.next2 = False
+if 'next3' not in st.session_state:
+    st.session_state.next3 = False
+if 'radio2' not in st.session_state:
+    st.session_state.radio2 = False
+if 'next4' not in st.session_state:
+    st.session_state.next4 = False
+if 'next5' not in st.session_state:
+    st.session_state.next5 = False
+if 'next6' not in st.session_state:
+    st.session_state.next6 = False
+if 'next7' not in st.session_state:
+    st.session_state.next7 = False
+
+if 'ParseNextButton' not in st.session_state:
+    st.session_state.ParseNextButton = False
+
+if 'allDone' not in st.session_state:
+    st.session_state.allDone = False
+
 
 
 #Module Imports for the different sections
-import  states, app_setup, file_uploads, file_structure, restructure_table, headers, iso_dates, parse_dates, rvq, save_and_download, units_vmv_merge
+import  app_setup, file_uploads, file_structure, restructure_table, headers, iso_dates, parse_dates, rvq, save_and_download, units_vmv_merge
 
 tab1, structureTab, tab4, tab5, tab6, tab7, tabDownload= st.tabs(['File Upload','Restructure Files', 
                                                                 'Clean Headers', 'Create ISO Date-Time', 'Parse Date','Manage RVQs',

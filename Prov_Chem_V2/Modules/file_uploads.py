@@ -53,7 +53,7 @@ def example_file_widget():
     def on_toggle():
         st.session_state.toggleChange=True
   
-    example_on=st.toggle("Yep, use an example", on_change=on_toggle, key=st.session_state.toggleChange)
+    example_on=st.toggle("Yep, use an example (If this glitches at first, just click again! 😬)", on_change=on_toggle, key=st.session_state.toggleChange)
 
     if example_on and st.session_state.toggleChange==True:
         example_file=output_path+'/example_LWOsis.csv'

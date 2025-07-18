@@ -33,34 +33,37 @@ if 'mergeRowsBegin' not in st.session_state:
 if 'pivotBegin' not in st.session_state:
     st.session_state.pivotBegin = False
 
-if 'begin3' not in st.session_state:
-    st.session_state.begin3 = False
-if 'begin4' not in st.session_state:
-    st.session_state.begin4 = False
-if 'begin5' not in st.session_state:
-    st.session_state.begin5 = False
-if 'begin6' not in st.session_state:
-    st.session_state.begin6 = False
+if 'headersBegin' not in st.session_state:
+    st.session_state.headersBegin = False
+
+if 'isoBegin' not in st.session_state:
+    st.session_state.isoBegin = False
+if 'parseBegin' not in st.session_state:
+    st.session_state.parseBegin = False
+if 'rvqBegin' not in st.session_state:
+    st.session_state.rvqBegin = False
 
 if 'mergeRowsNext1' not in st.session_state:
     st.session_state.mergeRowsNext1 = False
-if 'next2' not in st.session_state:
-    st.session_state.next2 = False
-if 'next3' not in st.session_state:
-    st.session_state.next3 = False
-if 'radio2' not in st.session_state:
-    st.session_state.radio2 = False
-if 'next4' not in st.session_state:
-    st.session_state.next4 = False
-if 'next5' not in st.session_state:
-    st.session_state.next5 = False
-if 'next6' not in st.session_state:
-    st.session_state.next6 = False
-if 'next7' not in st.session_state:
-    st.session_state.next7 = False
+if 'PivotNext1' not in st.session_state:
+    st.session_state.PivotNext1 = False
+if 'PivotNext2' not in st.session_state:
+    st.session_state.PivotNext2 = False
+if 'pivotRadio1' not in st.session_state:
+    st.session_state.pivotRadio1 = False
 
-if 'ParseNextButton' not in st.session_state:
-    st.session_state.ParseNextButton = False
+if 'isoNext1' not in st.session_state:
+    st.session_state.isoNext1 = False
+if 'isoNext2' not in st.session_state:
+    st.session_state.isoNext2 = False
+
+if 'parseNext1' not in st.session_state:
+    st.session_state.parseNext1 = False
+
+if 'rvqNext1' not in st.session_state:
+    st.session_state.rvqNext1 = False
+if 'rvqNext2' not in st.session_state:
+    st.session_state.rvqNext2 = False
 
 if 'allDone' not in st.session_state:
     st.session_state.allDone = False
@@ -68,9 +71,9 @@ if 'allDone' not in st.session_state:
 
 
 #Module Imports for the different sections
-import  app_setup, file_uploads, file_structure, restructure_table, headers, iso_dates, parse_dates, rvq, save_and_download, units_vmv_merge
+import  app_setup, file_uploads, file_structure, pivot_table, headers, iso_dates, parse_dates, rvq, save_and_download, units_vmv_merge
 
-tab1, structureTab, tab4, tab5, tab6, tab7, tabDownload= st.tabs(['File Upload','Restructure Files', 
+tab1, structureTab, headersTab, isoTab, parseTab, rvqTab, downloadTab= st.tabs(['File Upload','Restructure Files', 
                                                                 'Clean Headers', 'Create ISO Date-Time', 'Parse Date','Manage RVQs',
                                                                 'Download Data'])
 
@@ -90,6 +93,8 @@ def successes(msg):
 #Global Variables-----------------------------------------
 inconsistent_cols_error=False
 date_time_error=False
+no_user_codes_in_files=False
+
 cleaned_df_list=[]
 supplementary_df_list=[]
 placeholder=st.empty()
@@ -129,7 +134,7 @@ if datafiles and inconsistent_cols_error==False:
     
     cleaned_df_list=datafiles_dfs #Initialize cleaned_df_list with the original uploaded files. This will keep changing after each step.
 
-    with structureTab:
+    with structureTab: #Tab for choosing the structure of files-------------------------------------------
         #Get the option for the file structure from radio buttons
         structure_option=file_structure.choose_file_structure_widgets() or None 
 
@@ -149,213 +154,84 @@ if datafiles and inconsistent_cols_error==False:
 
         if structure_option=="pivot":# STEP--- Restructure table and Extract Variables-------------------------------------------
             #Streamlit Widget Functions -- Start of section
-            var_col,value_col, additional_params=restructure_table.restructure_widgets(cleaned_df_list) or (None,None, None)
+            var_col,value_col, additional_params=pivot_table.restructure_widgets(cleaned_df_list) or (None,None, None)
 
-            if st.session_state.radio2 and st.session_state.next2 and st.session_state.next3:
+            if st.session_state.pivotRadio1 and st.session_state.PivotNext1 and st.session_state.PivotNext2:
                 #Processing Functions - Pure Python
-                cleaned_df_list=restructure_table.filter_df_for_each_variable(cleaned_df_list,var_col,value_col, additional_params) or None #Extract variables as their own columns and add the VMV and Variable codes to the variable names (column headers)
+                cleaned_df_list=pivot_table.filter_df_for_each_variable(cleaned_df_list,var_col,value_col, additional_params) or None #Extract variables as their own columns and add the VMV and Variable codes to the variable names (column headers)
                 
                 #Streamlit Widget Functions -- End of section
                 if cleaned_df_list:
                     successes("File has been restructured!") #Streamlit success message
 
             
-    with tab4:
-        # STEP 2--- Clean Headers-------------------------------------------
+    with headersTab:# STEP--- Clean Headers-------------------------------------------       
         #Streamlit Widget Functions -- Start of section
         headers.clean_headers_widgets()
 
-        if st.session_state.begin3:
+        if st.session_state.headersBegin:
             #Processing Functions - Pure Python
             cleaned_df_list=headers.clean_headers(cleaned_df_list) #Remove special characters from headers
 
             #Streamlit Widget Functions -- End of section
             successes("Headers have been cleaned!")
 
-    with tab5:
-        #STEP 4 Convert the one dt column, or separate d & t columns to ISO-------------------------------------------
+    with isoTab:#STEP 4 Convert the one dt column, or separate D & T columns to ISO------------------------------
         # Streamlit Widget Functions -- Start of section      
         date_structure_radioButton=iso_dates.Choose_One_Or_Two_DateTime_Columns_Widgets() #Separate date + time cols, or just one dateTime column? Create radio buttons to get user selection (date_structure)
         
-        if st.session_state.begin4:
+        if st.session_state.isoBegin:
             if date_structure_radioButton: #Don't continue unless this widget has a value from user
                 date_time_col=iso_dates.one_dateTime_col_Widgets(cleaned_df_list, date_structure_radioButton) or None #widgets for allowing user to select the date-time column
                 date_col, time_col=iso_dates.separate_dateTime_cols_Widgets(cleaned_df_list, date_structure_radioButton) or (None, None)#widgets for allowing user to select both date and time column 
 
         #Processing Functions - Pure Python
-        if st.session_state.next4 == True: #If button is clicked from one_dateTime_col_Widgets:
+        if st.session_state.isoNext1 == True: #If button is clicked from one_dateTime_col_Widgets:
             cleaned_df_list, date_time_error=iso_dates.convert_one_dateTime_col_to_iso(cleaned_df_list,date_time_col)# Convert dt col to ISO   
 
-        if st.session_state.next5 == True: #If button is clicked from separate_dateTime_cols_Widgets:
+        if st.session_state.isoNext2 == True: #If button is clicked from separate_dateTime_cols_Widgets:
             cleaned_df_list, date_time_error=iso_dates.convert_date_and_time_cols_to_iso(date_col,time_col,cleaned_df_list) # Convert both cols to ISO  
 
         #Streamlit Widget Functions -- End of section
-        if (st.session_state.next4 or st.session_state.next5) and date_time_error==False:
+        if (st.session_state.isoNext1 or st.session_state.isoNext2) and date_time_error==False:
             successes('Created Date-Time column in ISO format!')
 
-    with tab6:#STEP--- #Parse ISO Date-Time column into yr, month, day, time-------------------------------------------
-        
+
+    with parseTab:#STEP--- #Parse ISO Date-Time column into yr, month, day, time-------------------------------------------     
         # Streamlit Widget Functions -- Start of section
         parse_dates.parse_date_time_Widgets()
 
-        if st.session_state.begin5:
+        if st.session_state.parseBegin:
             dt_col=parse_dates.select_date_time_column_Widgets(cleaned_df_list)
         
         #Processing Functions - Pure Python
         
-        if st.session_state.ParseNextButton==True:
+        if st.session_state.parseNext1==True:
             cleaned_df_list, date_time_error=df_merged=parse_dates.extract_yr_mn_day_time(cleaned_df_list, dt_col) #extract the Year, motnh, day and time
 
             if date_time_error==False:
                 #Streamlit Widget Functions -- End of section
                 successes('Parsed the Date time column!')
 
-    with tab7:
-    #STEP--- # Result Value Qualifier (RVQ) Management-------------------------------------------
+    with rvqTab:#STEP--- # Result Value Qualifier (RVQ) Management-------------------------------------------
     # Streamlit Widget Functions -- Start of section
         starting_rvq_var, exceptions=rvq.choose_RVQs_Widgets(cleaned_df_list) or (None,None) #Allow users to choose starting RVQs and exceptions
 
-        if st.session_state.next6:# Next button from choose_RVQs_Widgets was been clicked
+        if st.session_state.rvqNext1:# Next button from choose_RVQs_Widgets was been clicked
             if starting_rvq_var != None: # A starting RVQ was selected, thus there ARE RVQ cols
                 usercodes,rvqcodes=rvq.match_rvq_to_user_codes_widgets() or (None,None) #Allow user to match the User codes to rvq codes
 
-            if st.session_state.next7 and usercodes and rvqcodes:
+            if st.session_state.rvqNext2 and usercodes and rvqcodes:
                 #Processing Functions - Pure Python
                 supplementary_df_list=rvq.save_rvq_df_as_csv(supplementary_df_list, usercodes,rvqcodes) #Create an RVQ df and save as csv                
-                cleaned_df_list=rvq.add_RVQs_to_files(cleaned_df_list, starting_rvq_var, exceptions, usercodes,rvqcodes) #Add RVQ columns and codes to appropriate variable columns
+                cleaned_df_list, no_user_codes_in_files=rvq.add_RVQs_to_files(cleaned_df_list, starting_rvq_var, exceptions, usercodes,rvqcodes) #Add RVQ columns and codes to appropriate variable columns
 
-                #Streamlit Widget Functions -- End of section
-                successes('Added RVQs!')
+                if no_user_codes_in_files==False:
+                    #Streamlit Widget Functions -- End of section
+                    successes('Added RVQs!')
 
-    with tabDownload:
+    with downloadTab:
         save_and_download.download_view_widgets(cleaned_df_list)
 
         if st.session_state.allDone:
             save_and_download.download_output(output_path, cleaned_df_list, csvfileNames, supplementary_df_list)
-
-
-
-
-
-
-    #if st.session_state.nextTask and st.session_state.mergeRowsNext1: #Go straight to managing the date and time columns
-
-    # STEP--- Merge VMV and UNit Rows-------------------------------------------
-    #Streamlit Widget Functions -- Start of section
-
-        # count=0
-        # final_df_list=[]
-        # total_dfs=len(datafiles_dfs)
-
-        # #Loop through all the dataframes created from the files
-        # for df, csv in zip(datafiles_dfs, csvfileNames): 
-        #     count=count+1
-
-        #     if count==1:
-        #         units_vmv_merge.merge_rows_intro_widget()
-        #         if st.session_state.clicked4:
-        #             vmvCode_row,units_row=units_vmv_merge.merge_rows_widget() or (None, None)
-        #     if st.session_state.clicked5:
-        #         df=units_vmv_merge.merge_rows(df, vmvCode_row,units_row)
-        #         st.write(df.head())
-
-        #     # STEP 1--- Restructure table and Extract Variables-------------------------------------------
-        #     #Streamlit Widget Functions -- Start of section
-        #     if count==1:
-        #         restructure_table.restructure_widgets()
-
-        #     #Processing Functions - Pure Python
-        #     df_merged=restructure_table.filter_df_for_each_variable(df) #Extract variables as their own columns and add the VMV and Variable codes to the variable names (column headers)
-            
-        #     #Streamlit Widget Functions -- End of section
-        #     if count==total_dfs:
-        #         successes("File has been restructured!") #Streamlit success message
-        #         st.write(df_merged.head())
-
-        #     # STEP 2--- Clean Headers-------------------------------------------
-        #     #Streamlit Widget Functions -- Start of section
-        #     if count==1:
-        #         headers.clean_headers_widgets()
-
-        #     #Processing Functions - Pure Python
-        #     df_merged=headers.clean_headers(df_merged) #Remove special characters from headers
-
-        #     #Streamlit Widget Functions -- End of section
-        #     if count==total_dfs:
-        #         successes("Headers have been cleaned!")
-        #         st.write(df_merged.head())
-
-        #     # STEP 3--- Determine if there is one col for date and time or separate columns-------------------------------------------
-        #     #Streamlit Widgets
-        #     if count==1:       
-        #         date_structure_radioButton=iso_dates.Choose_One_Or_Two_DateTime_Columns_Widgets() #Separate date + time cols, or just one dateTime column? Create radio buttons to get user selection (date_structure)
-            
-        #     #STEP 4 Convert the one dt column, or separate d & t columns to ISO-------------------------------------------
-        #     # Streamlit Widget Functions -- Start of section
-        #         if date_structure_radioButton: #Don't continue unless this widget has a value from user
-        #             date_time_col=iso_dates.one_dateTime_col_Widgets(df_merged, date_structure_radioButton) #widgets for allowing user to select the date-time column
-        #             date_col, time_col=iso_dates.separate_dateTime_cols_Widgets(df_merged, date_structure_radioButton) #widgets for allowing user to select both date and time column
-
-        #     #Processing Functions - Pure Python
-        #     if st.session_state.clicked0 == True: #If button is clicked from one_dateTime_col_Widgets:
-        #         df_merged=iso_dates.convert_one_dateTime_col_to_iso(df_merged,date_time_col)# Convert dt col to ISO   
-
-        #     if st.session_state.clicked01 == True: #If button is clicked from separate_dateTime_cols_Widgets:
-        #         df_merged=iso_dates.convert_date_and_time_cols_to_iso(date_col,time_col,df_merged) # Convert both cols to ISO  
-
-        #     #Streamlit Widget Functions -- End of section
-        #     if st.session_state.clicked0 or st.session_state.clicked01:
-        #         if count==total_dfs:
-        #             successes('Created Date-Time column in ISO format!')
-        #             st.write(df_merged.head())
-
-        #     #STEP 5--- #Parse ISO Date-Time column into yr, month, day, time-------------------------------------------
-        #     # Streamlit Widget Functions -- Start of section
-        #     if count==1:
-        #         if st.session_state.clicked0 or st.session_state.clicked01: # Either of the next buttons button
-        #             ignore=parse_dates.parse_date_time_Widgets()
-
-        #     #Processing Functions - Pure Python
-        #     if st.session_state.clicked02 == True: ## Next button from parse_date_time_Widgets was been clicked
-        #         df_merged=parse_dates.extract_yr_mn_day_time(df_merged) #extract the Year, motnh, day and time
-        #         df_merged=parse_dates.move_cols_to_front_of_dataframe(df_merged) #Move these extracted cols to front of the dataframe
-
-        #     #Streamlit Widget Functions -- End of section
-        #         if count==total_dfs:
-        #             successes('Parsed the Date time column!')
-        #             st.write(df_merged.head(5))
-
-        #     #STEP 6--- # Result Value Qualifier (RVQ) Management-------------------------------------------
-        #     # Streamlit Widget Functions -- Start of section
-        #         if count==1:
-        #             starting_rvq_var, exceptions=rvq.choose_RVQs_Widgets(df_merged) or (None,None) #Allow users to choose starting RVQs and exceptions
-                
-        #         if st.session_state.clicked2:# Next button from choose_RVQs_Widgets was been clicked
-        #             if starting_rvq_var != None: # A starting RVQ was selected, thus there ARE RVQ cols
-        #                 usercodes,rvqcodes=rvq.match_rvq_to_user_codes_widgets() or (None,None) #Allow user to match the User codes to rvq codes
-                    
-        #     #Processing Functions - Pure Python
-        #             if st.session_state.clicked3:
-        #                 rvqdict=rvq.create_rvq_dictionary_from_user_input(usercodes,rvqcodes) #Create an RVQ dictionary
-        #                 rvq.save_rvq_dict_tocsv(rvqdict) #Save this RVQ dictionary as a CSV file e.g, 999:NC, L:BDL
-        #                 vars_with_rvqs=rvq.create_list_with_potential_rvq_variables(df_merged, starting_rvq_var, exceptions) #List of all variables that should be associated with RVQs as selected by the user
-
-        #                 #Let us loop through this varibale list and check for actual instances of user codes and get the rows
-        #                 rvq_dict_per_Variable_List = [] #This will contain a list of dictionaries for each variable that has user codes in their column. E.g,  {variable: Temp; usercodes:L0.5, L8; Rows: 0,3}
-        #                 for variable in vars_with_rvqs:
-        #                     rvq_dict_per_Variable_List, df_merged=rvq.checkFor_UserCodes_in_RVQVariable_Columns(df_merged,usercodes,rvqcodes, variable, rvq_dict_per_Variable_List)
-
-        #                 final_RVQ_Variable_list=rvq.filter_actual_RVQ_variables(rvq_dict_per_Variable_List) #Get the variables that actually have usercodes, these are the only ones actually associated with RVQs
-
-        #                 #Let us create the RVQ column only for those Variables that actually have usercodes:
-        #                 df_merged=rvq.create_RVQ_columns_for_Variables(rvq_dict_per_Variable_List,df_merged)
-                        
-        #                 final_df_list=save_and_download.save_final_dataframe(df_merged, csv, total_dfs, count, final_df_list) #Create csv file for data frame without dl still present in file
-                               
-        #         if st.session_state.clicked2 and starting_rvq_var == None:
-        #             save_and_download.save_raw_files_if_no_rvq(df_merged,csv)# Just save the raw files with RVQ empty cols
-
-        # if st.session_state.AllFilesProcessed:
-        #     save_and_download.download_output(output_path, final_df_list)
-
-

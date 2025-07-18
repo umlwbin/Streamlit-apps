@@ -6,7 +6,7 @@ def clean_headers_widgets():
     st.markdown('This step removes special characters and extra spaces from column headers, making them database-compatible.')
 
     def click_Begin_button():
-        st.session_state.begin3 = True
+        st.session_state.headersBegin = True
         st.session_state.allDone=False
     st.button("Let's Go!", type="primary", key='Begin_Button3', on_click=click_Begin_button)
 

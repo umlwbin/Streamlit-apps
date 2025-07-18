@@ -20,6 +20,5 @@ def choose_file_structure_widgets():
     if structure_radio_button:
         if structure_radio_button=='Your file has one row of **headers**, **VMV codes** and **units**, and you would like to restructure the file so that there is only one header row with the VMV codes and units added ot the column names.':
             return "merge_vmv_units"
-        
         else:
             return "pivot"

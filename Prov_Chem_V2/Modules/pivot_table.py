@@ -38,11 +38,11 @@ def restructure_widgets(cleaned_df_list):
         #Setting States
         # If the button is clicked, the session state is set to true (button is clicked)
         def click_button():
-            st.session_state.next2 = True
+            st.session_state.PivotNext1 = True
 
         # If the number is changed, the session state is set to False (button is unclicked, so user has to click again)
         def change_vars():
-            st.session_state.next2 = False
+            st.session_state.PivotNext1 = False
             st.session_state.allDone=False
 
         col1,col2, col3=st.columns(3, vertical_alignment='bottom')
@@ -52,7 +52,7 @@ def restructure_widgets(cleaned_df_list):
         #Next button
         col3.button("Next", type="primary", key='Next_Button02', on_click=click_button)
 
-        if st.session_state.next2==True: #Next button is pressed
+        if st.session_state.PivotNext1==True: #Next button is pressed
 
             additional_params=combine_values_with_headers_radio_widget(cols)
             return var_col,value_col, additional_params
@@ -65,12 +65,12 @@ def combine_values_with_headers_radio_widget(cols):
     st.markdown('You could add the **Units**, **VMV codes** or **Varibale codes** from corresponding columns (e.g, Temperature_degC_567). ')
 
     def change_radio():
-        st.session_state.radio2 = True
+        st.session_state.pivotRadio1 = True
         st.session_state.begin3 = False #The clean headers lets go button is deactivated
         st.session_state.begin4 = False #iso date lets go button is deactivated
         st.session_state.begin5 = False #parse date lets go button is deactivated
         st.session_state.begin6 = False #rvq lets go button is deactivated
-        st.session_state.next3 = False # So they have to press the next button again
+        st.session_state.PivotNext2 = False # So they have to press the next button again
 
 
     add_params_radio=st.radio("Would you like to add a column value to the variable header names, e.g, units?", ["Sure! 🤩", "Nah, I'm good 🙃"], on_change=change_radio,args=() , index=None)
@@ -80,7 +80,7 @@ def combine_values_with_headers_radio_widget(cols):
         return additional_params
 
     if add_params_radio=="Nah, I'm good 🙃":
-        st.session_state.next3 = True # It's like they pressed the next button. This has to be true for the next filter function to run.
+        st.session_state.PivotNext2 = True # It's like they pressed the next button. This has to be true for the next filter function to run.
         return None
 
 def combine_values_with_headers_widgets(cols):
@@ -89,11 +89,11 @@ def combine_values_with_headers_widgets(cols):
         #Setting States
         # If the button is clicked, the session state is set to true (button is clicked)
         def click_button():
-            st.session_state.next3 = True
+            st.session_state.PivotNext2 = True
 
         # If the number is changed, the session state is set to False (button is unclicked, so user has to click again)
         def change_vars():
-            st.session_state.next3 = False
+            st.session_state.PivotNext2 = False
 
         #Find potential unit, vmv, and variable codes (typical to add to the column headers)
         pot_units='UNIT'
@@ -122,7 +122,7 @@ def combine_values_with_headers_widgets(cols):
         additional_params=col1.multiselect("Select one or more columns",cols, default=default_value, on_change= change_vars)
         col2.button("Next", type="primary", key='Next_Button3', on_click=click_button)
 
-        if st.session_state.next3:
+        if st.session_state.PivotNext2:
             return additional_params
 
 def filter_df_for_each_variable(cleaned_df_list,var_col,value_col, additional_params):

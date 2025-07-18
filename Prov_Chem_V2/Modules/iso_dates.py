@@ -9,15 +9,15 @@ def Choose_One_Or_Two_DateTime_Columns_Widgets():
 
     # If the selections are changed, the session state is set to False (button is unclicked, so user has to click NExt again)
     def change_vars():
-        st.session_state.next4 = False
-        st.session_state.next5 = False
+        st.session_state.isoNext1 = False
+        st.session_state.isoNext2 = False
         st.session_state.allDone=False
 
     def click_Begin_button():
-        st.session_state.begin4 = True
+        st.session_state.isoBegin = True
     st.button("Let's Go!", type="primary", key='Begin_Button4', on_click=click_Begin_button)
 
-    if st.session_state.begin4: 
+    if st.session_state.isoBegin: 
         #Create the radio buttons to choose
         st.markdown('#####')
         st.markdown('##### Is there one date-time column, or separate date and time columns?')
@@ -34,11 +34,11 @@ def one_dateTime_col_Widgets(cleaned_df_list, date_structure_radioButton):
     #Setting States
     # If the button is clicked, the session state is set to true (button is clicked)
     def click_button():
-        st.session_state.next4 = True
+        st.session_state.isoNext1 = True
 
     # If the number is changed, the session state is set to False (button is unclicked, so user has to click again)
     def change_vars():
-        st.session_state.next4 = False
+        st.session_state.isoNext1 = False
 
     col1,col2=st.columns(2, vertical_alignment="center", gap="large")
     cols=list(cleaned_df_list[0].columns) #Updated columns
@@ -115,11 +115,11 @@ def separate_dateTime_cols_Widgets(cleaned_df_list, date_structure_radioButton):
     #Setting States
     # If the button is clicked, the session state is set to true (button is clicked)
     def click_button():
-        st.session_state.next5 = True
+        st.session_state.isoNext2 = True
 
     # If the number is changed, the session state is set to False (button is unclicked, so user has to click again)
     def change_vars():
-        st.session_state.next5 = False
+        st.session_state.isoNext2 = False
 
     col1,col2=st.columns(2, vertical_alignment="center", gap="large")
     

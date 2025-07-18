@@ -24,19 +24,19 @@ def fileupload_Widget():
         st.session_state.toggleChange=False
         st.session_state.mergeRowsBegin = False
         st.session_state.pivotBegin = False
-        
-        st.session_state.begin3 = False
-        st.session_state.begin4 = False
-        st.session_state.begin5 = False
-        st.session_state.begin6 = False
+
+        st.session_state.headersBegin = False
+        st.session_state.isoBegin = False
+        st.session_state.parseBegin = False
+        st.session_state.rvqBegin = False
 
         # st.session_state.next1=False
-        # st.session_state.next2=False
-        # st.session_state.next3=False
-        # st.session_state.next4=False
-        # st.session_state.next5=False
-        # st.session_state.next6=False
-        # st.session_state.next7=False
+        # st.session_state.PivotNext1=False
+        # st.session_state.PivotNext2=False
+        # st.session_state.isoNext1=False
+        # st.session_state.isoNext2=False
+        # st.session_state.rvqNext1=False
+        # st.session_state.rvqNext2=False
         # st.session_state.NextButton_Parse=False
         st.session_state.allDone=False
 

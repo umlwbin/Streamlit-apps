@@ -7,26 +7,23 @@ mvlDict={'result_value_qualifier': ["SSI","ADL",'BDL','FD','LD','EFAI','FEF','FE
             'OC', 'P', 'prob_good', 'Interpolated', 'Q','Standardized to 25C']}
 
 
-def display_rvq_df_from_file():
+def rvq_from_file_table_widget(): #See RVQs as a table
     with st.expander("Expand to see the list of RVQ codes and their meanings."):
         rvq_data_frame=pd.read_csv('rvq_dict.csv')
         st.table(rvq_data_frame)
 
-def choose_RVQs_Widgets(cleaned_df_list):
-
-    # Allow users to choose starting RVQs and exceptions
-    #********************************************************************************************************************************   
+def choose_RVQs_Widgets(cleaned_df_list):# Allow users to choose starting RVQs and exceptions
     st.markdown('#### 🌡️ Add RVQs')
     st.markdown('This step adds Result Value Qualifiers to cells in your files where the data might be atypical, erroneous, or missing.')
     st.markdown('It allows to you to specify that a certain code  in your data (we call this the **User Code**), or perhaps even blank spaces, means a certain error or event (defined by an **RVQ code**) has occurred.')
 
-    display_rvq_df_from_file()
+    rvq_from_file_table_widget()
 
     def click_Begin_button():
-        st.session_state.begin6 = True
+        st.session_state.rvqBegin = True
     st.button("Let's Go!", type="primary", key='Begin_Button6', on_click=click_Begin_button)
 
-    if st.session_state.begin6:
+    if st.session_state.rvqBegin:
         st.markdown('##### ')
         st.markdown('##### Choose the starting variable')
         st.markdown('From the first dropdown list, choose the starting variable that should be checked for codes in your file(s). '
@@ -38,12 +35,12 @@ def choose_RVQs_Widgets(cleaned_df_list):
         #Setting States
         # If the button is clicked, the session state is set to true (button is clicked)
         def click_button():
-            st.session_state.next6 = True
+            st.session_state.rvqNext1 = True
 
         # If selections are changed, the session state is set to False (button is unclicked, so user has to click again)
         def change_vars():
-            st.session_state.next6 = False
-            st.session_state.next7 = False
+            st.session_state.rvqNext1 = False
+            st.session_state.rvqNext2 = False
             st.session_state.allDone=False
 
 
@@ -54,7 +51,11 @@ def choose_RVQs_Widgets(cleaned_df_list):
         #Next button
         st.button("Next", type="primary", key='Next_Button6', on_click=click_button)
 
-        if st.session_state.next6==True:# If button is clicked
+        if st.session_state.rvqNext1==True:# If button is clicked
+
+            if starting_rvq_var==None: #User forgot to enter anything
+                st.warning('Oops, no starting variable selected!', icon="⚠️")
+
             return starting_rvq_var, exceptions
 
 #-------------------------------------------------------------------------------------------------------
@@ -90,11 +91,11 @@ def match_rvq_to_user_codes_widgets():
     #Setting States
     # If the button is clicked, the session state is set to true (button is clicked)
     def click_button():
-        st.session_state.next7 = True
+        st.session_state.rvqNext2 = True
 
     # If the number is changed, the session state is set to False (button is unclicked, so user has to click again)
     def change_vars():
-        st.session_state.next7 = False
+        st.session_state.rvqNext2 = False
 
     col1,col2, col3=st.columns(3)
     count=0
@@ -121,7 +122,7 @@ def match_rvq_to_user_codes_widgets():
     #Next button
     st.button("Next", type="primary", key='Next_Button7', on_click=click_button)
 
-    if st.session_state.next7==True:
+    if st.session_state.rvqNext2==True:
 
         #Remove NUll values and remove blank spaces
         usercodes=[uc for uc in usercodes if uc is not None and uc.strip()]
@@ -164,6 +165,7 @@ def save_rvq_df_as_csv(supplementary_df_list,usercodes,rvqcodes):
 def add_RVQs_to_files(cleaned_df_list, starting_rvq_var, exceptions, usercodes,rvqcodes):
 
     temp_workin_list=[]
+    no_user_codes_in_files=False
     for df in cleaned_df_list: 
 
         vars_with_rvqs=create_list_with_potential_rvq_variables(df, starting_rvq_var, exceptions)
@@ -172,14 +174,20 @@ def add_RVQs_to_files(cleaned_df_list, starting_rvq_var, exceptions, usercodes,r
         rvq_dict_per_Variable_List = [] #This will contain a list of dictionaries for each variable that has user codes in their column. E.g,  {variable: Temp; usercodes:L0.5, L8; Rows: 0,3}
         for variable in vars_with_rvqs:
             rvq_dict_per_Variable_List, df=checkFor_UserCodes_in_RVQVariable_Columns(df,usercodes,rvqcodes, variable, rvq_dict_per_Variable_List)
-        
-        #Let us create the RVQ column only for those Variables that actually have usercodes:
-        df=create_RVQ_columns_for_Variables(rvq_dict_per_Variable_List,df)
-            #final_df_list=save_and_download.save_final_dataframe(df_merged, csv, total_dfs, count, final_df_list) #Create csv file for data frame without dl still present in file
+    
+
+        if rvq_dict_per_Variable_List==[]: #NO RVQ dict created, means none of the usercodes were found
+            st.warning("None of the entered User Codes were found; files will not be changed",icon="⚠️" )
+            no_user_codes_in_files=True
+
+        else:
+            #Let us create the RVQ column only for those Variables that actually have usercodes:
+            df=create_RVQ_columns_for_Variables(rvq_dict_per_Variable_List,df)
+
         temp_workin_list.append(df) #update the list for this processing
 
     cleaned_df_list=temp_workin_list
-    return cleaned_df_list
+    return cleaned_df_list, no_user_codes_in_files
 
 #-------------------------------------------------------------------------------------------------------
 def create_list_with_potential_rvq_variables(df, starting_rvq_var, exceptions):
@@ -245,7 +253,7 @@ def checkFor_UserCodes_in_RVQVariable_Columns(df,usercodes, rvqcodes, variable, 
         rvq_dict_per_Variable['Rows']= usercode_rows_per_variable_list
 
         #Add this dictionary for each variable to a list 
-        rvq_dict_per_Variable_List.append(rvq_dict_per_Variable)
+        rvq_dict_per_Variable_List.append(rvq_dict_per_Variable)   
 
     return rvq_dict_per_Variable_List, df
 

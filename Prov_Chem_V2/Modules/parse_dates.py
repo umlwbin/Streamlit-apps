@@ -7,7 +7,7 @@ def parse_date_time_Widgets():
     st.markdown('This step parses one date time ISO column into Day, year, month and time columns.')
 
     def click_Begin_button():
-        st.session_state.begin5 = True
+        st.session_state.parseBegin = True
         st.session_state.allDone=False
     st.button("Let's Go!", type="primary", key='Begin_Button5', on_click=click_Begin_button)
 
@@ -17,11 +17,11 @@ def select_date_time_column_Widgets(cleaned_df_list):
     st.markdown('##### Select your ISO date-time column')
 
     def change_vars():
-        st.session_state.ParseNextButton = False
+        st.session_state.parseNext1 = False
         st.session_state.allDone=False
 
     def click_Next_button():
-        st.session_state.ParseNextButton = True
+        st.session_state.parseNext1 = True
 
     cols=list(cleaned_df_list[0].columns)
     col1, col2=st.columns(2)
@@ -38,7 +38,7 @@ def select_date_time_column_Widgets(cleaned_df_list):
     #Next button
     st.button("Next", type="primary", key='NextButton_Parse', on_click=click_Next_button)
 
-    if st.session_state.ParseNextButton:
+    if st.session_state.parseNext1:
         return dt_col
     
 

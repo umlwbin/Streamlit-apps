@@ -14,7 +14,6 @@ def merge_rows_widget():
         st.session_state.mergeRowsBegin = True
     st.button("Let's Go!", type="primary", key='Begin_Button1', on_click=click_Begin_button)
 
-    
     if st.session_state.mergeRowsBegin:
         #Setting States
         if 'mergeRowsNext1' not in st.session_state:

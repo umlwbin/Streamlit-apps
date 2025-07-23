@@ -43,6 +43,8 @@ def select_date_time_column_Widgets(cleaned_df_list):
     
 
 def extract_yr_mn_day_time(cleaned_df_list, dt_col): 
+
+    st.write(dt_col)
     temp_workin_list=[]
     date_time_error=False
 
@@ -62,7 +64,7 @@ def extract_yr_mn_day_time(cleaned_df_list, dt_col):
             df=move_cols_to_front_of_dataframe(df, dt_col)
 
         except ValueError: #Error in the date column
-            st.error('Unknown datetime string format! Please check your Date-time column.',icon="🚨" )
+            st.error('Unknown datetime string format! Please check your Date-time column.',icon="🚨")
             date_time_error=True
         temp_workin_list.append(df) #update the list for this processing
 

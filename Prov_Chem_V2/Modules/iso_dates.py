@@ -173,11 +173,6 @@ def convert_date_and_time_cols_to_iso(date_col,time_col,cleaned_df_list):
                 errors='raise'
             )
 
-            # Check which original strings were successfully converted
-            df['is_datetime'] = df[time_col].notna()
-
-            st.write(df['is_datetime'])
-
 
             # To get TIME OBJECTS (datetime.time):
             df[time_col] = parsed_times.dt.time

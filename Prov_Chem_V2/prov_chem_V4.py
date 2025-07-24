@@ -195,16 +195,16 @@ if (datafiles) and (inconsistent_cols_error==False):
                 date_time_col=iso_dates.one_dateTime_col_Widgets(st.session_state.cleaned_df_list, date_structure_radioButton) or None #widgets for allowing user to select the date-time column
                 date_col, time_col=iso_dates.separate_dateTime_cols_Widgets(st.session_state.cleaned_df_list, date_structure_radioButton) or (None, None)#widgets for allowing user to select both date and time column 
 
-            #Processing Functions - Pure Python
-            if date_time_col and st.session_state.isoNext1 == True: #If button is clicked from one_dateTime_col_Widgets:
-                st.session_state.cleaned_df_list, date_time_error=iso_dates.convert_one_dateTime_col_to_iso(st.session_state.cleaned_df_list,date_time_col)# Convert dt col to ISO   
+                #Processing Functions - Pure Python
+                if date_time_col and st.session_state.isoNext1 == True: #If button is clicked from one_dateTime_col_Widgets:
+                    st.session_state.cleaned_df_list, date_time_error=iso_dates.convert_one_dateTime_col_to_iso(st.session_state.cleaned_df_list,date_time_col)# Convert dt col to ISO   
 
-            if st.session_state.isoNext2 == True and date_col and time_col: #If button is clicked from separate_dateTime_cols_Widgets:
-                st.session_state.cleaned_df_list, date_time_error=iso_dates.convert_date_and_time_cols_to_iso(date_col,time_col,st.session_state.cleaned_df_list) # Convert both cols to ISO  
+                if st.session_state.isoNext2 == True and date_col and time_col: #If button is clicked from separate_dateTime_cols_Widgets:
+                    st.session_state.cleaned_df_list, date_time_error=iso_dates.convert_date_and_time_cols_to_iso(date_col,time_col,st.session_state.cleaned_df_list) # Convert both cols to ISO  
 
-            #Streamlit Widget Functions -- End of section
-            if (st.session_state.isoNext1 or st.session_state.isoNext2) and date_time_error==False:
-                successes('Created Date-Time column in ISO format!')
+                #Streamlit Widget Functions -- End of section
+                if (st.session_state.isoNext1 or st.session_state.isoNext2) and date_time_error==False:
+                    successes('Created Date-Time column in ISO format!')
 
     with parseTab:#STEP--- #Parse ISO Date-Time column into yr, month, day, time-------------------------------------------     
         # Streamlit Widget Functions -- Start of section

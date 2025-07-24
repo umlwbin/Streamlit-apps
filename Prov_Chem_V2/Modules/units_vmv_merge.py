@@ -7,7 +7,7 @@ def merge_rows_widget(cleaned_df_list):
     st.markdown('#####')
     st.markdown('##### 🗒️ Merging Units and VMV codes to headers')
     st.markdown(' This step cleans  provincial file that contains one row of units and (or) one row of VMV codes. ' \
-    'It merges the codes and units to the column headers and also cleans the headers '
+    'It merges the codes and (or) units to the column headers and also cleans the headers '
     '(removes special characters and spaces).' )
 
     def click_Begin_button():

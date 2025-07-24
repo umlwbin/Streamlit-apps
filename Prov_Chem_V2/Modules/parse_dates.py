@@ -52,7 +52,6 @@ def select_date_time_column_Widgets(cleaned_df_list):
 
 def extract_yr_mn_day_time(cleaned_df_list, dt_col): 
 
-    st.write(dt_col)
     temp_workin_list=[]
     date_time_error=False
 

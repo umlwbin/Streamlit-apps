@@ -66,12 +66,20 @@ def extract_yr_mn_day_time(cleaned_df_list, dt_col):
             df['Year'] = df[cleaned_dt_col].dt.year.astype('Int64')
             df['Month'] = df[cleaned_dt_col].dt.month.astype('Int64')
             df['Day'] = df[cleaned_dt_col].dt.day.astype('Int64')
-            df['Time'] = df[cleaned_dt_col].dt.time
+
+            # Create 'time' column if there's a time component
+            df['Time'] = df[cleaned_dt_col].apply(lambda dt: dt.time() if dt.time() != pd.Timestamp(0).time() else pd.NaT)
+
+            # Drop 'time' column if it's all NaT or NaN
+            if df['Time'].isna().all():
+                df.drop(columns=['Time'], inplace=True)
+
+            #df['Time'] = df[cleaned_dt_col].dt.time
 
             df=move_cols_to_front_of_dataframe(df, dt_col)
 
         except ValueError: #Error in the date column
-            st.error('Unknown datetime string format! Please check your Date-time column.',icon="🚨")
+            st.error('Unknown datetime string format! Please check your Date-time column, or restructure first',icon="🚨")
             date_time_error=True
         temp_workin_list.append(df) #update the list for this processing
 
@@ -84,12 +92,15 @@ def move_cols_to_front_of_dataframe(df, dt_col):
     year_col=df.pop('Year')     # pop the column from the data frame
     month_col=df.pop('Month')   # pop the column from the data frame
     day_col=df.pop('Day')       # pop the column from the data frame
-    time_col=df.pop('Time')     # pop the column from the data frame
+
+    if 'Time' in df:
+        time_col=df.pop('Time')     # pop the column from the data frame
 
     origDate_index=df.columns.get_loc(cleaned_dt_col) # get the index of the original date column
     df.insert(origDate_index+1,'Year', year_col)      # insert the merged data column before the original date column
     df.insert(origDate_index+2,'Month', month_col)    # insert the merged data column before the original date column
     df.insert(origDate_index+3,'Day', day_col) # insert the merged data column before the original date column
-    df.insert(origDate_index+4,'Time', time_col) # insert the merged data column before the original date column
+    if 'Time' in df:
+        df.insert(origDate_index+4,'Time', time_col) # insert the merged data column before the original date column
     return df 
 

@@ -51,21 +51,23 @@ def merge_rows(cleaned_df_list, vmvCode_row,units_row):
 
         # Ensure there are no spaces or brackets in header name
         headers_list=[]
-        pattern = r'[!@#$%^&*()_+={}\[\]:;"\'<>,.?/\\|`~-]'
+        pattern = r'[^A-Za-z0-9]'
         for header, code, unit in zip(headers, codes, units):
-
-            #Clean current headers
-            header=re.sub(pattern, '_', header)   
-            header = re.sub(r"[^\w\s]", '', header)# Remove all non-word characters (everything except numbers and letters)
-            header=header.rstrip() # Remove trailing white space
-            header = re.sub(r"\s+", '_', header) # Replace all remaining whitespace with _
-            header=header.replace("__", "_") #Replace __ with _, just in case
             
             # Merging the nvm code and units
             if pd.isna(code)==False:
                 header=header+'_'+str(code)+'_'+str(unit)
-                header = re.sub(r"[^\w\s]", '_', header)# Remove all non-word characters
-                header = re.sub(r"\s+", '_', header) # Replace all remaining whitespace with _
+            
+            #Clean current headers
+            header=header.strip() # Remove trailing white space
+            header=re.sub(pattern, '_', header)
+
+            # Collapse multiple underscores into one
+            header = re.sub(r'_+', '_', header)
+            
+            # Remove trailing underscore if any
+            if header.endswith('_'):
+                header = header[:-1]           
 
             headers_list.append(header) #append to final header list
 

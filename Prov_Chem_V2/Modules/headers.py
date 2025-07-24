@@ -21,12 +21,13 @@ def clean_headers(cleaned_df_list):
         for header in list(headers): 
             header=header.strip() # Remove trailing white space
             header=re.sub(pattern, '_', header)
+
             # Collapse multiple underscores into one
             header = re.sub(r'_+', '_', header)
+
             if header.endswith('_'):
                 header = header[:-1]
-            # Remove trailing underscore if any
-            header=header.rstrip()
+
             headers_list.append(header) #append to final header list
         
         #Save updated column headers to data frame

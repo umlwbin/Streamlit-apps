@@ -21,6 +21,17 @@ def choose_RVQs_Widgets(cleaned_df_list):# Allow users to choose starting RVQs a
 
     def click_Begin_button():
         st.session_state.rvqBegin = True
+        st.session_state.rvqNext1 = False 
+        st.session_state.rvqNext2 = False
+
+        # Turn off all other Begin button sessions states
+        st.session_state.mergeRowsBegin = st.session_state.pivotBegin = st.session_state.headersBegin = st.session_state.isoBegin = st.session_state.parseBegin = st.session_state.rvqBegin = False
+        # Turn off all other Next button sessions states
+        st.session_state.mergeRowsNext1 = st.session_state.PivotNext1 = st.session_state.PivotNext2 = st.session_state.isoNext1 =st.session_state.parseNext1 = st.session_state.isoNext2 = False
+        # Turn off all other sessions states
+        st.session_state.pivotRadio1 = st.session_state.allDone = False         
+
+
     st.button("Let's Go!", type="primary", key='Begin_Button6', on_click=click_Begin_button)
 
     if st.session_state.rvqBegin:

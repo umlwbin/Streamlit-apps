@@ -20,24 +20,26 @@ def fileupload_Widget():
     st.markdown('#### Upload CSV files here')
 
     def newUpload(): #on change fucntion
+        st.session_state.cleaned_df_list=[]
         st.session_state.new_upload=True
+        
         st.session_state.toggleChange=False
+
         st.session_state.mergeRowsBegin = False
         st.session_state.pivotBegin = False
-
         st.session_state.headersBegin = False
         st.session_state.isoBegin = False
         st.session_state.parseBegin = False
         st.session_state.rvqBegin = False
 
-        # st.session_state.next1=False
-        # st.session_state.PivotNext1=False
-        # st.session_state.PivotNext2=False
-        # st.session_state.isoNext1=False
-        # st.session_state.isoNext2=False
-        # st.session_state.rvqNext1=False
-        # st.session_state.rvqNext2=False
-        # st.session_state.NextButton_Parse=False
+        st.session_state.mergeRowsNext1=False
+        st.session_state.PivotNext1=False
+        st.session_state.PivotNext2=False
+        st.session_state.isoNext1=False
+        st.session_state.isoNext2=False
+        st.session_state.parseNext1 = False
+        st.session_state.rvqNext1=False
+        st.session_state.rvqNext2=False
         st.session_state.allDone=False
 
     datafiles = st.file_uploader("Choose CSV files", accept_multiple_files=True, on_change=newUpload, type="csv", key='fileupload')

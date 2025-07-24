@@ -11,6 +11,19 @@ def restructure_widgets(cleaned_df_list):
 
     def click_Begin_button():
         st.session_state.pivotBegin = True
+        st.session_state.PivotNext1 = False
+        st.session_state.PivotNext2 = False
+
+        # Turn off all other Begin button sessions states
+        st.session_state.mergeRowsBegin= st.session_state.headersBegin = st.session_state.isoBegin = st.session_state.parseBegin = st.session_state.rvqBegin = False
+        # Turn off all other Next button sessions states
+        st.session_state.mergeRowsNext1 = st.session_state.isoNext1 = st.session_state.isoNext2 = st.session_state.parseNext1 = st.session_state.rvqNext1=st.session_state.rvqNext2 = False
+        # Turn off all other sessions states
+        st.session_state.pivotRadio1 = st.session_state.allDone = False   
+
+        st.session_state.mergeRowsBegin,     
+
+
     st.button("Let's Go!", type="primary", key='Begin_Button2', on_click=click_Begin_button)
 
     if st.session_state.pivotBegin: #Lets go button is pressed
@@ -54,8 +67,11 @@ def restructure_widgets(cleaned_df_list):
 
         if st.session_state.PivotNext1==True: #Next button is pressed
 
-            additional_params=combine_values_with_headers_radio_widget(cols)
-            return var_col,value_col, additional_params
+            if (var_col==None and value_col==None) or (var_col!=None and value_col==None) or (var_col==None and value_col!=None):
+                st.error('No Variable or Value column was selected. Please try again.', icon="🚨")
+            else:      
+                additional_params=combine_values_with_headers_radio_widget(cols)
+                return var_col,value_col, additional_params
 
 def combine_values_with_headers_radio_widget(cols):
 
@@ -71,7 +87,6 @@ def combine_values_with_headers_radio_widget(cols):
         st.session_state.begin5 = False #parse date lets go button is deactivated
         st.session_state.begin6 = False #rvq lets go button is deactivated
         st.session_state.PivotNext2 = False # So they have to press the next button again
-
 
     add_params_radio=st.radio("Would you like to add a column value to the variable header names, e.g, units?", ["Sure! 🤩", "Nah, I'm good 🙃"], on_change=change_radio,args=() , index=None)
 
@@ -153,6 +168,11 @@ def filter_df_for_each_variable(cleaned_df_list,var_col,value_col, additional_pa
             filtered_dfs=add_vmv_and_variable_code(var, filtered_df, filtered_dfs, additional_params)
         
         df_merged=merge_filtered_dfs(filtered_dfs) #concatenate all the filtered variable dataframes
+
+        #Reset Index
+        df_merged.reset_index(drop=True, inplace=True)
+
+        #Append to temp processed list
         temp_workin_list.append(df_merged)
 
     cleaned_df_list=temp_workin_list

@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 
+
 def download_view_widgets(cleaned_df_list):
     if cleaned_df_list==None or cleaned_df_list==[]:
         st.info('No processing has been done yet!',icon="ℹ️")
@@ -10,10 +11,27 @@ def download_view_widgets(cleaned_df_list):
         st.markdown(' The processed files are updated after each step. Click **Ready to Download** to convert files to CSV for downloading.')
         st.markdown(' ######')
         st.markdown(' ###### Snapshot of your processed file so far:')
-        st.write(cleaned_df_list[0].head(20))
+        st.dataframe(cleaned_df_list[0].head(20) )
 
     def on_change():
         st.session_state.allDone=True
+
+        st.session_state.mergeRowsBegin = False
+        st.session_state.pivotBegin = False
+        st.session_state.headersBegin = False
+        st.session_state.isoBegin = False
+        st.session_state.parseBegin = False
+        st.session_state.rvqBegin = False
+
+        st.session_state.mergeRowsNext1=False
+        st.session_state.PivotNext1=False
+        st.session_state.PivotNext2=False
+        st.session_state.isoNext1=False
+        st.session_state.isoNext2=False
+        st.session_state.parseNext1 = False
+        st.session_state.rvqNext1=False
+        st.session_state.rvqNext2=False
+
     st.button('Ready to Download!', on_click=on_change)
 
 
@@ -23,6 +41,7 @@ def download_output(output_path, cleaned_df_list, csvfileNames, supplementary_df
     #Donwload button function
     def downloadButton(lab, fp, filename, mi):
         def on_download_click():
+            st.session_state.allDone=False
             st.balloons()
 
         st.download_button(label=lab,data=fp, file_name=filename, mime=mi,
@@ -50,7 +69,7 @@ def download_output(output_path, cleaned_df_list, csvfileNames, supplementary_df
 
             # Iterate over all dfs and create CSV files
             for df, csv in zip(cleaned_df_list,csvfileNames):
-                df.to_csv(csv, index=False)
+                df.to_csv(csv,index=False)
 
             #Get all output files including supplementary files
             _, _, files = next(os.walk(output_path))

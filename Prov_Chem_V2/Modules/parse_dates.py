@@ -8,7 +8,15 @@ def parse_date_time_Widgets():
 
     def click_Begin_button():
         st.session_state.parseBegin = True
-        st.session_state.allDone=False
+        st.session_state.parseNext1 = False
+
+        # Turn off all other Begin button sessions states
+        st.session_state.mergeRowsBegin = st.session_state.pivotBegin = st.session_state.headersBegin = st.session_state.isoBegin = st.session_state.rvqBegin = False
+        # Turn off all other Next button sessions states
+        st.session_state.mergeRowsNext1 = st.session_state.PivotNext1 = st.session_state.PivotNext2 = st.session_state.isoNext1 = st.session_state.isoNext2 = st.session_state.rvqNext1=st.session_state.rvqNext2 = False
+        # Turn off all other sessions states
+        st.session_state.pivotRadio1 = st.session_state.allDone = False 
+
     st.button("Let's Go!", type="primary", key='Begin_Button5', on_click=click_Begin_button)
 
 
@@ -56,9 +64,9 @@ def extract_yr_mn_day_time(cleaned_df_list, dt_col):
             df[cleaned_dt_col] = pd.to_datetime(df[cleaned_dt_col])
 
             #Use the .dt accessor to extract the year, month, day, and time components. Create new columns for each component.
-            df['Year'] = df[cleaned_dt_col].dt.year
-            df['Month'] = df[cleaned_dt_col].dt.month
-            df['Day'] = df[cleaned_dt_col].dt.day
+            df['Year'] = df[cleaned_dt_col].dt.year.astype('Int64')
+            df['Month'] = df[cleaned_dt_col].dt.month.astype('Int64')
+            df['Day'] = df[cleaned_dt_col].dt.day.astype('Int64')
             df['Time'] = df[cleaned_dt_col].dt.time
 
             df=move_cols_to_front_of_dataframe(df, dt_col)

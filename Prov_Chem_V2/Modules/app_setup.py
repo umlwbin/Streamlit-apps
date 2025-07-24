@@ -12,3 +12,5 @@ def app_intro_sidebar():
     st.sidebar.markdown('- Click on the **Restructure Files** tab to first restructure the file(s) according to the type of chemistry file.')
     st.sidebar.markdown('- Click on any other tab to apply that cleaning function.')
     st.sidebar.markdown('- Click on the **Download Data** tab whenever you are ready to download the processed file(s). ')
+
+

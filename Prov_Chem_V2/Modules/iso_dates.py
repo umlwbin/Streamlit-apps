@@ -94,17 +94,22 @@ def convert_one_dateTime_col_to_iso(cleaned_df_list,date_time_col):
                 df['temp_time'] = df['temp_time'].fillna(pd.to_datetime('00:00:00').time())
 
                 # Combine date and time
-                df['Date_Time'] = pd.to_datetime(df['temp_date'].astype(str) + ' ' + df['temp_time'].astype(str), errors='coerce')
+                if date_time_col=='Date_Time':
+                    new_dt_colName='DateTime'
+                else:
+                    new_dt_colName='Date_Time'
+                
+                df[new_dt_colName] = pd.to_datetime(df['temp_date'].astype(str) + ' ' + df['temp_time'].astype(str), errors='coerce')
 
                 # To get an ISO string:
-                df['Date_Time']=df['Date_Time'].dt.strftime('%Y-%m-%dT%H:%M:%S')
+                df[new_dt_colName]=df['Date_Time'].dt.strftime('%Y-%m-%dT%H:%M:%S')
 
-                date_timecol=df.pop('Date_Time')       # pop the column from the data frame
+                date_timecol=df.pop(new_dt_colName)       # pop the column from the data frame
                 origDate_index=df.columns.get_loc(date_time_col) # get the index of the original date column
-                df.insert(origDate_index,'Date_Time', date_timecol) # insert the merged data column before the original date column
+                df.insert(origDate_index,new_dt_colName, date_timecol) # insert the merged data column before the original date column
 
                 #Drop the old date and time cols
-                df=df.drop(columns=[date_time_col])
+                df=df.drop(columns=[date_time_col, 'temp_time', 'temp_date'])
 
         except ValueError: #Error in the date column
             st.error('Unknown datetime string format! Please check your Date-time column.',icon="🚨" )

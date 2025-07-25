@@ -1,5 +1,6 @@
 import streamlit as st
 import re
+import copy
 
 def clean_headers_widgets():
     st.markdown('#### 🧹 Cleaning Headers ')
@@ -21,7 +22,15 @@ def clean_headers_widgets():
 
 
 def clean_headers(cleaned_df_list):
-    temp_workin_list=[]
+    # Create a deep copy of the current list in session state. We will work on this copy
+    cleaned_df_list=copy.deepcopy(st.session_state.cleaned_df_list)
+
+    # Push current version to history before makign any changes
+    st.session_state.df_history.append(copy.deepcopy(st.session_state.cleaned_df_list))
+
+    # Clear redo stack since we are making a new change
+    st.session_state.redo_stack.clear()
+
     for df in cleaned_df_list:
         # CLEAN the headers and update the merged data frame
         headers=df.columns         
@@ -33,15 +42,16 @@ def clean_headers(cleaned_df_list):
 
             # Collapse multiple underscores into one
             header = re.sub(r'_+', '_', header)
-
+            
+            #if header has extra _ at end
             if header.endswith('_'):
                 header = header[:-1]
 
-            headers_list.append(header) #append to final header list
+            #Append to final header list
+            headers_list.append(header) 
         
         #Save updated column headers to data frame
         df.columns=headers_list
-        temp_workin_list.append(df)
-
-    cleaned_df_list=temp_workin_list
-    return cleaned_df_list
+        
+    #Update the cleaned list in session state
+    st.session_state.cleaned_df_list=cleaned_df_list

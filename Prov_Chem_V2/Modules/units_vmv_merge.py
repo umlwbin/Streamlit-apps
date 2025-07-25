@@ -1,9 +1,15 @@
 import streamlit as st
 import pandas as pd
 import re
+import copy
 
 
-def merge_rows_widget(cleaned_df_list):
+def merge_rows_widget():
+
+    if 'cleaned_df_list' in st.session_state:
+        cleaned_df_list=st.session_state.cleaned_df_list
+
+
     st.markdown('#####')
     st.markdown('##### 🗒️ Merging Units and VMV codes to headers')
     st.markdown(' This step cleans  provincial file that contains one row of units and (or) one row of VMV codes. ' \
@@ -41,8 +47,8 @@ def merge_rows_widget(cleaned_df_list):
         st.markdown('#####')
         st.markdown('##### Choose the rows that contains the Valid Method Variable (VMV) code and the variable units')
         col1,col2, col3=st.columns(3, vertical_alignment='bottom')
-        vmvCode_row = col1.selectbox(label='Select the VMV code row',options=['0', '1','2', 'No VMV row'],index=3, key='select1', on_change=change_vars)
-        units_row = col2.selectbox(label='Select the Units row',options=['0', '1','2', 'No Units row'],index=3,key='select2', on_change=change_vars)
+        vmvCode_row = col1.selectbox(label='Select the VMV code row',options=['0', '1', 'No VMV row'],index=2, key='select1', on_change=change_vars)
+        units_row = col2.selectbox(label='Select the Units row',options=['0', '1', 'No Units row'],index=2,key='select2', on_change=change_vars)
 
         if vmvCode_row !="No VMV row":
             st.markdown(' ')
@@ -66,18 +72,31 @@ def merge_rows_widget(cleaned_df_list):
             return vmvCode_row,units_row
        
 
-def merge_rows(cleaned_df_list, vmvCode_row,units_row, just_cleaned_headers_flag):
-    temp_workin_list=[]
+def merge_rows(vmvCode_row,units_row, just_cleaned_headers_flag):
+
+    # Create a deep copy of the current list in session state. We will work on this copy
+    cleaned_df_list=copy.deepcopy(st.session_state.cleaned_df_list)
+
+    # Push current version to history before makign any changes
+    st.session_state.df_history.append(copy.deepcopy(st.session_state.cleaned_df_list))
+
+    # Clear redo stack since we are making a new change
+    st.session_state.redo_stack.clear()
+
+    #Grab a copy of the current headers before making changes
+    old_headers=copy.deepcopy(st.session_state.cleaned_df_list)[0].columns
+
     just_cleaned_headers_flag=False
     headers_are_the_same=False
     for df in cleaned_df_list:
+
         # This function merges the user defined rows containing units and VMV codes
         headers=list(df.columns) #get the original headers
         headers_with_vmvCodes=[]
         headers_with_units=[]
         headers_list_final=[]
 
-        # Merging the nvm code and units------------------------------
+        # Merging the nvm code and units------------------------------------------------
         if vmvCode_row!=None: #If there was a vmv code row
             codes=list(df.iloc[int(vmvCode_row)]) #Get the row of data
 
@@ -86,6 +105,9 @@ def merge_rows(cleaned_df_list, vmvCode_row,units_row, just_cleaned_headers_flag
                     if ("VMV" not in str(code)) and ('vmv' not in str(code)):# Merging if VMV is not in the string in a cell in that row
                         header=header+'_'+str(code)
                 headers_with_vmvCodes.append(header)
+
+            #Drop that row
+            df.drop(int(vmvCode_row), inplace=True)
 
         if units_row!=None: #If there was a unit row
             units=list(df.iloc[int(units_row)]) #Get the row of data
@@ -96,19 +118,22 @@ def merge_rows(cleaned_df_list, vmvCode_row,units_row, just_cleaned_headers_flag
             else:
                 headers2=headers_with_vmvCodes
 
-            for header, unit in zip(headers2, units):                   
+            for header, unit in zip(headers2, units):                 
                 if pd.isna(unit)==False: # Merging if not NAN
                     if "Unit" not in str(unit) and 'unit' not in str(unit) and 'UNIT' not in str(unit):# Merging if 'Unit' is not in the string in a cell in that row
                         header=header+'_'+str(unit)
                 headers_with_units.append(header)
 
+            #Drop that row
+            df.drop(int(units_row), inplace=True)
+
         if vmvCode_row==None and units_row==None:
             st.warning('No VMV code or Units row selected! BUT we cleaned your headers anyway! ☺️', icon="⚠️" )
             just_cleaned_headers_flag=True
-        
+
      
-        #Now that they have been added, clean up headers
-        #Depending on what has been added to the headers:
+        #Nowclean up headers-------------------------------------------------------
+        #Depending on what has been added to the headers, determine the headers before cleaning:
         if vmvCode_row !=None and units_row==None:
             headers_before_cleaning=headers_with_vmvCodes
         elif vmvCode_row ==None and units_row!=None:
@@ -118,10 +143,13 @@ def merge_rows(cleaned_df_list, vmvCode_row,units_row, just_cleaned_headers_flag
         elif vmvCode_row ==None and units_row==None:
             headers_before_cleaning=headers #original list
 
-
-        pattern = r'[^A-Za-z0-9]'
+        #Clean headers 🧹
+        
+        chars_to_keep = "µ" # Characters to explicitly keep
+        # Escape characters in chars_to_keep for safe use in regex
+        escaped_chars_to_keep = re.escape(chars_to_keep)
+        pattern = rf"[^A-Za-z0-9\s{escaped_chars_to_keep}]"
         for header in headers_before_cleaning:
-
             header=header.strip() # Remove trailing white space
             header=re.sub(pattern, '_', header) # Remove special characters
             header = re.sub(r'_+', '_', header) # Collapse multiple underscores into one
@@ -133,21 +161,16 @@ def merge_rows(cleaned_df_list, vmvCode_row,units_row, just_cleaned_headers_flag
             headers_list_final.append(header) #append to final header list
 
         #Save updated column headers to data frame
-        df.columns=headers_list_final
-        df=df.tail(-2)
-
+        df.columns=headers_list_final.copy()
         #Reset Index
         df.reset_index(drop=True, inplace=True)
 
-        #update the processed temp list
-        temp_workin_list.append(df) 
-    
-    #Headers are the same (no cleanign needed)
-    if list(cleaned_df_list[0].columns)==list(temp_workin_list[0].columns):
+    # Headers are the same (no cleanign needed)
+    if list(cleaned_df_list[0].columns)==list(old_headers):
         headers_are_the_same=True
-        
-    #Update the cleaned list
-    cleaned_df_list=temp_workin_list
 
-    return cleaned_df_list, just_cleaned_headers_flag, headers_are_the_same
+    #Update the cleaned list in session state
+    st.session_state.cleaned_df_list=cleaned_df_list
+
+    return just_cleaned_headers_flag, headers_are_the_same
     

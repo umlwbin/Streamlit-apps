@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import copy
 
 
 def Choose_One_Or_Two_DateTime_Columns_Widgets():
@@ -67,7 +68,17 @@ def one_dateTime_col_Widgets(cleaned_df_list, date_structure_radioButton):
     return date_time_col  
 
 def convert_one_dateTime_col_to_iso(cleaned_df_list,date_time_col):
-    temp_workin_list=[]
+
+    # Create a deep copy of the current list in session state. We will work on this copy
+    cleaned_df_list=copy.deepcopy(st.session_state.cleaned_df_list)
+
+    # Push current version to history before makign any changes
+    st.session_state.df_history.append(copy.deepcopy(st.session_state.cleaned_df_list))
+
+    # Clear redo stack since we are making a new change
+    st.session_state.redo_stack.clear()
+
+
     date_time_error=False
     for df in cleaned_df_list:    
         #Test first to see if it is actually a datetime value (maybe user selected the wrong column)
@@ -109,16 +120,16 @@ def convert_one_dateTime_col_to_iso(cleaned_df_list,date_time_col):
                 df.insert(origDate_index,new_dt_colName, date_timecol) # insert the merged data column before the original date column
 
                 #Drop the old date and time cols
-                df=df.drop(columns=[date_time_col, 'temp_time', 'temp_date'])
+                df.drop(columns=[date_time_col, 'temp_time', 'temp_date'], axis=1, inplace=True)
 
         except ValueError: #Error in the date column
             st.error('Unknown datetime string format! Please check your Date-time column.',icon="🚨" )
             date_time_error=True
 
-        temp_workin_list.append(df) #update the list for this processing. If there is a datetime error, the original df would be added
+    #Update the cleaned list in session state
+    st.session_state.cleaned_df_list=cleaned_df_list
 
-    cleaned_df_list=temp_workin_list
-    return cleaned_df_list, date_time_error
+    return date_time_error
 
 def separate_dateTime_cols_Widgets(cleaned_df_list, date_structure_radioButton):
 
@@ -158,11 +169,18 @@ def separate_dateTime_cols_Widgets(cleaned_df_list, date_structure_radioButton):
     
     return date_col, time_col
 
-def convert_date_and_time_cols_to_iso(date_col,time_col,cleaned_df_list):  
+def convert_date_and_time_cols_to_iso(date_col,time_col,cleaned_df_list): 
 
-    temp_workin_list=[]
+    # Create a deep copy of the current list in session state. We will work on this copy
+    cleaned_df_list=copy.deepcopy(st.session_state.cleaned_df_list)
+
+    # Push current version to history before makign any changes
+    st.session_state.df_history.append(copy.deepcopy(st.session_state.cleaned_df_list))
+
+    # Clear redo stack since we are making a new change
+    st.session_state.redo_stack.clear()
+
     date_time_error=False
-
     for df in cleaned_df_list:           
         try:
             # Convert date column to datetime
@@ -177,7 +195,6 @@ def convert_date_and_time_cols_to_iso(date_col,time_col,cleaned_df_list):
                 format=None,           # Let pandas infer the format
                 errors='raise'
             )
-
 
             # To get TIME OBJECTS (datetime.time):
             df[time_col] = parsed_times.dt.time
@@ -201,8 +218,8 @@ def convert_date_and_time_cols_to_iso(date_col,time_col,cleaned_df_list):
         except ValueError: #Error in the date column
             st.error('Unknown datetime string format! Please check your Date or Time column.',icon="🚨" )
             date_time_error=True
-
-        temp_workin_list.append(df) #update the list for this processing
     
-    cleaned_df_list=temp_workin_list        
-    return cleaned_df_list, date_time_error
+    #Update the cleaned list in session state
+    st.session_state.cleaned_df_list=cleaned_df_list
+
+    return date_time_error

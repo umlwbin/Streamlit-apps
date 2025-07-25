@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import copy
 
 
 mvlDict={'result_value_qualifier': ["SSI","ADL",'BDL','FD','LD','EFAI','FEF','FEQ','FFB','FFD',
@@ -175,7 +176,15 @@ def save_rvq_df_as_csv(supplementary_df_list,usercodes,rvqcodes):
 
 def add_RVQs_to_files(cleaned_df_list, starting_rvq_var, exceptions, usercodes,rvqcodes):
 
-    temp_workin_list=[]
+    # Create a deep copy of the current list in session state. We will work on this copy
+    cleaned_df_list=copy.deepcopy(st.session_state.cleaned_df_list)
+
+    # Push current version to history before makign any changes
+    st.session_state.df_history.append(copy.deepcopy(st.session_state.cleaned_df_list))
+
+    # Clear redo stack since we are making a new change
+    st.session_state.redo_stack.clear()
+
     no_user_codes_in_files=False
     for df in cleaned_df_list: 
 
@@ -195,10 +204,10 @@ def add_RVQs_to_files(cleaned_df_list, starting_rvq_var, exceptions, usercodes,r
             #Let us create the RVQ column only for those Variables that actually have usercodes:
             df=create_RVQ_columns_for_Variables(rvq_dict_per_Variable_List,df)
 
-        temp_workin_list.append(df) #update the list for this processing
+    #Update the cleaned list in session state
+    st.session_state.cleaned_df_list=cleaned_df_list
 
-    cleaned_df_list=temp_workin_list
-    return cleaned_df_list, no_user_codes_in_files
+    return no_user_codes_in_files
 
 #-------------------------------------------------------------------------------------------------------
 def create_list_with_potential_rvq_variables(df, starting_rvq_var, exceptions):

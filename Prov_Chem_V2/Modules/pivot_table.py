@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import copy
 
 def restructure_widgets(cleaned_df_list):
     st.markdown('-------')
@@ -141,7 +142,17 @@ def combine_values_with_headers_widgets(cols):
             return additional_params
 
 def filter_df_for_each_variable(cleaned_df_list,var_col,value_col, additional_params):
-    temp_workin_list=[]
+
+    # Create a deep copy of the current list in session state. We will work on this copy
+    cleaned_df_list=copy.deepcopy(st.session_state.cleaned_df_list)
+
+    # Push current version to history before makign any changes
+    st.session_state.df_history.append(copy.deepcopy(st.session_state.cleaned_df_list))
+
+    # Clear redo stack since we are making a new change
+    st.session_state.redo_stack.clear()
+
+
     for df in cleaned_df_list:
 
         unique_vars=df[var_col].unique() #Extract strings and find unique ones
@@ -172,11 +183,8 @@ def filter_df_for_each_variable(cleaned_df_list,var_col,value_col, additional_pa
         #Reset Index
         df_merged.reset_index(drop=True, inplace=True)
 
-        #Append to temp processed list
-        temp_workin_list.append(df_merged)
-
-    cleaned_df_list=temp_workin_list
-    return cleaned_df_list
+    #Update the cleaned list in session state
+    st.session_state.cleaned_df_list=cleaned_df_list
 
 def add_vmv_and_variable_code(var, filtered_df, filtered_dfs, additional_params):
 

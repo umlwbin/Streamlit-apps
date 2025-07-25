@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import copy
 
 def parse_date_time_Widgets():
 
@@ -52,9 +53,16 @@ def select_date_time_column_Widgets(cleaned_df_list):
 
 def extract_yr_mn_day_time(cleaned_df_list, dt_col): 
 
-    temp_workin_list=[]
-    date_time_error=False
+    # Create a deep copy of the current list in session state. We will work on this copy
+    cleaned_df_list=copy.deepcopy(st.session_state.cleaned_df_list)
 
+    # Push current version to history before makign any changes
+    st.session_state.df_history.append(copy.deepcopy(st.session_state.cleaned_df_list))
+
+    # Clear redo stack since we are making a new change
+    st.session_state.redo_stack.clear()
+
+    date_time_error=False
     for df in cleaned_df_list:   
         cleaned_dt_col=dt_col #Date_time_column that was inserted 
         #Test first to see if it is actually a datetime value (maybe user selected the wrong column)
@@ -81,10 +89,10 @@ def extract_yr_mn_day_time(cleaned_df_list, dt_col):
         except ValueError: #Error in the date column
             st.error('Unknown datetime string format! Please check your Date-time column, or restructure first',icon="🚨")
             date_time_error=True
-        temp_workin_list.append(df) #update the list for this processing
 
-    cleaned_df_list=temp_workin_list
-    return cleaned_df_list, date_time_error
+    #Update the cleaned list in session state
+    st.session_state.cleaned_df_list=cleaned_df_list
+    return date_time_error
 
 
 def move_cols_to_front_of_dataframe(df, dt_col):

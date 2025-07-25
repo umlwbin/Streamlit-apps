@@ -6,6 +6,7 @@ import re
 import os
 import plotly.express as px
 import sys
+import copy
 
 #Set page config
 st.set_page_config(page_title="Provincial Chemistry App", page_icon="📖", layout="wide", initial_sidebar_state="expanded", menu_items=None)
@@ -19,74 +20,23 @@ output_path=os.path.abspath(os.curdir)
 
 sys.path.append(f'{input_path}/Modules') #adding the Modules directory to Python's search path at runtime.
 
-#Setting States
-if 'cleaned_df_list' not in st.session_state:
-    st.session_state.cleaned_df_list=[]
-
-if 'new_upload' not in st.session_state:
-    st.session_state.new_upload=False
-if 'toggleChange' not in st.session_state:
-    st.session_state.toggleChange=False
-
-if 'mergeRowsBegin' not in st.session_state:
-    st.session_state.mergeRowsBegin = False
-if 'pivotBegin' not in st.session_state:
-    st.session_state.pivotBegin = False
-if 'headersBegin' not in st.session_state:
-    st.session_state.headersBegin = False
-if 'isoBegin' not in st.session_state:
-    st.session_state.isoBegin = False
-if 'parseBegin' not in st.session_state:
-    st.session_state.parseBegin = False
-if 'rvqBegin' not in st.session_state:
-    st.session_state.rvqBegin = False
-
-if 'mergeRowsNext1' not in st.session_state:
-    st.session_state.mergeRowsNext1 = False
-if 'PivotNext1' not in st.session_state:
-    st.session_state.PivotNext1 = False
-if 'PivotNext2' not in st.session_state:
-    st.session_state.PivotNext2 = False
-if 'pivotRadio1' not in st.session_state:
-    st.session_state.pivotRadio1 = False
-
-if 'isoNext1' not in st.session_state:
-    st.session_state.isoNext1 = False
-if 'isoNext2' not in st.session_state:
-    st.session_state.isoNext2 = False
-
-if 'parseNext1' not in st.session_state:
-    st.session_state.parseNext1 = False
-
-if 'rvqNext1' not in st.session_state:
-    st.session_state.rvqNext1 = False
-if 'rvqNext2' not in st.session_state:
-    st.session_state.rvqNext2 = False
-
-if 'allDone' not in st.session_state:
-    st.session_state.allDone = False
-
-
-
 #Module Imports for the different sections
-import  app_setup, file_uploads, file_structure, pivot_table, headers, iso_dates, parse_dates, rvq, save_and_download, units_vmv_merge
+import  session_initializer, undo_redo_restart, app_setup, messages, file_uploads, file_structure, pivot_table, headers, iso_dates, parse_dates, rvq, save_and_download, units_vmv_merge
 
+#Initialize Sessions
+session_initializer.init_session_state()
+
+#Undo, Redo, Restart Buttons
+undo_redo_restart.undo_redo_restart_widgets()
+
+#Tabs
 tab1, structureTab, headersTab, isoTab, parseTab, rvqTab, downloadTab= st.tabs(['File Upload','Restructure Files', 
                                                                 'Clean Headers', 'Create ISO Date-Time', 'Parse Date','Manage RVQs',
                                                                 'Download Data'])
 
-#MESSAGES-----------------------------------------------
-def warnings(msg):
-    left, right = st.columns([0.8, 0.2])
-    left.warning(f'{msg}', icon="⚠️")
+#PAGE SETUP
+app_setup.app_intro_sidebar()
 
-def errors(msg):
-    left, right = st.columns([0.8, 0.2])
-    left.error(f'{msg}', icon="🚨")  
-
-def successes(msg):
-    #left, right = st.columns([0.8, 0.2])
-    st.success(f'Success! {msg}', icon="✅",)
 
 #Global Variables-----------------------------------------
 inconsistent_cols_error=False
@@ -97,11 +47,6 @@ headers_are_the_same=False
 
 supplementary_df_list=[]
 placeholder=st.empty()
-
-#st.session_state.cleaned_df_list=[]
-
-#PAGE SETUP----------------------------------------------------
-app_setup.app_intro_sidebar()#Set up APP Page
 
 
 #WORKFLOW
@@ -120,7 +65,7 @@ with tab1: #File Upload Tab
 
     #If an upload was done but the files are now removed
     if st.session_state.new_upload and not datafiles:   
-        warnings('Please Upload CSV files')
+        messages.warnings('Please Upload CSV files')
 
     #If there are files, uploaded or example
     if datafiles: 
@@ -128,7 +73,7 @@ with tab1: #File Upload Tab
 
     #inconsistent columns
     if inconsistent_cols_error: 
-        errors('Ooops, I think your file might have inconsistent columns. Each line must have the same number of columns. Please reformat your files and re-upload.')
+        messages.errors('Ooops, I think your file might have inconsistent columns. Each line must have the same number of columns. Please reformat your files and re-upload.')
 
 #All is good to begin cleaning!!!!!🙌🏽-------------------------------------
 if (datafiles) and (inconsistent_cols_error==False): 
@@ -143,22 +88,22 @@ if (datafiles) and (inconsistent_cols_error==False):
         if structure_option=="merge_vmv_units":# STEP--- Merge VMV and UNit Rows-------------------------------------------
 
             #Streamlit Widget Functions -- Start of section
-            vmvCode_row,units_row=units_vmv_merge.merge_rows_widget(st.session_state.cleaned_df_list) or (None, None)
+            vmvCode_row,units_row=units_vmv_merge.merge_rows_widget() or (None, None)
 
             if st.session_state.mergeRowsBegin and st.session_state.mergeRowsNext1: #next button from the above widget function is clicked
 
                 #Processing Functions - Pure Python
-                st.session_state.cleaned_df_list, just_cleaned_headers_flag, headers_are_the_same=units_vmv_merge.merge_rows(st.session_state.cleaned_df_list, vmvCode_row,units_row, just_cleaned_headers_flag)
+                just_cleaned_headers_flag, headers_are_the_same=units_vmv_merge.merge_rows(vmvCode_row,units_row, just_cleaned_headers_flag)
 
                 if st.session_state.cleaned_df_list:
                     #Streamlit Widget Functions -- End of section
                     if just_cleaned_headers_flag==True:
                         if headers_are_the_same:
-                            successes("Headers look great and did not need cleaning!") #Streamlit success message
+                            messages.successes("Headers look great and did not need cleaning!") #Streamlit success message
                         else:
-                            successes("Headers cleaned!") #Streamlit success message
+                            messages.successes("Headers cleaned!") #Streamlit success message
                     else:
-                        successes("Rows have been merged and headers cleaned!") #Streamlit success message
+                        messages.successes("Rows have been merged and headers cleaned!") #Streamlit success message
 
         if structure_option=="pivot":# STEP--- Restructure table and Extract Variables-------------------------------------------
             #Streamlit Widget Functions -- Start of section
@@ -168,11 +113,11 @@ if (datafiles) and (inconsistent_cols_error==False):
 
                 if st.session_state.pivotBegin and st.session_state.pivotRadio1 and st.session_state.PivotNext1 and st.session_state.PivotNext2:
                     #Processing Functions - Pure Python
-                    st.session_state.cleaned_df_list=pivot_table.filter_df_for_each_variable(st.session_state.cleaned_df_list,var_col,value_col, additional_params) or None #Extract variables as their own columns and add the VMV and Variable codes to the variable names (column headers)
+                    pivot_table.filter_df_for_each_variable(st.session_state.cleaned_df_list,var_col,value_col, additional_params) or None #Extract variables as their own columns and add the VMV and Variable codes to the variable names (column headers)
                     
                     #Streamlit Widget Functions -- End of section
                     if st.session_state.cleaned_df_list:
-                        successes("File has been restructured!") #Streamlit success message
+                        messages.successes("File has been restructured!") #Streamlit success message
 
             
     with headersTab:# STEP--- Clean Headers-------------------------------------------       
@@ -181,10 +126,10 @@ if (datafiles) and (inconsistent_cols_error==False):
 
         if st.session_state.headersBegin:
             #Processing Functions - Pure Python
-            st.session_state.cleaned_df_list=headers.clean_headers(st.session_state.cleaned_df_list) #Remove special characters from headers
+            headers.clean_headers(st.session_state.cleaned_df_list) #Remove special characters from headers
 
             #Streamlit Widget Functions -- End of section
-            successes("Headers have been cleaned!")
+            messages.successes("Headers have been cleaned!")
 
     with isoTab:#STEP 4 Convert the one dt column, or separate D & T columns to ISO------------------------------
         # Streamlit Widget Functions -- Start of section      
@@ -197,14 +142,14 @@ if (datafiles) and (inconsistent_cols_error==False):
 
                 #Processing Functions - Pure Python
                 if date_time_col and st.session_state.isoNext1 == True: #If button is clicked from one_dateTime_col_Widgets:
-                    st.session_state.cleaned_df_list, date_time_error=iso_dates.convert_one_dateTime_col_to_iso(st.session_state.cleaned_df_list,date_time_col)# Convert dt col to ISO   
+                    date_time_error=iso_dates.convert_one_dateTime_col_to_iso(st.session_state.cleaned_df_list,date_time_col)# Convert dt col to ISO   
 
                 if st.session_state.isoNext2 == True and date_col and time_col: #If button is clicked from separate_dateTime_cols_Widgets:
-                    st.session_state.cleaned_df_list, date_time_error=iso_dates.convert_date_and_time_cols_to_iso(date_col,time_col,st.session_state.cleaned_df_list) # Convert both cols to ISO  
+                    date_time_error=iso_dates.convert_date_and_time_cols_to_iso(date_col,time_col,st.session_state.cleaned_df_list) # Convert both cols to ISO  
 
                 #Streamlit Widget Functions -- End of section
                 if (st.session_state.isoNext1 or st.session_state.isoNext2) and date_time_error==False:
-                    successes('Created Date-Time column in ISO format!')
+                    messages.successes('Created Date-Time column in ISO format!')
 
     with parseTab:#STEP--- #Parse ISO Date-Time column into yr, month, day, time-------------------------------------------     
         # Streamlit Widget Functions -- Start of section
@@ -216,11 +161,11 @@ if (datafiles) and (inconsistent_cols_error==False):
             if dt_col:
                 #Processing Functions - Pure Python
                 if st.session_state.parseNext1==True:
-                    st.session_state.cleaned_df_list, date_time_error=parse_dates.extract_yr_mn_day_time(st.session_state.cleaned_df_list, dt_col) #extract the Year, motnh, day and time
+                    date_time_error=parse_dates.extract_yr_mn_day_time(st.session_state.cleaned_df_list, dt_col) #extract the Year, motnh, day and time
 
                     if date_time_error==False:
                         #Streamlit Widget Functions -- End of section
-                        successes('Parsed the Date time column!')
+                        messages.successes('Parsed the Date time column!')
 
     with rvqTab:#STEP--- # Result Value Qualifier (RVQ) Management-------------------------------------------
     # Streamlit Widget Functions -- Start of section
@@ -236,11 +181,11 @@ if (datafiles) and (inconsistent_cols_error==False):
             if st.session_state.rvqNext2 and usercodes and rvqcodes:
                 #Processing Functions - Pure Python
                 supplementary_df_list=rvq.save_rvq_df_as_csv(supplementary_df_list, usercodes,rvqcodes) #Create an RVQ df and save as csv                
-                st.session_state.cleaned_df_list, no_user_codes_in_files=rvq.add_RVQs_to_files(st.session_state.cleaned_df_list, starting_rvq_var, exceptions, usercodes,rvqcodes) #Add RVQ columns and codes to appropriate variable columns
+                no_user_codes_in_files=rvq.add_RVQs_to_files(st.session_state.cleaned_df_list, starting_rvq_var, exceptions, usercodes,rvqcodes) #Add RVQ columns and codes to appropriate variable columns
 
                 if no_user_codes_in_files==False:
                     #Streamlit Widget Functions -- End of section
-                    successes('Added RVQs!')
+                    messages.successes('Added RVQs!')
 
     with downloadTab:
         save_and_download.download_view_widgets(st.session_state.cleaned_df_list)

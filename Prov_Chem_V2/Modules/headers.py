@@ -35,7 +35,12 @@ def clean_headers(cleaned_df_list):
         # CLEAN the headers and update the merged data frame
         headers=df.columns         
         headers_list=[]
-        pattern = r'[^A-Za-z0-9]'
+        
+        chars_to_keep = "µ" # Characters to explicitly keep
+        # Escape characters in chars_to_keep for safe use in regex
+        escaped_chars_to_keep = re.escape(chars_to_keep)
+        pattern = rf"[^A-Za-z0-9\s{escaped_chars_to_keep}]"        
+
         for header in list(headers): 
             header=header.strip() # Remove trailing white space
             header=re.sub(pattern, '_', header)

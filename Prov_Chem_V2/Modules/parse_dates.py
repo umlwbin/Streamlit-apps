@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import copy
+import numpy as np
 
 def parse_date_time_Widgets():
 
@@ -68,21 +69,15 @@ def extract_yr_mn_day_time(cleaned_df_list, dt_col):
         #Test first to see if it is actually a datetime value (maybe user selected the wrong column)
         try:
             #Ensure your datetime column is in datetime format using pd.to_datetime()
-            df[cleaned_dt_col] = pd.to_datetime(df[cleaned_dt_col])
+            df[cleaned_dt_col] = pd.to_datetime(df[cleaned_dt_col], errors='coerce')
 
             #Use the .dt accessor to extract the year, month, day, and time components. Create new columns for each component.
             df['Year'] = df[cleaned_dt_col].dt.year.astype('Int64')
             df['Month'] = df[cleaned_dt_col].dt.month.astype('Int64')
             df['Day'] = df[cleaned_dt_col].dt.day.astype('Int64')
 
-            # Create 'time' column if there's a time component
-            df['Time'] = df[cleaned_dt_col].apply(lambda dt: dt.time() if dt.time() != pd.Timestamp(0).time() else pd.NaT)
-
-            # Drop 'time' column if it's all NaT or NaN
-            if df['Time'].isna().all():
-                df.drop(columns=['Time'], inplace=True)
-
-            #df['Time'] = df[cleaned_dt_col].dt.time
+            # Create a 'time' column only when the time part is not 00:00:00
+            df['Time'] = df[cleaned_dt_col].apply(lambda x: x.time() if pd.notnull(x) and (x.time() != pd.Timestamp.min.time()) else np.nan)
 
             df=move_cols_to_front_of_dataframe(df, dt_col)
 

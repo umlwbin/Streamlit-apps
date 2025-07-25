@@ -4,7 +4,7 @@ import copy
 
 def undo_redo_restart_widgets():
     #Butons
-    c1,c2, c3,c4=st.columns([0.3,0.3, 0.4, 0.8], vertical_alignment="bottom")
+    c1,c2, c3,c4=st.columns([0.3,0.3, 0.4, 0.5], vertical_alignment="bottom")
     undo=c1.button("Undo", icon="⏪️")
     redo=c2.button("Redo", icon="⏩️")
     restart=c3.button("Restart Processing", icon='🔄' )

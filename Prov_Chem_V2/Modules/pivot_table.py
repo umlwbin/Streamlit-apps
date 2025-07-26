@@ -203,22 +203,6 @@ def add_vmv_and_variable_code(var, filtered_df, filtered_dfs, additional_params)
             filtered_dfs.append(filtered_df) #append the filtered data frame to data frame list
             return filtered_dfs
 
-
-    # units='UNIT_CODE'
-    # vmv_codes='VMV_CODE'
-    # var_codes='VARIABLE_CODE'
-    # if not filtered_df.empty:
-        # # Get the value of the units, we just take the first cell under the UNIT_CODE column
-        # unit = filtered_df.loc[0,units]  # Gets the unit            
-        # vmv_code = filtered_df.loc[0, vmv_codes]  # Gets the VMV code 
-        # var_code = filtered_df.loc[0, var_codes]  # Gets the VAR code
-
-        # filtered_df.rename(columns={var: f"{var}_{unit}_{vmv_code}_{var_code}"}, inplace=True)# Rename the variable column to include the codes
-        # filtered_df=filtered_df.drop([units,vmv_codes,var_codes], axis=1) #remove the codes columns
-
-        # filtered_dfs.append(filtered_df) #append the filtered data frame to data frame list
-        # return filtered_dfs
-
 def merge_filtered_dfs(filtered_dfs):
     # MERGE all the filtered dataframes together
     df_merged=pd.concat(filtered_dfs, ignore_index=True) #merge all variables into one dataframe

@@ -37,8 +37,7 @@ tab1, structureTab, headersTab, isoTab, parseTab, rvqTab, downloadTab= st.tabs([
 #PAGE SETUP
 app_setup.app_intro_sidebar()
 
-
-#Global Variables-----------------------------------------
+#Global Variables
 inconsistent_cols_error=False
 date_time_error=False
 no_user_codes_in_files=False
@@ -49,7 +48,7 @@ supplementary_df_list=[]
 placeholder=st.empty()
 
 
-#WORKFLOW
+#WORKFLOW-------------------------------------------------------------------------------------
 with tab1: #File Upload Tab
     datafiles=file_uploads.fileupload_Widget() #Get all the files
     example_file=file_uploads.example_file_widget() #Use exmaple file instead

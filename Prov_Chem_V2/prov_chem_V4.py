@@ -174,14 +174,14 @@ if (datafiles) and (inconsistent_cols_error==False):
             if st.session_state.rvqNext1 and starting_rvq_var != None: # Next button from choose_RVQs_Widgets was been clicked and a starting RVQ was selected, thus there ARE RVQ cols
                 usercodes,rvqcodes=rvq.match_rvq_to_user_codes_widgets() or (None,None) #Allow user to match the User codes to rvq codes
 
-            if st.session_state.rvqNext2 and usercodes and rvqcodes:
-                #Processing Functions - Pure Python
-                supplementary_df_list=rvq.save_rvq_df_as_csv(supplementary_df_list, usercodes,rvqcodes) #Create an RVQ df and save as csv                
-                no_user_codes_in_files=rvq.add_RVQs_to_files(st.session_state.cleaned_df_list, starting_rvq_var, exceptions, usercodes,rvqcodes) #Add RVQ columns and codes to appropriate variable columns
+                if st.session_state.rvqNext2 and usercodes and rvqcodes:
+                    #Processing Functions - Pure Python
+                    supplementary_df_list=rvq.save_rvq_df_as_csv(supplementary_df_list, usercodes,rvqcodes) #Create an RVQ df and save as csv                
+                    no_user_codes_in_files=rvq.add_RVQs_to_files(st.session_state.cleaned_df_list, starting_rvq_var, exceptions, usercodes,rvqcodes) #Add RVQ columns and codes to appropriate variable columns
 
-                if no_user_codes_in_files==False:
-                    #Streamlit Widget Functions -- End of section
-                    messages.successes('Added RVQs!')
+                    if no_user_codes_in_files==False:
+                        #Streamlit Widget Functions -- End of section
+                        messages.successes('Added RVQs!')
 
     with downloadTab:
         save_and_download.download_view_widgets(st.session_state.cleaned_df_list)

@@ -110,10 +110,9 @@ if (datafiles) and (inconsistent_cols_error==False):
             var_col,value_col, additional_params=pivot_table.restructure_widgets(st.session_state.cleaned_df_list) or (None,None, None)
 
             if var_col !=None and value_col !=None:
-
                 if st.session_state.pivotBegin and st.session_state.pivotRadio1 and st.session_state.PivotNext1 and st.session_state.PivotNext2:
                     #Processing Functions - Pure Python
-                    pivot_table.filter_df_for_each_variable(var_col,value_col, additional_params) or None #Extract variables as their own columns and add the VMV and Variable codes to the variable names (column headers)
+                    pivot_table.filter_df_for_each_variable(var_col,value_col, additional_params) #Extract variables as their own columns and add the VMV and Variable codes to the variable names (column headers)
                     
                     #Streamlit Widget Functions -- End of section
                     if st.session_state.cleaned_df_list:

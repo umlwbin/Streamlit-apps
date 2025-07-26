@@ -126,7 +126,6 @@ def combine_values_with_headers_widgets(cols):
         #Check if any of the default have been found
         if all(v is None for v in [units, vmv_codes, var_codes]):
             default_value=None
-
         else:
             default_value=[v for v in [units, vmv_codes, var_codes] if v!=None ]
 
@@ -187,9 +186,7 @@ def add_vmv_and_variable_code(var, filtered_df, filtered_dfs, additional_params)
         #Dont add any additional parameters to the variable name, just add the filtered df to list and return
         filtered_dfs.append(filtered_df) #append the filtered data frame to data frame list
         return filtered_dfs
-    
     else:
-
         if not filtered_df.empty:
 
             # Get the values from the first row of the additional parameters columns

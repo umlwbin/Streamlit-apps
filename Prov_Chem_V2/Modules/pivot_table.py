@@ -20,10 +20,7 @@ def restructure_widgets(cleaned_df_list):
         # Turn off all other Next button sessions states
         st.session_state.mergeRowsNext1 = st.session_state.isoNext1 = st.session_state.isoNext2 = st.session_state.parseNext1 = st.session_state.rvqNext1=st.session_state.rvqNext2 = False
         # Turn off all other sessions states
-        st.session_state.pivotRadio1 = st.session_state.allDone = False   
-
-        st.session_state.mergeRowsBegin,     
-
+        st.session_state.pivotRadio1 = st.session_state.allDone = False  
 
     st.button("Let's Go!", type="primary", key='Begin_Button2', on_click=click_Begin_button)
 
@@ -141,7 +138,7 @@ def combine_values_with_headers_widgets(cols):
         if st.session_state.PivotNext2:
             return additional_params
 
-def filter_df_for_each_variable(cleaned_df_list,var_col,value_col, additional_params):
+def filter_df_for_each_variable(var_col,value_col, additional_params):
 
     # Create a deep copy of the current list in session state. We will work on this copy
     cleaned_df_list=copy.deepcopy(st.session_state.cleaned_df_list)
@@ -152,19 +149,14 @@ def filter_df_for_each_variable(cleaned_df_list,var_col,value_col, additional_pa
     # Clear redo stack since we are making a new change
     st.session_state.redo_stack.clear()
 
-
-    for df in cleaned_df_list:
-
-        unique_vars=df[var_col].unique() #Extract strings and find unique ones
-        unique_vars = [item for item in unique_vars if item==item] #nan!=nan, removes nans
-        
-        # Filter the DataFrame for each Variable. Create a filtered data frame for each and then concatenate all dataframes
-        c=0
+    for i, df in enumerate(cleaned_df_list):
         filtered_dfs=[]
-        for var in unique_vars:
-            c=c+1
-            filtered_df=df.copy()
-            filtered_df = filtered_df[filtered_df[var_col].isin([var])] #filter the dataframe for only the rows where the variable is var
+
+        unique_variables=df[var_col].unique() #Extract variable strings and find unique ones
+        unique_variables = [item for item in unique_variables if item==item] #nan!=nan, removes nans 
+
+        for var in unique_variables:
+            filtered_df = df[df[var_col] == var]#filter the dataframe for only the rows where the variable is var
             filtered_df = filtered_df.rename(columns={value_col: var}) #Change the name 'VALUE' to the variable name (df is now filtered to one variable)
             filtered_df=filtered_df.drop(var_col, axis=1) #remove 'the Varibale_Name column'
 
@@ -174,14 +166,17 @@ def filter_df_for_each_variable(cleaned_df_list,var_col,value_col, additional_pa
             filtered_df[var]=extracted_column
 
             filtered_df=filtered_df.reset_index(drop=True) #reset the index
-
             #call add variable code and vmv code fuction
             filtered_dfs=add_vmv_and_variable_code(var, filtered_df, filtered_dfs, additional_params)
         
-        df_merged=merge_filtered_dfs(filtered_dfs) #concatenate all the filtered variable dataframes
+        # Concatenate filtered variable dataframes
+        df_merged=merge_filtered_dfs(filtered_dfs)
 
         #Reset Index
         df_merged.reset_index(drop=True, inplace=True)
+
+    # Assign merged_df back to the same position in the list
+    cleaned_df_list[i] = df_merged
 
     #Update the cleaned list in session state
     st.session_state.cleaned_df_list=cleaned_df_list

@@ -170,11 +170,8 @@ if (datafiles) and (inconsistent_cols_error==False):
     # Streamlit Widget Functions -- Start of section
         starting_rvq_var, exceptions=rvq.choose_RVQs_Widgets(st.session_state.cleaned_df_list) or (None,None) #Allow users to choose starting RVQs and exceptions
 
-        if st.session_state.rvqBegin and st.session_state.rvqNext1:# Next button from choose_RVQs_Widgets was been clicked
-            #Reset any widget states to false if they were previously true
-            app_setup.turn_off_session_states([st.session_state.rvqBegin, st.session_state.rvqNext1, st.session_state.rvqNext2])
-
-            if starting_rvq_var != None: # A starting RVQ was selected, thus there ARE RVQ cols
+        if st.session_state.rvqBegin:
+            if st.session_state.rvqNext1 and starting_rvq_var != None: # Next button from choose_RVQs_Widgets was been clicked and a starting RVQ was selected, thus there ARE RVQ cols
                 usercodes,rvqcodes=rvq.match_rvq_to_user_codes_widgets() or (None,None) #Allow user to match the User codes to rvq codes
 
             if st.session_state.rvqNext2 and usercodes and rvqcodes:

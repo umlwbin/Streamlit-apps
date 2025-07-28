@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import os
-from datetime import datetime as dt
 
 #Set page config
 st.set_page_config(page_title=None, page_icon="📖", layout="wide", initial_sidebar_state="expanded", menu_items=None)
@@ -22,8 +21,6 @@ if 'oneVarClick' not in st.session_state:
 
 if 'compare_click' not in st.session_state:
     st.session_state.compare_click = False
-
-
 
 
 def main():

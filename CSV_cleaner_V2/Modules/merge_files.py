@@ -12,6 +12,9 @@ sys.path.append(f'{path}/Modules')
 import readFiles, save_files, download
 
 def merge(datafiles, cols):
+    #Update version state here since there is no Next button
+    st.session_state.version=st.session_state.version+1
+
     # INTRO WIDGETS FOR FUNCTION---------------------------------------------
     st.markdown('#### Merging all your files')
 

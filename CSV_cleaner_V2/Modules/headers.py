@@ -13,6 +13,9 @@ sys.path.append(f'{path}/Modules')
 import readFiles, save_files, download
 
 def clean_headers(datafiles, cols):
+    # Update version state here since there is no next button
+    st.session_state.version=st.session_state.version+1
+
     # INTRO WIDGETS FOR FUNCTION---------------------------------------------
     st.markdown('#### Cleaning headers!')
     st.markdown('###### Your original column headers are: 👇🏼')
@@ -65,5 +68,4 @@ def clean_headers(datafiles, cols):
         save_files.show_snapshot(df_list)
 
     # CALL DOWNLOAD FUNCTION---------------------------------------------------------
-    st.session_state.version=st.session_state.version+1
     download.download_output(df_list)

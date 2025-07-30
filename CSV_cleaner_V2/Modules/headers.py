@@ -64,7 +64,7 @@ def clean_headers(datafiles, cols):
         left.markdown(' ')
         left.success('Column headers are cleaned!',icon='✅')    
         
-        #SHOW SNAPSHOT OF PROCESSES FILES-----------------------------------------------------------------------------------------------------------
+        #SHOW SNAPSHOT OF PROCESSES FILES--------------------------------------------
         save_files.show_snapshot(df_list)
 
     # CALL DOWNLOAD FUNCTION---------------------------------------------------------

@@ -60,8 +60,11 @@ radiobutton=st.radio('Select an action',['Tidy Data Checker','Reorder columns','
 st. markdown('')
 tog=st.toggle("**Activate switch to use the same dataset**",on_change=onToggle,key='toggleSwitch', value=True)
 
+
+# CALL FUNCTIONS DEPENDING ON TOGGLE AND RADIO BUTTONS ---------------------------------------------
+
 # Toggle is turned on ---------------------------------------------
-if tog:  #If the Toggle is ON (on by default)
+if tog:
     left, right = st.columns([0.6, 0.4])
     left.info('Working on the same file! Select an action above.', icon="ℹ️",)
 

@@ -25,9 +25,9 @@ def reorder(datafiles, cols):
 
     # WIDGET CREATION --------------------------------------------      
     var_list=sort_items(cols) #Sort Items widget 
-    st.button("Next", type="primary", key='Next_Button1', on_click=click_button) #Next button
+    sort_button=st.button("Next", type="primary", key='Next_Button1', on_click=click_button) #Next button
 
-    if st.session_state.reorderNext==True: #If next button is clicked
+    if sort_button and st.session_state.reorderNext==True: #If next button is clicked
         if var_list:
             key_error=False
             df_list=[] # a list of all the final dataframes created for each file

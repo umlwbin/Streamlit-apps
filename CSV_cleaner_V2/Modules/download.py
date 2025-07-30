@@ -9,8 +9,17 @@ path=os.path.abspath(os.curdir)
 def download_output(df_list):
     def on_download():
         st.balloons()
+        #Set Next button states to False
         st.session_state.new_upload=False
+        st.session_state.reorderNext = False
+        st.session_state.addColsNext1 = False
+        st.session_state.addColsNext2 = False 
+        st.session_state.removeColsNext = False
+        st.session_state.renameNext = False
+        st.session_state.mergeDateNext = False
+        st.session_state.convertISONext1 = False
         #st.session_state.toggle = False
+
 
     #Update the first run session state. Once it gets to the first download set the first run to false
     st.session_state.firstRun=False

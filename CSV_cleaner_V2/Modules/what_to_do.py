@@ -19,6 +19,7 @@ def what_to_do_widgets():
         st.session_state.renameNext = False
         st.session_state.mergeDateNext = False
         st.session_state.convertISONext1 = False
+        st.session_state.cleanupContinue = False
 
     def onToggle():
         if tog: # if it is ON, and then you switch it off, 'if tog' will be true
@@ -32,6 +33,7 @@ def what_to_do_widgets():
         st.session_state.renameNext = False
         st.session_state.mergeDateNext = False
         st.session_state.convertISONext1 = False
+        st.session_state.cleanupContinue = False
 
     # WIDGET CREATION --------------------------------------------
     radiobutton=st.radio('Select an action',['Tidy Data Checker','Reorder columns','Add columns', 'Remove columns', 'Merge multiple files', 'Clean column headers',

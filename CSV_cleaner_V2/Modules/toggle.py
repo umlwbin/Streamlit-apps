@@ -1,6 +1,7 @@
 import streamlit as st
 import sys
 import os
+import pandas as pd
 
 #Output Path
 path=os.path.abspath(os.curdir)
@@ -10,6 +11,22 @@ sys.path.append(f'{path}/Modules') #adding the Modules directory to Python's sea
 
 #Module Imports for the different sections
 import  file_uploads, reorder_variables, add_columns, remove_columns, merge_files, headers, rename, merge_date_time, iso, tidy_data
+
+
+def grab_already_curated_files():
+    # Grab the already curated files
+    _, _, files = next(os.walk(path))
+    tempfiles=[f for f in files if '_cwout' in f]
+
+    if tempfiles:
+        # Get the cols again since we wont do the upload func, and the cols may have changed
+        tempfile=tempfiles[0]
+        df=pd.read_csv(tempfile, nrows=1) # just get a row
+        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+        tempcols= list(df.columns)
+    
+        return tempfiles, tempcols
+
 
 
 def call_processing_function_old_data(radiobutton, tempfiles, tempcols):

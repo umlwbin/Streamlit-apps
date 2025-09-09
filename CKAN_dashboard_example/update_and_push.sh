@@ -7,7 +7,7 @@ cd /Users/yaniquecampbell/Git/Streamlit-apps/CKAN_dashboard_example/
 git pull origin main --rebase
 
 # Run the Python script (updates data.csv)
-python3 update_csv.py
+/usr/bin/python3 update_csv.py
 
 # Stage the updated CSV
 git add 2022_ctd.csv

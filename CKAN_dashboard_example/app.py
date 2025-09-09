@@ -138,9 +138,9 @@ with t1:
     local_time = utc_time.astimezone(ZoneInfo("America/Winnipeg"))
     next_update = local_time + datetime.timedelta(minutes=10)
 
-    st.sidebar.markdown("##### ⏱️ Update Info")
-    st.sidebar.write(f"**Last updated:** {local_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    st.sidebar.write(f"**Next update expected:** {next_update.strftime('%Y-%m-%d %H:%M:%S')}")
+    st.markdown("##### ⏱️ Update Info")
+    st.write(f"**Last updated:** {local_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    st.write(f"**Next update expected:** {next_update.strftime('%Y-%m-%d %H:%M:%S')}")
 
     st. dataframe(df_from_github)
 

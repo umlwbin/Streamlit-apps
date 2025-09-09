@@ -129,20 +129,16 @@ with t1:
     st.subheader("📊 Latest Data From Github")
     st.markdown('Data is being updated every 12 minutes')
 
-    from datetime import datetime, timedelta
-    # Get last modified time of the CSV
-    mod_time = os.path.getmtime("2022_ctd.csv")
-    last_updated = datetime.fromtimestamp(mod_time)
+    csv_path = "2022_ctd.csv"
+    # Get last modified time
+    last_modified = datetime.datetime.fromtimestamp(os.path.getmtime(csv_path))
 
-    # Calculate next expected update (add 10 minutes)
-    next_update = last_updated + timedelta(minutes=12)
+    # Calculate next update (10 minutes later)
+    next_update = last_modified + datetime.timedelta(minutes=12)
 
-    # Display timestamps
-    st.markdown(f"**Last updated:** {last_updated.strftime('%Y-%m-%d %H:%M:%S')}")
-    st.markdown(f"**Next update expected:** {next_update.strftime('%Y-%m-%d %H:%M:%S')}")
-
-
-
+    st.markdown("### ⏱️ Update Info")
+    st.write(f"**Last updated:** {last_modified.strftime('%Y-%m-%d %H:%M:%S')}")
+    st.write(f"**Next update expected:** {next_update.strftime('%Y-%m-%d %H:%M:%S')}")
 
     st. dataframe(df_from_github)
 

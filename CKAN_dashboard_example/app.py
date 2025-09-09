@@ -122,9 +122,8 @@ with t1:
     # """)
 
     # Footer
+    st.markdown("📁 [Dataset Source - CanWIN](https://canwin-datahub.ad.umanitoba.ca/data/dataset/james-bay-ctd-2022)")
     st.markdown("---")
-    st.markdown("📁 [Dataset Source](https://canwin-datahub.ad.umanitoba.ca/data/dataset/james-bay-ctd-2022)")
-
 
 
     st.subheader("📊 Latest Data From Github")

@@ -107,23 +107,24 @@ with t1:
     A CTD is a key tool in oceanography that measures how water properties change with depth. Temperature and salinity influence water density, which drives ocean circulation and affects marine ecosystems.
     """)
 
-    # Interpretation
-    st.subheader("🔬 More about CTDs")
-    st.markdown("""
-    The CTD instrument provides a vertical profile of the water column:
+    # # Interpretation
+    # st.subheader("🔬 More about CTDs")
+    # st.markdown("""
+    # The CTD instrument provides a vertical profile of the water column:
 
-    - **Temperature** typically decreases with depth, indicating thermal stratification.
-    - **Salinity** can vary due to freshwater input from rivers or ice melt, especially near the surface.
-    - **Conductivity** reflects salinity and temperature, helping infer water mass characteristics.
+    # - **Temperature** typically decreases with depth, indicating thermal stratification.
+    # - **Salinity** can vary due to freshwater input from rivers or ice melt, especially near the surface.
+    # - **Conductivity** reflects salinity and temperature, helping infer water mass characteristics.
 
-    In James Bay, surface waters may be fresher due to river discharge, while deeper layers are colder and more saline. This stratification influences nutrient mixing, biological productivity, and carbon cycling.
+    # In James Bay, surface waters may be fresher due to river discharge, while deeper layers are colder and more saline. This stratification influences nutrient mixing, biological productivity, and carbon cycling.
 
-    By comparing stations over time, we can detect seasonal changes, freshwater plumes, or mixing zones—critical for understanding climate impacts in sub-Arctic marine environments.
-    """)
+    # By comparing stations over time, we can detect seasonal changes, freshwater plumes, or mixing zones—critical for understanding climate impacts in sub-Arctic marine environments.
+    # """)
 
     # Footer
     st.markdown("---")
     st.markdown("📁 [Dataset Source](https://canwin-datahub.ad.umanitoba.ca/data/dataset/james-bay-ctd-2022)")
+
 
 
     st.subheader("📊 Latest Data From Github")

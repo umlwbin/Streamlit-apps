@@ -1,0 +1,10 @@
+error: cannot pull with rebase: You have unstaged changes.
+error: please commit or stash them.
+Traceback (most recent call last):
+  File "/Users/yaniquecampbell/Git/Streamlit-apps/CKAN_dashboard_example/update_csv.py", line 1, in <module>
+    import pandas as pd
+ModuleNotFoundError: No module named 'pandas'
+[main def1d8f] Auto-update: 2025-09-09 14:00:00
+ 1 file changed, 1147 insertions(+)
+ create mode 100644 CKAN_dashboard_example/2022_ctd.csv
+fatal: could not read Username for 'https://github.com': Device not configured

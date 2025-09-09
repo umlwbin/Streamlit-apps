@@ -15,12 +15,6 @@ df = pd.read_csv('2022_ctd.csv')
 df.iat[0, 0] = df.iat[0, 0] + 5
 
 
-with open("log.txt", "a") as log:
-    log.write(f"Updated at {datetime.datetime.now()}\n")
-
-
-
-
 
 # os.makedirs(output_dir, exist_ok=True)
 

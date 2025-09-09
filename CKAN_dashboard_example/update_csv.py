@@ -1,7 +1,6 @@
 import pandas as pd
 import datetime
 import os
-import streamlit as st
 
 
 input_path=os.path.abspath(os.curdir)
@@ -12,13 +11,12 @@ output_dir = f"{input_path}/output/{today}"
 
 
 #Read File
-def update_csv():
-    df = pd.read_csv('2022_ctd.csv')
-    df.iloc[0, 0] += 5  # Update first data cell
-    df.to_csv('2022_ctd.csv', index=False)
+df = pd.read_csv('2022_ctd.csv')
+df.iat[0, 0] = df.iat[0, 0] + 5
+
 
 with open("log.txt", "a") as log:
-    log.write(f"Updated at {datetime.now()}\n")
+    log.write(f"Updated at {datetime.datetime.now()}\n")
 
 
 

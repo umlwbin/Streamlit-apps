@@ -1,5 +1,0 @@
-pandas
-plotly==5.23.0
-streamlit==1.40.1
-pydeck
-streamlit_autorefresh

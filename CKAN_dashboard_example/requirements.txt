@@ -1,0 +1,5 @@
+pandas
+plotly==5.23.0
+streamlit==1.40.1
+pip install pydeck
+streamlit_autorefresh

@@ -36,3 +36,6 @@ def init_session_state():
 
     if 'cleanupContinue' not in st.session_state:
         st.session_state.cleanupContinue = False
+        
+    if 'ParseNext1' not in st.session_state:
+        st.session_state.ParseNext1 = False

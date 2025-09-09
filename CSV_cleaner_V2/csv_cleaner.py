@@ -42,7 +42,7 @@ if tog:
             # Go to the processing function directly
             toggle.call_processing_function_old_data(radiobutton, tempfiles, tempcols)
 
-    # 2. 12 Toggle is on, but we havent processed any files yet, we still need to use the uplaoder. -------
+    # 2. 12 Toggle is on, but we havent processed any files yet, we still need to use the uploader. -------
     else:
         toggle.call_processing_function_new_data(radiobutton)
 

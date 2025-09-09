@@ -10,7 +10,7 @@ path=os.path.abspath(os.curdir)
 sys.path.append(f'{path}/Modules') #adding the Modules directory to Python's search path at runtime.
 
 #Module Imports for the different sections
-import  file_uploads, reorder_variables, add_columns, remove_columns, merge_files, headers, rename, merge_date_time, iso, tidy_data
+import  file_uploads, reorder_variables, add_columns, remove_columns, merge_files, headers, rename, merge_date_time, iso, tidy_data, parse_dates
 
 
 def grab_already_curated_files():
@@ -26,8 +26,6 @@ def grab_already_curated_files():
         tempcols= list(df.columns)
     
         return tempfiles, tempcols
-
-
 
 def call_processing_function_old_data(radiobutton, tempfiles, tempcols):
 
@@ -63,6 +61,9 @@ def call_processing_function_old_data(radiobutton, tempfiles, tempcols):
     if radiobutton=='Tidy Data Checker':
         tidy_data.file_cleanup(tempfiles,tempcols)
 
+    if radiobutton=='Parse Date':
+        parse_dates.parse_dateTime(tempfiles,tempcols)
+
 def call_processing_function_new_data(radiobutton):
     if radiobutton is not None:
         st.markdown('-------------')
@@ -95,6 +96,9 @@ def call_processing_function_new_data(radiobutton):
 
     if radiobutton=='Tidy Data Checker':
         datafiles, cols, func=file_uploads.fileuploadfunc(tidy_data.file_cleanup)
+
+    if radiobutton=='Parse Date':
+        datafiles, cols, func=file_uploads.fileuploadfunc(parse_dates.parse_dateTime)
 
     if radiobutton and datafiles:
         #CALL CORE PROCESSING FUNCTION-----------------------

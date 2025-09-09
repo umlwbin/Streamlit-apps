@@ -130,15 +130,17 @@ with t1:
     st.markdown('Data is being updated every 12 minutes')
 
     csv_path = "2022_ctd.csv"
-    # Get last modified time
-    last_modified = datetime.datetime.fromtimestamp(os.path.getmtime(csv_path))
+    # Get UTC modified time
+    utc_time = datetime.datetime.fromtimestamp(os.path.getmtime(csv_path), tz=datetime.timezone.utc)
 
-    # Calculate next update (10 minutes later)
-    next_update = last_modified + datetime.timedelta(minutes=12)
+    from zoneinfo import ZoneInfo
+    # Convert to local time (Winnipeg)
+    local_time = utc_time.astimezone(ZoneInfo("America/Winnipeg"))
+    next_update = local_time + datetime.timedelta(minutes=10)
 
-    st.markdown("### ⏱️ Update Info")
-    st.write(f"**Last updated:** {last_modified.strftime('%Y-%m-%d %H:%M:%S')}")
-    st.write(f"**Next update expected:** {next_update.strftime('%Y-%m-%d %H:%M:%S')}")
+    st.sidebar.markdown("##### ⏱️ Update Info")
+    st.sidebar.write(f"**Last updated:** {local_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    st.sidebar.write(f"**Next update expected:** {next_update.strftime('%Y-%m-%d %H:%M:%S')}")
 
     st. dataframe(df_from_github)
 

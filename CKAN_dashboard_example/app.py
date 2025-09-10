@@ -14,6 +14,9 @@ st.set_page_config(page_title="James Bay CTD Dashboard", layout="wide")
 # Refresh every 600 seconds (12 minutes)
 #st_autorefresh(interval=720 * 1000, limit=100, key="datarefresh")
 
+logo='https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/master/Apps/Vocab%20app/UM-EarthObservationScience-cmyk-left.png?ref_type=heads'
+st.sidebar.image(logo, width=250)
+
 st.sidebar.markdown("### 📂 **Select View**")
 page = st.sidebar.radio("Select", ["Introduction", "Latest Data", "Station Map", "Depth Profiles", "Surface Properties in the Bay"])
 

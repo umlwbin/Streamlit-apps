@@ -18,7 +18,7 @@ logo='https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/maste
 st.sidebar.image(logo, width=250)
 
 st.sidebar.markdown("### 📂 **Select View**")
-page = st.sidebar.radio("Select", ["Introduction", "Latest Data", "Station Map", "Depth Profiles", "Surface Properties in the Bay"])
+page = st.sidebar.radio("Select", ["Introduction", "Station Map", "Depth Profiles", "Surface Properties in the Bay"])
 
 if st.button("Refresh Data"):
     st.experimental_rerun()
@@ -87,7 +87,6 @@ filtered_df = df[
 ]
 
 
-
 st.sidebar.markdown(" ") 
 st.sidebar.caption("Made with ❤️ by Yan")
 
@@ -125,23 +124,23 @@ if page == "Introduction":
     st.markdown("####")
 
 
-if page == "Latest Data":
-    with st.container(border=True):
-        st.subheader("📊 Latest Data From CanWIN")
-        csv_path = "2022_ctd.csv"
-        # Get UTC modified time
-        utc_time = datetime.datetime.fromtimestamp(os.path.getmtime(csv_path), tz=datetime.timezone.utc)
+# if page == "Latest Data":
+#     with st.container(border=True):
+#         st.subheader("📊 Latest Data From CanWIN")
+#         csv_path = "2022_ctd.csv"
+#         # Get UTC modified time
+#         utc_time = datetime.datetime.fromtimestamp(os.path.getmtime(csv_path), tz=datetime.timezone.utc)
 
-        from zoneinfo import ZoneInfo
-        # Convert to local time (Winnipeg)
-        local_time = utc_time.astimezone(ZoneInfo("America/Winnipeg"))
-        next_update = local_time + datetime.timedelta(minutes=10)
+#         from zoneinfo import ZoneInfo
+#         # Convert to local time (Winnipeg)
+#         local_time = utc_time.astimezone(ZoneInfo("America/Winnipeg"))
+#         next_update = local_time + datetime.timedelta(minutes=10)
 
-        st.markdown("##### ⏱️ Update Info")
-        st.write(f"**Last updated:** {local_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        st.write(f"**Next update expected:** {next_update.strftime('%Y-%m-%d %H:%M:%S')}")
+#         st.markdown("##### ⏱️ Update Info")
+#         st.write(f"**Last updated:** {local_time.strftime('%Y-%m-%d %H:%M:%S')}")
+#         st.write(f"**Next update expected:** {next_update.strftime('%Y-%m-%d %H:%M:%S')}")
 
-        st. dataframe(df_from_github)
+#         st. dataframe(df_from_github)
 
 
 if page == "Station Map":
@@ -345,67 +344,6 @@ if page == "Surface Properties in the Bay":
     min_depth_anim = animation_df["Depth"].min()
     max_depth_anim = animation_df["Depth"].max()
 
-
-    # fig = px.scatter(
-    #     animation_df,
-    #     x=animated_param,
-    #     y="Depth",
-    #     animation_frame="Timestamp",
-    #     size_max=20,  # Optional, sets upper bound for size scaling
-    #     range_y=[max_depth_anim, min_depth_anim],
-    #     color=animated_param,
-    #     color_continuous_scale="Viridis",
-    #     title=f"{animated_param} vs Depth Over Time",
-    #     labels={"Depth": "Depth (m)", animated_param: animated_param}
-    # )
-    # fig.update_traces(marker=dict(
-    #     size=14,
-    #     opacity=0.8,
-    #     line=dict(width=2, color='white')  # creates a halo effect
-    # ))
-
-
-
-    # fig.update_layout(
-    #     updatemenus=[{
-    #         "type": "buttons",
-    #         "buttons": [{
-    #             "label": "Play",
-    #             "method": "animate",
-    #             "args": [None, {
-    #                 "frame": {"duration": 1000, "redraw": True},  # 1000 ms per frame
-    #                 "fromcurrent": True,
-    #                 "transition": {"duration": 500, "easing": "linear"}
-    #             }]
-    #         }, {
-    #             "label": "Pause",
-    #             "method": "animate",
-    #             "args": [[None], {
-    #                 "frame": {"duration": 0, "redraw": False},
-    #                 "mode": "immediate",
-    #                 "transition": {"duration": 0}
-    #             }]
-    #         }]
-    #     }]
-    # )
-
-
-
-
-
-    # slice_df = df[df["Depth"].between(10, 15)]  # example slice
-
-    # fig = px.scatter(
-    #     slice_df,
-    #     x="Station",
-    #     y="Temperature",  # or Salinity, Conductivity
-    #     animation_frame="Timestamp",
-    #     color="Temperature",
-    #     color_continuous_scale="Reds",
-    #     title="Temperature at 10–15m Depth Over Time"
-    # )
-
-
     surface_df = df[df["Depth"] < 5]  # surface layer
 
     fig = px.scatter_mapbox(
@@ -420,9 +358,6 @@ if page == "Surface Properties in the Bay":
         zoom=5,
         title=f"Surface {animated_param} Across Stations"
     )
-
-
-
 
     st.plotly_chart(fig)
 

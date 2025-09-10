@@ -76,19 +76,6 @@ df["TimestampStr"] = df["Timestamp"].dt.strftime("%Y-%m-%d %H:%M")
 min_time = df["Timestamp"].min()
 max_time = df["Timestamp"].max()
 
-# Use pandas Timestamps in the slider
-# selected_time = st.sidebar.slider(
-#     "Select Time Range",
-#     min_value=min_time,
-#     max_value=max_time,
-#     value=(min_time.to_pydatetime(), max_time.to_pydatetime()),
-#     format="YYYY-MM-DD HH:mm"
-# )
-
-# selected_time_utc = (
-#     selected_time[0].replace(tzinfo=datetime.timezone.utc),
-#     selected_time[1].replace(tzinfo=datetime.timezone.utc)
-# )
 
 # Filtered data
 filtered_df = df[

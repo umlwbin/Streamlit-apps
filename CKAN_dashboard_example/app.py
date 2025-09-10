@@ -15,7 +15,7 @@ st.set_page_config(page_title="James Bay CTD Dashboard", layout="wide")
 #st_autorefresh(interval=720 * 1000, limit=100, key="datarefresh")
 
 st.sidebar.markdown("### 📂 **Select View**")
-page = st.sidebar.radio("Select", ["Introduction", "Latest Data", "Station Map", "Depth Profiles", "Animated Profiles"])
+page = st.sidebar.radio("Select", ["Introduction", "Latest Data", "Station Map", "Depth Profiles", "Surface Properties in the Bay"])
 
 if st.button("Refresh Data"):
     st.experimental_rerun()
@@ -96,7 +96,9 @@ filtered_df = df[
     # (df["Timestamp"] <= selected_time_utc[1])
 ]
 
-st.sidebar.markdown("---")
+
+
+st.sidebar.markdown(" ") 
 st.sidebar.caption("Made with ❤️ by Yan")
 
 
@@ -104,6 +106,8 @@ if page == "Introduction":
     # Title and intro
     st.title("🌊 James Bay CTD 2022 Dashboard")
     st.markdown("This dashboard visualizes oceanographic measurements collected using a CTD (Conductivity, Temperature, Depth) instrument in James Bay, 2022.")
+    st.markdown("Data is being pulled from the **Canadian Watershed Information Network (CanWIN)**. ")
+    st.markdown("Check them out below!!")
 
     with st.expander("🔬 More About CTDs"):
 
@@ -155,61 +159,114 @@ if page == "Station Map":
 
     # Spinner while loading
     with st.spinner("Loading interactive map..."):
-        # Prepare data
-        map_df = df[["Latitude", "Longitude", "Station", "Timestamp"]].dropna().copy()
 
-        # Convert Timestamp to string for tooltip
-        map_df["Timestamp"] = pd.to_datetime(map_df["Timestamp"])
-        map_df["TimestampStr"] = map_df["Timestamp"].dt.strftime("%Y-%m-%d %H:%M")
+        df["TimestampRounded"] = df["Timestamp"].dt.floor("10min")
+        df["TimestampStr"] = df["TimestampRounded"].dt.strftime("%Y-%m-%d %H:%M")
 
-        # Assign unique color per station
-        stations = map_df["Station"].unique()
-        color_map = {station: list(np.random.randint(50, 255, size=3)) for station in stations}
-        map_df["Color"] = map_df["Station"].map(color_map)
+        frame_counts = df["TimestampStr"].value_counts()
+        valid_frames = frame_counts[frame_counts > 1].index
+        map_df = df[df["TimestampStr"].isin(valid_frames)]
 
-        # Ensure all columns are basic types
-        map_df["Latitude"] = map_df["Latitude"].astype(float)
-        map_df["Longitude"] = map_df["Longitude"].astype(float)
-        map_df["Station"] = map_df["Station"].astype(str)
-        map_df["TimestampStr"] = map_df["TimestampStr"].astype(str)
-        map_df["Color"] = map_df["Color"].apply(lambda x: list(map(int, x)))
 
-        # Create PyDeck layer
-        layer = pdk.Layer(
-            "ScatterplotLayer",
-            data=map_df,
-            get_position=["Longitude", "Latitude"],
-            get_radius=5000,
-            get_color="Color",
-            pickable=True,
-            auto_highlight=True
-        )
-
-        # Define tooltip
-        tooltip = {
-            "html": "<b>Station:</b> {Station}<br><b>Lat:</b> {Latitude}<br><b>Lon:</b> {Longitude}<br><b>Time:</b> {TimestampStr}",
-            "style": {"backgroundColor": "steelblue", "color": "white"}
-        }
-
-        # Set view
-        view_state = pdk.ViewState(
-            latitude=map_df["Latitude"].mean(),
-            longitude=map_df["Longitude"].mean(),
+        fig = px.scatter_mapbox(
+            map_df,
+            lat="Latitude",
+            lon="Longitude",
+            hover_name="Station",
+            hover_data={"TimestampStr": True},
+            animation_frame="TimestampStr",
+            color="Station",
             zoom=5,
-            pitch=0
+            height=600,
+            mapbox_style="carto-positron",
+            title="Station Deployment Over Time"
         )
 
-        # Render map
-        st.pydeck_chart(pdk.Deck(
-            layers=[layer],
-            initial_view_state=view_state,
-            tooltip=tooltip
-        ))
+        fig.update_traces(marker=dict(size=14))  # Try 18, 24, or even 30
+
+
+        fig.update_layout(
+            updatemenus=[{
+                "type": "buttons",
+                "buttons": [{
+                    "label": "Play",
+                    "method": "animate",
+                    "args": [None, {
+                        "frame": {"duration": 1000, "redraw": True},  # 1 second per frame
+                        "fromcurrent": True,
+                        "transition": {"duration": 500}
+                    }]
+                }, {
+                    "label": "Pause",
+                    "method": "animate",
+                    "args": [[None], {
+                        "frame": {"duration": 0, "redraw": False},
+                        "mode": "immediate",
+                        "transition": {"duration": 0}
+                    }]
+                }]
+            }]
+        )
+
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
+        # # Prepare data
+        # map_df = df[["Latitude", "Longitude", "Station", "Timestamp"]].dropna().copy()
+
+        # # Convert Timestamp to string for tooltip
+        # map_df["Timestamp"] = pd.to_datetime(map_df["Timestamp"])
+        # map_df["TimestampStr"] = map_df["Timestamp"].dt.strftime("%Y-%m-%d %H:%M")
+
+        # # Assign unique color per station
+        # stations = map_df["Station"].unique()
+        # color_map = {station: list(np.random.randint(50, 255, size=3)) for station in stations}
+        # map_df["Color"] = map_df["Station"].map(color_map)
+
+        # # Ensure all columns are basic types
+        # map_df["Latitude"] = map_df["Latitude"].astype(float)
+        # map_df["Longitude"] = map_df["Longitude"].astype(float)
+        # map_df["Station"] = map_df["Station"].astype(str)
+        # map_df["TimestampStr"] = map_df["TimestampStr"].astype(str)
+        # map_df["Color"] = map_df["Color"].apply(lambda x: list(map(int, x)))
+
+        # # Create PyDeck layer
+        # layer = pdk.Layer(
+        #     "ScatterplotLayer",
+        #     data=map_df,
+        #     get_position=["Longitude", "Latitude"],
+        #     get_radius=5000,
+        #     get_color="Color",
+        #     pickable=True,
+        #     auto_highlight=True
+        # )
+
+        # # Define tooltip
+        # tooltip = {
+        #     "html": "<b>Station:</b> {Station}<br><b>Lat:</b> {Latitude}<br><b>Lon:</b> {Longitude}<br><b>Time:</b> {TimestampStr}",
+        #     "style": {"backgroundColor": "steelblue", "color": "white"}
+        # }
+
+        # # Set view
+        # view_state = pdk.ViewState(
+        #     latitude=map_df["Latitude"].mean(),
+        #     longitude=map_df["Longitude"].mean(),
+        #     zoom=5,
+        #     pitch=0
+        # )
+
+        # # Render map
+        # st.pydeck_chart(pdk.Deck(
+        #     layers=[layer],
+        #     initial_view_state=view_state,
+        #     tooltip=tooltip
+        # ))
 
 
 if page == "Depth Profiles":
     # Depth profiles
-    st.subheader("📊 Interactive Depth Profiles")
+    st.subheader("📈 Interactive Depth Profiles")
     st.caption(f"Available data from {df['Timestamp'].min().strftime('%Y-%m-%d')} to {df['Timestamp'].max().strftime('%Y-%m-%d')}")
 
     # Use filtered_df from your sidebar filters
@@ -270,25 +327,112 @@ if page == "Depth Profiles":
                 st.plotly_chart(fig_cond, use_container_width=True)
 
 
-if page == "Animated Profiles":
+if page == "Surface Properties in the Bay":
     import plotly.express as px
-    st.subheader("🎞️ Animated Depth Profile Over Time")
+    st.subheader("🌡️ Surface Properties")
 
     # Choose parameter
     animated_param = st.selectbox("Select parameter for animation", ["Temperature", "Salinity", "Conductivity"])
 
     # Filter for animation (optional: limit to one station)
-    animation_df = df[df["Station"] == selected_station]
+    animation_df = df[
+        (df["Station"] == selected_station) &
+        (df["Depth"] >= depth_range[0]) &
+        (df["Depth"] <= depth_range[1])
+    ]
 
-    fig = px.scatter(
-        animation_df,
-        x=animated_param,
-        y="Depth",
-        animation_frame="Timestamp",
-        range_y=[animation_df["Depth"].max(), animation_df["Depth"].min()],
-        color="Station",
-        title=f"{animated_param} vs Depth Over Time",
-        labels={"Depth": "Depth (m)", animated_param: animated_param}
+    #filter out timestamps that don’t have any data in the selected depth range:
+    valid_timestamps = animation_df["Timestamp"].sort_values().unique()
+    animation_df = animation_df[animation_df["Timestamp"].isin(valid_timestamps)]
+
+
+    #remove frames with only one point (which can feel static), you could group and filter
+    frame_counts = animation_df.groupby("Timestamp").size()
+    valid_frames = frame_counts[frame_counts > 1].index
+    animation_df = animation_df[animation_df["Timestamp"].isin(valid_frames)]
+
+
+    min_depth_anim = animation_df["Depth"].min()
+    max_depth_anim = animation_df["Depth"].max()
+
+
+    # fig = px.scatter(
+    #     animation_df,
+    #     x=animated_param,
+    #     y="Depth",
+    #     animation_frame="Timestamp",
+    #     size_max=20,  # Optional, sets upper bound for size scaling
+    #     range_y=[max_depth_anim, min_depth_anim],
+    #     color=animated_param,
+    #     color_continuous_scale="Viridis",
+    #     title=f"{animated_param} vs Depth Over Time",
+    #     labels={"Depth": "Depth (m)", animated_param: animated_param}
+    # )
+    # fig.update_traces(marker=dict(
+    #     size=14,
+    #     opacity=0.8,
+    #     line=dict(width=2, color='white')  # creates a halo effect
+    # ))
+
+
+
+    # fig.update_layout(
+    #     updatemenus=[{
+    #         "type": "buttons",
+    #         "buttons": [{
+    #             "label": "Play",
+    #             "method": "animate",
+    #             "args": [None, {
+    #                 "frame": {"duration": 1000, "redraw": True},  # 1000 ms per frame
+    #                 "fromcurrent": True,
+    #                 "transition": {"duration": 500, "easing": "linear"}
+    #             }]
+    #         }, {
+    #             "label": "Pause",
+    #             "method": "animate",
+    #             "args": [[None], {
+    #                 "frame": {"duration": 0, "redraw": False},
+    #                 "mode": "immediate",
+    #                 "transition": {"duration": 0}
+    #             }]
+    #         }]
+    #     }]
+    # )
+
+
+
+
+
+    # slice_df = df[df["Depth"].between(10, 15)]  # example slice
+
+    # fig = px.scatter(
+    #     slice_df,
+    #     x="Station",
+    #     y="Temperature",  # or Salinity, Conductivity
+    #     animation_frame="Timestamp",
+    #     color="Temperature",
+    #     color_continuous_scale="Reds",
+    #     title="Temperature at 10–15m Depth Over Time"
+    # )
+
+
+    surface_df = df[df["Depth"] < 5]  # surface layer
+
+    fig = px.scatter_mapbox(
+        surface_df,
+        lat="Latitude",
+        lon="Longitude",
+        size=animated_param,
+        color=animated_param,
+        color_continuous_scale="Viridis",
+        hover_name="Station",
+        mapbox_style="carto-positron",
+        zoom=5,
+        title=f"Surface {animated_param} Across Stations"
     )
+
+
+
+
     st.plotly_chart(fig)
 

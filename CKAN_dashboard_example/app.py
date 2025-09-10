@@ -137,7 +137,7 @@ if page == "Introduction":
 
 if page == "Latest Data":
     with st.container(border=True):
-        st.subheader("📊 Latest Data From Github")
+        st.subheader("📊 Latest Data From CanWIN")
         csv_path = "2022_ctd.csv"
         # Get UTC modified time
         utc_time = datetime.datetime.fromtimestamp(os.path.getmtime(csv_path), tz=datetime.timezone.utc)

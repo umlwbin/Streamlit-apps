@@ -102,12 +102,13 @@ def file_upload():
     datafiles=st.file_uploader("Choose a CSV file", accept_multiple_files=True, on_change=newUpload, type="csv")
     
     #If there are files uplaoded call get header widget function
-    if datafiles:
-        get_data_metadata_tables(datafiles)
+    if st.session_state.new_upload:
+        if datafiles:
+            get_data_metadata_tables(datafiles)
 
-    else:
-        left, right = st.columns(2)
-        left.warning('Oops, please uplaod CSV files', icon="⚠️")
+        else:
+            left, right = st.columns(2)
+            left.warning('Oops, please uplaod CSV files', icon="⚠️")
 
 
 

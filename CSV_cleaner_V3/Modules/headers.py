@@ -3,13 +3,25 @@ import pandas as pd
 import re
 
 
+def headers_widgets():
+    # INTRO WIDGETS FOR FUNCTION---------------------------------------------
+    st.markdown(" ")
+    st.markdown('##### Cleaning up those headers...🧹')
+    st.markdown('')
+
+    # WIDGET CREATION --------------------------------------------   
+    #Next Button
+    st.button("Let's Go", type="primary", key='headersContinue') 
+
+    #IF NEXT BUTTON IS CLICKED
+    if st.session_state.get("headersContinue"): 
+        task_inputs = {}              
+        return task_inputs    
+
+
 def clean_headers(df,):
 
     cols=list(df.columns)
-
-    # INTRO WIDGETS FOR FUNCTION---------------------------------------------
-    st.markdown('#### Cleaning headers...')
-    st.markdown('')
 
     #PROCESSING************************************************************************ 
     cleaned_headers=[]

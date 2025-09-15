@@ -36,19 +36,42 @@ def what_to_do_widgets():
     # INTRO WIDGETS---------------------------------------------
     st.markdown('#### What would you like to do? 🤔')
 
-    # WIDGET INTERACTIONS----------------------------------------------------
-    def click_Rbutton():
+    # # WIDGET INTERACTIONS----------------------------------------------------
+    # def click_Rbutton():
 
-        st.session_state.selected_task = task
-        session_initializer.reset_widget_flags() #Reset all the next buttons that are not directly widgetkeys. 
+    #     st.session_state.selected_task = task
+    #     session_initializer.reset_widget_flags() #Reset all the next buttons that are not directly widgetkeys. 
 
-    # WIDGET CREATION --------------------------------------------
-    task=st.radio('Select an action',['Tidy Data Checker','Reorder columns','Add columns', 'Remove columns', 'Merge multiple files', 'Clean column headers',
-                                                'Rename columns','Merge date and time columns', 'Convert DateTime column to ISO format', 'Parse Date', 'Transpose Data', 'Assign Data Type'],
-                                                captions=['Please use this checker for key cleaning steps. It removes empty rows and cols, standardizes NaNs, and cleans column headers.',
-                                                          '','','','','Remove spaces and special characters',' Standardize those column names!','','YYYY-MM-DDTHH:MM:SS', 'Parse one ISO date-time column into Y-m-d and Time','Flip your data!', 'Assign data types to **columns**'], 
-                                                index=None,on_change=click_Rbutton, key='RadioKey')
-    
-    return task
+    # # WIDGET CREATION --------------------------------------------
+    # task=st.radio('Select an action',['Tidy Data Checker','Reorder columns','Add columns', 'Remove columns', 'Merge multiple files', 'Clean column headers',
+    #                                             'Rename columns','Merge date and time columns', 'Convert DateTime column to ISO format', 'Parse Date', 'Transpose Data', 'Assign Data Type'],
+    #                                             captions=['Please use this checker for key cleaning steps. It removes empty rows and cols, standardizes NaNs, and cleans column headers.',
+    #                                                       '','','','','Remove spaces and special characters',' Standardize those column names!','','YYYY-MM-DDTHH:MM:SS', 'Parse one ISO date-time column into Y-m-d and Time','Flip your data!', 'Assign data types to **columns**'], 
+    #                                             index=None,on_change=click_Rbutton, key='RadioKey')
+
+    task_descriptions = {
+    "Tidy Data Checker": "Please use this checker for key cleaning steps. It removes empty rows and cols, standardizes NaNs, and cleans column headers.",
+    "Reorder columns": "Rearrange columns ",
+    "Add columns": "Insert a new column with a single value throughout ",
+    "Remove columns": " Remove columns from all files",
+    'Merge multiple files':"Concatenate multiple data tables ",
+    'Clean column headers': "Remove spaces and special characters ",
+    'Rename columns': "Standardize those column names!",
+    'Merge date and time columns': " ", 
+    'Convert DateTime column to ISO format': "YYYY-MM-DDTHH:MM:SS ", 
+    'Parse Date': "Parse one ISO date-time column into Y-m-d and Time ", 
+    'Transpose Data': "Flip your data! ", 
+    'Assign Data Type': "Assign data types to **columns** "
+
+    # Add more as needed...
+        }
+
+    selected_task = st.selectbox("Choose a task", list(task_descriptions.keys()), index=None)
+
+    if selected_task:
+        # Show description below
+        st.caption(f"ℹ️ {task_descriptions[selected_task]}")
+        
+        return selected_task
 
 

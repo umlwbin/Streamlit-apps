@@ -81,7 +81,6 @@ def run_task(task_name, **kwargs):
     view_undo_redo.show_snapshot()
 
 
-
 with tab1:
     # -------------------------------
     # 🎯 Step 1: Task Selection
@@ -147,8 +146,9 @@ with tab1:
                     run_task(task, **task_inputs)                       
 
             if task=='Clean column headers':                                   
-                task_inputs={}              
-                run_task(task, **task_inputs)  
+                task_inputs=headers.headers_widgets()
+                if st.session_state.get("headersContinue"):      
+                    run_task(task, **task_inputs) 
 
             if task=='Rename columns':                                   
                 task_inputs=rename.rename_cols_widgets(cols) or {} 
@@ -171,8 +171,9 @@ with tab1:
                     run_task(task, **task_inputs)
 
             if task=='Transpose Data': 
-                task_inputs={}              
-                run_task(task, **task_inputs)  
+                task_inputs=pivot_data.pivot_widgets()
+                if st.session_state.get("pivotContinue"):      
+                    run_task(task, **task_inputs)               
 
             if task=='Assign Data Type': 
                 first_df=list(st.session_state.current_data.values())[0]                                 
@@ -201,6 +202,17 @@ with tab1:
             st.warning("⚠️ All uploaded files failed to load. Please check the format and try again.")
 
 
+
+        # Detect file removal and clear session state - This clears the Live Data Preview
+        if uploaded_files == [] and st.session_state.get("current_data"):
+            st.session_state.current_data = {}
+            st.session_state.original_data  = {}
+            st.session_state.task_history = {}
+            st.session_state.history_stack = {}
+            st.session_state.redo_stack = {}
+            st.info(" All uploaded files removed. Preview cleared.")
+
+
 # -------------------------------
 # 👀 Step 4: Live Preview
 # ------------------------------- 
@@ -210,7 +222,7 @@ with tab2:
 
     if st.session_state.current_data:
         filenames = list(st.session_state.current_data.keys())
-        selected_file = st.selectbox("📂 Choose a file to preview", filenames, key="preview_file") #Drowpdownbox to select file
+        selected_file = st.selectbox("📂 Choose a file to preview", filenames, key="preview_file") #Dropdown box to select file
 
         current_df = st.session_state.current_data[selected_file]
         original_df = st.session_state.original_data[selected_file]
@@ -223,11 +235,11 @@ with tab2:
         compare = st.checkbox("Compare with Original", key="sidebar_compare")
 
         if compare:
-            st.markdown("**Original (Top 5 rows):**")
-            st.dataframe(original_df.head(5), use_container_width=True)
-
             st.markdown("**Processed (Top 5 rows):**")
             st.dataframe(current_df.head(5), use_container_width=True)
+
+            st.markdown("**Original (Top 5 rows):**")
+            st.dataframe(original_df.head(5), use_container_width=True)
         else:
             st.markdown("**Processed Data (Top 5 rows):**")
             st.dataframe(current_df.head(5), use_container_width=True)

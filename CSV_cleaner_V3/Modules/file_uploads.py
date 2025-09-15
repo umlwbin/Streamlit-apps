@@ -21,6 +21,7 @@ def fileuploadfunc():
     def newUpload():
         #st.session_state.new_upload=True
         session_initializer.reset_widget_flags() #Reset all the next buttons that are not directly widgetkeys. 
+        st.session_state.files_processed=False
   
         # Clear output data
         for f in os.listdir(path):

@@ -2,9 +2,23 @@ import streamlit as st
 import pandas as pd
 
 
+def pivot_widgets():
+    # INTRO WIDGETS FOR FUNCTION---------------------------------------------
+    st.markdown(" ")
+    st.markdown('##### Flipping your data! 🤸🏽‍♂️ ')
+
+
+    # WIDGET CREATION --------------------------------------------   
+    #Next Button
+    st.button("Let's Go", type="primary", key='pivotContinue') 
+
+    #IF NEXT BUTTON IS CLICKED
+    if st.session_state.get("pivotContinue"): 
+        task_inputs = {}              
+        return task_inputs
+
 #PROCESSING************************************************************************
 def pivot(df):
-    st.markdown("#### 🤸🏽‍♂️ Transposing your data!")
     st.markdown("##### 📄 Original DataFrame")
     st.dataframe(df.head(5))
 

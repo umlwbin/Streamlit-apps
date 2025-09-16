@@ -6,8 +6,12 @@ def reset_undo_redo_buttons():
 
     with col1:
         # 🔄 Reset all
-        if st.button("🔄  **Reset All Files**"):
+        if st.button("🔄  **Reset All Files**",key="reset"):
             for filename in st.session_state.original_data:
+
+                # # Clear task selection
+                st.session_state["task_selection"] = "Choose an option"
+
                 st.session_state.current_data[filename] = st.session_state.original_data[filename].copy()
                 st.session_state.task_history[filename] = []
             st.toast("🔁 All files reset to original versions")

@@ -7,7 +7,7 @@ path=os.path.abspath(os.curdir)
 #Add Modules
 sys.path.append(f'{path}/Modules')
 #Module Imports for the different sections
-import  session_initializer, add_columns,reorder_variables,remove_columns, merge_files, headers, rename,merge_date_time, iso, parse_dates, tidy_data, pivot_data, assign_dataType 
+import add_columns,reorder_variables,remove_columns, merge_files, headers, rename,merge_date_time, iso, parse_dates, tidy_data, pivot_data, assign_dataType2
 
 
 def define_task_functions():
@@ -16,14 +16,14 @@ def define_task_functions():
         "Add columns": {"type": "single", "func": add_columns.add_cols},
         "Reorder columns": {"type": "single", "func": reorder_variables.reorder},
         "Remove columns": {"type": "single", "func": remove_columns.remove_cols},
-        "Merge All Files": {"type": "multi", "func": merge_files.merge},
+        "Merge multiple files": {"type": "multi", "func": merge_files.merge},
         "Clean column headers": {"type": "single", "func": headers.clean_headers},
         "Rename columns": {"type": "single", "func": rename.rename_cols},
         "Merge date and time columns": {"type": "single", "func": merge_date_time.merge},
         "Convert DateTime column to ISO format": {"type": "single", "func": iso.convert_func},
         "Parse Date": {"type": "single", "func": parse_dates.parse_func},
         "Transpose Data": {"type": "single", "func": pivot_data.pivot},
-        "Assign Data Type": {"type": "single", "func": assign_dataType.assign},
+        "Assign Data Type": {"type": "single", "func": assign_dataType2.assign},
         
     }
 
@@ -50,6 +50,7 @@ def what_to_do_widgets():
     #                                             index=None,on_change=click_Rbutton, key='RadioKey')
 
     task_descriptions = {
+    "Choose an option": "Select from the dropdown list",
     "Tidy Data Checker": "Please use this checker for key cleaning steps. It removes empty rows and cols, standardizes NaNs, and cleans column headers.",
     "Reorder columns": "Rearrange columns ",
     "Add columns": "Insert a new column with a single value throughout ",
@@ -66,12 +67,12 @@ def what_to_do_widgets():
     # Add more as needed...
         }
 
-    selected_task = st.selectbox("Choose a task", list(task_descriptions.keys()), index=None)
+    selected_task = st.selectbox("Choose a task", list(task_descriptions.keys()),key="task_selection")
 
     if selected_task:
         # Show description below
         st.caption(f"ℹ️ {task_descriptions[selected_task]}")
-        
+
         return selected_task
 
 

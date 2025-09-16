@@ -13,7 +13,7 @@ path=os.path.abspath(os.curdir)
 sys.path.append(f'{path}/Modules') #adding the Modules directory to Python's search path at runtime.
 
 #Module Imports for the different sections
-import  session_initializer, sidebar_intro, tasks, view_undo_redo, file_uploads, add_columns,reorder_variables,remove_columns, merge_files, headers, rename,merge_date_time, iso, parse_dates, tidy_data, pivot_data, assign_dataType, download 
+import  session_initializer, sidebar_intro, tasks, view_undo_redo, file_uploads, add_columns,reorder_variables,remove_columns, merge_files, headers, rename,merge_date_time, iso, parse_dates, tidy_data, pivot_data, assign_dataType,assign_dataType2, download 
 
 # Initialize Session States
 session_initializer.init_session_state()
@@ -123,68 +123,85 @@ with tab1:
         # 🔁 Step 3: Apply Task to Current Data - See Run Task Function above
         # ------------------------------- 
         if uploaded_files and task and st.session_state.original_data: # At least one GOOD file was read into a DataFrame
+
+            if task =="Choose an option":
+                st.markdown(' ')
         
-            if task is not None:
+            if task is not None and task != "Choose an option":
                 st.markdown('-------------')
                 st.markdown(f'### {task}')
                 st.markdown(' ')
                 cols=list(list(st.session_state.current_data.values())[0].columns)
 
+            if task=='Merge multiple files':                                   
+                task_inputs=merge_files.merge_widgets()
+                if st.session_state.get("mergeContinue"):      
+                    run_task(task, **task_inputs)
+
             if task=='Add columns':                                   
                 task_inputs=add_columns.how_many_vars_widget(cols) or {} # Create Widgets and get user inputs
                 if st.session_state.get("addColsNext2_WidgetKey"):       # Last Next Button Clicked
-                    run_task(task, **task_inputs)                        # Run Processing Function and Update Undo, Redo, Current states.
+                    if task_inputs: 
+                        run_task(task, **task_inputs)                       # Run Processing Function and Update Undo, Redo, Current states.
 
             if task=='Reorder columns':                                   
                 task_inputs=reorder_variables.redorder_widget(cols) or {} 
                 if st.session_state.get("reorderNext_WidgetKey"):       
-                    run_task(task, **task_inputs)                                 
+                    if task_inputs: 
+                        run_task(task, **task_inputs)                                
 
             if task=='Remove columns':                                   
                 task_inputs=remove_columns.which_cols_widgets(cols) or {} 
                 if st.session_state.get("removeColsNext_WidgetKey"):       
-                    run_task(task, **task_inputs)                       
-
-            if task=='Clean column headers':                                   
-                task_inputs=headers.headers_widgets()
-                if st.session_state.get("headersContinue"):      
-                    run_task(task, **task_inputs) 
+                    if task_inputs: 
+                        run_task(task, **task_inputs)                      
 
             if task=='Rename columns':                                   
                 task_inputs=rename.rename_cols_widgets(cols) or {} 
                 if st.session_state.get("renameNext_WidgetKey"):       
-                    run_task(task, **task_inputs)                        
+                    if task_inputs: 
+                        run_task(task, **task_inputs)                       
 
             if task=='Merge date and time columns':                                                
                 task_inputs=merge_date_time.merge_dt_widgets(cols) or {}
                 if st.session_state.get("mergeDateNext_WidgetKey"):      
-                    run_task(task, **task_inputs)                       
+                    if task_inputs: 
+                        run_task(task, **task_inputs)                      
 
             if task=='Convert DateTime column to ISO format':                                                
                 task_inputs=iso.convert_dateTime_widgets(cols) or {}
                 if st.session_state.get("convertISONext1_WidgetKey"):      
-                    run_task(task, **task_inputs)
+                    if task_inputs: 
+                        run_task(task, **task_inputs)
 
             if task=='Parse Date':                                                
                 task_inputs=parse_dates.parse_dateTime_widgets(cols) or {}
                 if st.session_state.get("ParseNext_WidgetKey"):      
+                    if task_inputs: 
+                        run_task(task, **task_inputs)
+
+            if task=='Clean column headers':                                   
+                task_inputs=headers.headers_widgets()
+                if st.session_state.get("headersContinue"):      
                     run_task(task, **task_inputs)
 
             if task=='Transpose Data': 
-                task_inputs=pivot_data.pivot_widgets()
+                task_inputs=pivot_data.pivot_widgets() or {}
                 if st.session_state.get("pivotContinue"):      
-                    run_task(task, **task_inputs)               
+                    run_task(task, **task_inputs)             
 
             if task=='Assign Data Type': 
                 first_df=list(st.session_state.current_data.values())[0]                                 
-                task_inputs=assign_dataType.assign_widgets(first_df, cols) or {}
-                if st.session_state.get("assignNext_WidgetKey"):          
-                    run_task(task, **task_inputs)
+                task_inputs=assign_dataType2.assign_widgets(first_df) or {}
+                if st.session_state.get('assignNext_WidgetKey'): 
+                    if task_inputs: 
+                        run_task(task, **task_inputs)
 
             if task=='Tidy Data Checker':
                 task_inputs=tidy_data.file_cleanup_widgets(cols) or {}
-                if st.session_state.get("cleanupContinue"):      
-                    run_task(task, **task_inputs)
+                if st.session_state.get("cleanupContinue"): 
+                    if task_inputs: 
+                        run_task(task, **task_inputs)
 
                     # Display Summary of cleaning
                     st.markdown(" ")
@@ -197,11 +214,8 @@ with tab1:
                             if summary.get("columns_cleaned"):
                                 st.success("✅ Column headers cleaned")
 
-
         if uploaded_files and not st.session_state.original_data:
-            st.warning("⚠️ All uploaded files failed to load. Please check the format and try again.")
-
-
+            st.error("❌ Uploaded files failed to load. Please check the format and try again.")
 
         # Detect file removal and clear session state - This clears the Live Data Preview
         if uploaded_files == [] and st.session_state.get("current_data"):

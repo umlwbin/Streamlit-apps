@@ -15,15 +15,14 @@ def init_session_state():
 
         #'new_upload': False,
         'files_processed':False,
-        #'reorderNext':False,
         'addColsNext1':False,
-        #'addColsNext2':False,
         'removeColsNext':False,        
         'renameNext':False,
         'mergeDateNext':False,
         'convertISONext1':False,
         'cleanupContinue':False,
-        'ParseNext1':False 
+        'ParseNext1':False,
+        'assignNext1':False
     }
     
     for key, value in default_values.items():

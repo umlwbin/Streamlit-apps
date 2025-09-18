@@ -134,10 +134,10 @@ def get_data_metadata_tables(datafiles):
         # Identify metadata and data start
         for i, line in enumerate(lines):
             parts = line.split(",")
-            if len(parts) == 2:
+            if len(parts) <3:
                 metadata_rows.append(parts)
             else:
-                if len(parts)> 3 and any("Temperature" in col for col in parts) :
+                if len(parts)>= 3 and any("Temperature" in col for col in parts) :
                     data_start_index = i
                     break
 
@@ -156,7 +156,7 @@ def get_data_metadata_tables(datafiles):
         if f==1:
             st. markdown("##### Awesome! This is what your metadata and data tables look like:")
 
-            with st.expander("**Expand to see tables!**"):
+            with st.expander("**Expand to see tables**"):
                 st.markdown(" Metadata")
                 st.dataframe(metadata_df.head(5))
 
@@ -168,7 +168,7 @@ def get_met_vars(all_dfs,all_metadata_dfs):
     st.markdown('#####')
     st.markdown('#### Ok, let\'s add some variables from the metadata to the new data table 🕺🏻')
     left, right = st.columns([0.8,0.2])
-    left.info('The values are to the right of these variables in the CSV file', icon="ℹ️")
+    left.info('The values are to the right of these variables, see the table above', icon="ℹ️")
     
     # Get the metadata variables from first metadata_df in list
     original_metadata_cols=list(all_metadata_dfs[0].columns)

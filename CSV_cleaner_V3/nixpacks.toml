@@ -4,5 +4,6 @@ providers = ["python"]
 nixPkgs = ["python310", "python310Packages.pip"]
 
 [start]
-cmd = "streamlit run CSV_cleaner_V3.py --server.port=8080 --server.address=0.0.0.0"
+cmd = "streamlit run csv_cleaner.py --server.port=8080 --server.address=0.0.0.0"
+
 

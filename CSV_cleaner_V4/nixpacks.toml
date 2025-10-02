@@ -1,0 +1,8 @@
+providers = ["python"]
+
+[phases.setup]
+nixPkgs = ["python310", "python310Packages.pip"]
+
+[start]
+cmd = "streamlit run csv_cleaner.py --server.port=8080 --server.address=0.0.0.0"
+

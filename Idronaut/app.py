@@ -48,11 +48,10 @@ def main():
 
     #Download example files Widget
     main_path=os.path.abspath(os.curdir)
-    full_path=main_path+'/Idronaut/'
 
-    _, _, files = next(os.walk(full_path))
+    _, _, files = next(os.walk(main_path))
     files=[f for f in files if 'example1' in f]
-    filepath=os.path.join(full_path,files[0])
+    filepath=os.path.join(main_path,files[0])
 
     file_df=pd.read_csv(filepath, sep='\s+')
     txt=file_df.to_csv(index=False).encode("utf-8")

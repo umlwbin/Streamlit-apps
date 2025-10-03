@@ -5,7 +5,7 @@ import plotly.express as px
 from io import StringIO
 import re
 import os
-from datetime import datetime as dt
+import io
 
 #Set page config
 st.set_page_config(page_title=None, page_icon="📖", layout="wide", initial_sidebar_state="expanded", menu_items=None)
@@ -118,24 +118,49 @@ def read_files(datafile):
         left.error('Ooops, I think your file might have inconsistent columns. Each line must have the same number of columns. Please reformat your files and re-upload.', icon="🚨")
     else:
                
-        #Create a data frame (table) with the data
-        df=pd.read_csv(datafile, sep='\s+')
-        cols=list(df.columns)
-
+        #Define Correct Headers
         correct_headers=['Date', 'Time','Pres','Temp','Cond','Sal','Turb','SigmaT','Cond25']
+        correct_headers_lower = [col.lower() for col in correct_headers]
+
+        def validate_and_rename_headers(df):
+            uploaded_headers_lower = [col.lower() for col in df.columns]
+
+            # Check which ideal headers are present
+            matched = [col for col in correct_headers_lower if col in uploaded_headers_lower]
+            missing = [col for col in correct_headers_lower if col not in uploaded_headers_lower]
+
+            if len(missing) == len(correct_headers_lower):
+                return None, f"❌ None of the required headers were found. Expected: {correct_headers_lower}"
+            elif missing:
+                return None, f"⚠️ Missing headers: {missing}. Please check your file format."
+            else:
+                # Rename headers to ideal headers
+                rename_map = {old: new for old, new in zip(df.columns, correct_headers) if old.lower() in correct_headers_lower}
+                df.rename(columns=rename_map, inplace=True)
+                return df, None
+
 
         wrong_file=False
-        for ch in correct_headers:
-            if ch not in cols:
-                wrong_file=True
-                left, right = st.columns([0.8, 0.2])
-                left.error('Ooops, not finding some key variables. The MBGL Idronaut files contain: Date, Time, Pres, Temp, Cond, Sal, Turb, SigmaT, Cond25. Please try again.', icon="🚨")
-                break
+        try:
+            content = datafile.read().decode("utf-8")
+            df = pd.read_csv(io.StringIO(content))
+            cols=list(df.columns)
+            validated_df, error = validate_and_rename_headers(df)
+
+            if error:
+                st.error(error)
+            else:
+                st.success("✅ All required headers found and standardized!")
+                st.dataframe(validated_df.head())
+        except Exception as e:
+            wrong_file=True
+            st.error("Ooops, not finding some key variables. The MBGL Idronaut files contain: Date, Time, Pres, Temp, Cond, Sal, Turb, SigmaT, Cond25. Please try again.")
+
         if wrong_file==False:         
             # Display now reading file message
             filename=datafile.name
             st.success(f" Now reading file {filename}")
-            
+
             #Ensure date column is this format: '%Y-%m-%d'
             df['Date'] = pd.to_datetime(df.Date, format='%d-%m-%Y')
             df['Date'] = df['Date'].dt.strftime('%Y-%m-%d')
@@ -153,9 +178,6 @@ def read_files(datafile):
             st.markdown('#####')
             st.markdown('### Downcast Processing')
             st.markdown('##### 1. Find the downcast from the plot below 📉')
-
-            # loader=v.ProgressCircular(indeterminate=True,size="50",color="primary", class_='my-7') #This is just a progress loader
-            # display(loader)
 
             # Plot graph
             fig = px.scatter(df, x=df.index, y='Pres')

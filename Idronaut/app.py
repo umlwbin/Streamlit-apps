@@ -17,7 +17,7 @@ def main():
     st.sidebar.image(logo, width=250)
 
     # Title and Description
-    st.sidebar.title('Idronaut Data processor 🌊')
+    st.sidebar.title('Idronaut Data Processor 🌊')
     st.sidebar.image("https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/master/Apps/Idronaut/img/idronaut.jpg", width=150)
     st.sidebar.html('''
     <style>

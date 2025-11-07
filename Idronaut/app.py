@@ -35,7 +35,7 @@ def main():
      depth, salinity, pH, dissolved oxygen and much more.
         <br><br>
 
-        <b>What This App Does</b> <br>
+        <b>What This App Does:</b> <br>
     <ul>
       <li>Reads idronaut text/csv files and allows a user to visually crop the downcast</li>
       <li>Allows the user to enter the Latitude, Longitude and Site ID which is added to the processed file</li>

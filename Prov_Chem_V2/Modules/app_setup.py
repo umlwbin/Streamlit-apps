@@ -6,7 +6,7 @@ def app_intro_sidebar():
     st.sidebar.image(logo, width=250)
 
     # Title and Description
-    st.sidebar.title('Provincial Chemistry File Editor 🧑🏽‍🔬')
+    st.sidebar.title('Provincial Chemistry & CAMP File Editor 🧑🏽‍🔬')
     st.sidebar.markdown('## Welcome!')
     st.sidebar.markdown('This app allows for the applicaiton of several cleaning steps for Provincial chemistry files.')
     st.sidebar.markdown('- Click on the **Restructure Files** tab to first restructure the file(s) according to the type of chemistry file.')

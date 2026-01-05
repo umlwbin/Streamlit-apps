@@ -2,7 +2,7 @@ import streamlit as st
 
 def sidebar():
     # Get CanWIN Logo
-    logo='https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/master/Apps/Vocab%20app/UM-EarthObservationScience-cmyk-left.png?ref_type=heads'
+    logo='https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/master/images/apps_images/UM-EarthObservationScience-cmyk-left.png?ref_type=heads'
     st.image(logo, width=250)
 
     # Title and Description

@@ -24,13 +24,13 @@ def main():
     # ============================================
     with st.sidebar:
         # GEt CanWIN Logo
-        logo='https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/master/Apps/Vocab%20app/UM-EarthObservationScience-cmyk-left.png?ref_type=heads'
+        logo='https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/master/images/apps_images/UM-EarthObservationScience-cmyk-left.png?ref_type=heads'
         st.image(logo, width=250)
 
         # Title and Description
         st.title('Castaway CTD Processor ⛴️')
         
-        st.image("https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/master/Apps/Castaway/img/ctd.jpg", width=60)
+        st.image("https://cwincloud.cc.umanitoba.ca/canwin_public/datamanagement/-/raw/master/images/apps_images/st-laurent_17060_oct2022.jpeg?ref_type=heads", width=60)
         st.markdown("The small, handy CastAway-CTD is a lightweight, easy-to-use instrument designed for quick and accurate conductivity, temperature and depth profiles.")
 
         with st.expander("**What This App Does**"):

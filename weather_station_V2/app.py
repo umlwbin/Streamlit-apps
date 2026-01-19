@@ -252,7 +252,7 @@ def grab_data():
     #get the first ECC date
     ecc_first_date=eccc_df['Datetime'][0]
     
-    #crop the dataframe ot start at that date
+    #crop the dataframe to start at that date
     newdf=out[out.Datetime >=ecc_first_date].reset_index(drop=True)
 
 

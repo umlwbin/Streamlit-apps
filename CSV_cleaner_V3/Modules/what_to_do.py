@@ -6,9 +6,6 @@ path=os.path.abspath(os.curdir)
 
 def what_to_do_widgets():
     
-    # INTRO WIDGETS---------------------------------------------
-    st.markdown('#### What would you like to do? 🤔')
-
     # WIDGET INTERACTIONS----------------------------------------------------
     def click_Rbutton():
         # Set all next buttons to false when the radio btton selection changes

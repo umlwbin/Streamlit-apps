@@ -1,0 +1,32 @@
+﻿RVQ Code,Meaning
+ADL , Above Detection Limit
+BDL , Below Detection Limit
+CC , Coordinates converted to decimal degrees using CanWIN FME
+FD , Field Duplicate
+LD , Lab Duplicate
+$ , Incorrect sample container
+EFAI ," Equipment failure, sample lost"
+FEF , Field equipment failed
+FEQ , Field Equipment Questionable
+FFB , Failed. Field blank not acceptable
+FFD , Failed. Field Duplicate
+FFS , Failed. Field spike not acceptable
+FGPS , GPS coordinates from field log
+GPSC , Coordinates taken from gps log
+H , Holding time exceeded
+ISP , Improper sample preservation
+ML , data taken from a master list
+ITNA , Incubation time not attained
+ITNM , Incubation temperature not maintained
+JCW ," Sample container damaged, sample lost"
+NaN , Value is missing and reason is not known
+NC , Not collected
+ND , Not detected
+NR , Sample taken/measured on site but information in this field not recorded
+NS , Sample collected but not submitted
+P , Analysis requested and result pending
+prob_good , probably good value. Data value that is probably consistent with real phenomena but this is unconfirmed or data value forming part of a malfunction that is considered too small to affect the overall quality of the data object of which it is a part
+prob_bad , probably bad value. Data value recognised as unusual during quality control that forms part of a feature that is probably inconsistent with real phenomena
+Interpolated , This value has been derived by interpolation from other values in the data object
+Q , Below limit of quantification (LOQ). The value was below the LOQ of the analytical method. The value in the result field is the limit of quantification (limit of detection) for the method
+25C , Standardized to 25C

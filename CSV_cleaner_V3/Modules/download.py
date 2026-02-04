@@ -4,80 +4,88 @@ from zipfile import ZipFile
 import os
 import io
 import sys
-
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill
 from io import BytesIO
 import pandas as pd
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
 
-#Output Path
-path=os.path.abspath(os.curdir)
+sys.path.append(f'{os.path.abspath(os.curdir)}/Modules')
+import session_initializer
 
-#Add Modules
-sys.path.append(f'{path}/Modules')
-
-import  session_initializer
 
 def download_output():
+
     def on_download():
         st.balloons()
-        #Set Next button states to False
-        session_initializer.reset_widget_flags() #Reset all the next buttons that are not directly widgetkeys.
+        session_initializer.reset_widget_flags()
 
-    st.markdown('## 📦 Download Processed Files')
-    if len(st.session_state.current_data) > 0:
-        st.markdown('### 📑 CSV')
+    current_files = st.session_state.current_data
+    if not current_files:
+        st.info("No processed files available yet.")
+        return
 
-    #Check if this was a Merge Function
-    merge_check=[s for s in st.session_state.current_data.keys() if 'merge' in s]
+    st.markdown("##### 📑 CSV")
 
-    #Merge Task
-    if merge_check:
-        filename=merge_check[0] # 'merged_output.csv'
-        df=st.session_state.current_data['merged_output.csv']
+    # Detect merged output safely
+    merged_filename = None
+    for name in current_files.keys():
+        if name.lower().startswith("merged"):
+            merged_filename = name
+            break
+
+    # CASE 1 — Merged file
+    if merged_filename:
+        df = current_files[merged_filename]
         st.download_button(
-            label=f"⬇️ Download {filename}",
-            data=df.to_csv(index=False).encode('utf-8'),
-            file_name=f"{filename}",
+            label=f"⬇️ Download {merged_filename}",
+            data=df.to_csv(index=False).encode("utf-8"),
+            file_name=merged_filename,
             mime="text/csv",
             on_click=on_download,
             icon=":material/download:"
         )
+        return
 
-    # All Other Tasks
-    else:
+    # CASE 2 — Single file
+    if len(current_files) == 1:
+        filename, df = next(iter(current_files.items()))
+        base, ext = os.path.splitext(filename)
 
-        if len(st.session_state.current_data) == 1:
-            filename, df = next(iter(st.session_state.current_data.items()))
-            st.write(filename)
-            st.download_button(
-                label=f"Download {filename}",
-                data=df.to_csv(index=False).encode('utf-8'),
-                file_name=f"{filename[:-4]}_cleaned.csv",
-                mime="text/csv",
-                on_click=on_download,
-                icon=":material/download:"
-            )
+        st.download_button(
+            label=f"⬇️ Download {filename}",
+            data=df.to_csv(index=False).encode("utf-8"),
+            file_name=f"{base}_cleaned.csv",
+            mime="text/csv",
+            on_click=on_download,
+            icon=":material/download:"
+        )
+        return
 
-        if len(st.session_state.current_data) > 1:
-            dfs_dict=st.session_state.current_data
-            zip_buffer = io.BytesIO()
-            with ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-                for filename, df in dfs_dict.items():
-                    csv_bytes = df.to_csv(index=False).encode('utf-8')
-                    zip_file.writestr(f"{filename[:-4]}_cleaned.csv", csv_bytes)
-            zip_buffer.seek(0)
+    # CASE 3 — Multiple files → ZIP
+    zip_buffer = io.BytesIO()
+    with ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        # Main cleaned files
+        for filename, df in current_files.items():
+            base, ext = os.path.splitext(filename)
+            csv_bytes = df.to_csv(index=False).encode("utf-8")
+            zip_file.writestr(f"{base}_cleaned.csv", csv_bytes)
 
-            zip_data=zip_buffer
+        # Supplementary outputs (e.g., RVQ summaries)
+        if "supplementary_outputs" in st.session_state:
+            for summary_name, summary_df in st.session_state.supplementary_outputs.items():
+                zip_file.writestr(summary_name, summary_df.to_csv(index=False))
 
-            st.download_button(
-                label=f"Download All as ZIP",
-                data=zip_data,
-                file_name="output_data.zip",
-                mime="application/zip",
-                on_click=on_download,
-                icon=":material/download:"
-            )
+
+    zip_buffer.seek(0)
+
+    st.download_button(
+        label="⬇️ Download All as ZIP",
+        data=zip_buffer,
+        file_name="cleaned_files.zip",
+        mime="application/zip",
+        on_click=on_download,
+        icon=":material/download:"
+    )
 
 # EXCEL-------------------------------------------------------------------------------------------------
 def to_excel_with_formatting(df, freeze_header=False):
@@ -127,15 +135,18 @@ def to_excel_with_formatting(df, freeze_header=False):
 def excel_download():
     if len(st.session_state.current_data) == 1:
         filename, df = next(iter(st.session_state.current_data.items()))
+        base, ext = os.path.splitext(filename)
+
         st.markdown(" ")
-        st.markdown('### 📑 EXCEL')
+        st.markdown("###### 📑 EXCEL")
         freeze = st.checkbox("Freeze header row in Excel")
 
         excel_data = to_excel_with_formatting(df, freeze_header=freeze)
+
         st.download_button(
-            label="Download Excel File with Formatting",
+            label="⬇️ Download Excel File with Formatting",
             data=excel_data,
-            file_name=filename[:-4]+"_cleaned.xlsx",
+            file_name=f"{base}_cleaned.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             icon=":material/download:"
         )

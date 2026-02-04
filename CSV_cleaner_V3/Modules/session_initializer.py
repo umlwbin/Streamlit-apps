@@ -1,36 +1,41 @@
 import streamlit as st
 
-
 def init_session_state():
+    default_values = {
+        # Data storage
+        "original_data": {},      # filename → original df
+        "current_data": {},       # filename → cleaned df
+        "task_history": {},       # filename → list of past tasks
+        "history_stack": {},      # filename → undo stack
+        "redo_stack": {},         # filename → redo stack
 
-    default_values={
-        "original_data": {}, # filename → original df
-        "current_data": {},  # key: filename, value: cleaned DataFrame
-        "task_history":{},
-        "history_stack":{}, # history_stack: stores previous versions (for undo)
-        "redo_stack":{}, # redo_stack: stores undone versions (for redo)
-        'uploaded_files':[],
-        'selected_types' : {},
-        #"selected_task":None,
+        # File upload state
+        "uploaded_files": [],
+        "files_processed": False,
 
-        #'new_upload': False,
-        'files_processed':False,
-        'addColsNext1':False,
-        'removeColsNext':False,        
-        'renameNext':False,
-        'mergeDateNext':False,
-        'convertISONext1':False,
-        'cleanupContinue':False,
-        'ParseNext1':False,
-        'assignNext1':False
+        # Type selection (used in Assign Data Type)
+        "selected_types": {},
+
+        #when a task is applied
+        "task_applied": False,
+
+        # Widget flags (only keep the ones actually used)
+        "cleanupContinue": False,
+
+        # Summaries
+        "all_summaries": {},
     }
-    
+
     for key, value in default_values.items():
         if key not in st.session_state:
             st.session_state[key] = value
 
 
 def reset_widget_flags():
-    for key in st.session_state.keys():
+    """
+    Reset all widget flags that follow the 'Next' pattern.
+    This keeps widgets predictable when new files are uploaded.
+    """
+    for key in list(st.session_state.keys()):
         if "Next" in key and "WidgetKey" not in key:
             st.session_state[key] = False

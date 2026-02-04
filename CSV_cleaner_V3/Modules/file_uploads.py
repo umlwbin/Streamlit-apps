@@ -4,38 +4,51 @@ import os
 import sys
 
 #Output Path
-path=os.path.abspath(os.curdir)
+path = os.path.abspath(os.curdir)
 
 #Add Modules
 sys.path.append(f'{path}/Modules')
-
-import  session_initializer
+import session_initializer
 
 def fileuploadfunc():
-    # INTRO WIDGETS FOR FUNCTION---------------------------------------------
-    st.markdown('')
-    st.markdown('#### Upload a CSV/TXT File here')
-    st.markdown(' ') 
+    st.markdown("#### Upload a CSV/TXT File to begin")
 
-    # WIDGET INTERACTIONS----------------------------------------------------
     def newUpload():
-        #st.session_state.new_upload=True
-        session_initializer.reset_widget_flags() #Reset all the next buttons that are not directly widgetkeys. 
-        st.session_state.files_processed=False
-  
-        # Clear output data
-        for f in os.listdir(path):
-            if 'output' in f or 'cleaned' in f:
-                os.remove(os.path.join(path, f))
+        session_initializer.reset_widget_flags()
+        st.session_state.files_processed = False
+        st.session_state.task_applied = False
 
-    # WIDGET CREATION --------------------------------------------
-    uploaded_files = st.file_uploader("Choose a CSV file", accept_multiple_files=True,type="csv", on_change=newUpload, key="new_upload")
-    st.markdown("")
+        # Clear any previous data
+        st.session_state.original_data = {}
+        st.session_state.current_data = {}
+        st.session_state.task_history = {}
+        st.session_state.history_stack = {}
+        st.session_state.redo_stack = {}
 
-    #PROCESSING----------------------------------------------------
-    if uploaded_files and st.session_state.new_upload: #If there are files uplaoded
-        st.session_state.uploaded_files = uploaded_files
-        return uploaded_files
-    
-    else:
-        return []
+    uploaded_files = st.file_uploader(
+        "Choose CSV file(s)",
+        accept_multiple_files=True,
+        type="csv",
+        on_change=newUpload,
+        key="new_upload"
+    )
+
+    if uploaded_files and not st.session_state.files_processed:
+        for file in uploaded_files:
+            filename = file.name
+            try:
+                df = pd.read_csv(file)
+                # ✅ Populate session state immediately
+                st.session_state.original_data[filename] = df.copy()
+                st.session_state.current_data[filename] = df.copy()
+                st.session_state.task_history[filename] = []
+                st.session_state.history_stack[filename] = []
+                st.session_state.redo_stack[filename] = []
+            except Exception as e:
+                st.error(f"❌ Failed to read `{filename}`: {str(e)}")
+
+        if st.session_state.original_data:
+            st.session_state.files_processed = True
+            st.success("Files uploaded and initialized.")
+
+    return uploaded_files or []

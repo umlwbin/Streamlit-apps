@@ -17,7 +17,7 @@ groups = group_columns(df, chunk_size=3)
 dropdown_options = build_dropdown_options(df)
 
 # --- App Title ---
-st.title("🔍 CanWIN Keyword Explorer")
+st.title("CanWIN Keyword Explorer")
 
 
 # --- Word Cloud View ---
@@ -40,7 +40,8 @@ st.markdown("---")
 all_keywords = sum([sum(group.values(), []) for group in groups.values()], [])
 
 # Text input for search
-search_term = st.text_input("Search keywords:")
+st.markdown("##### Search Keywords:")
+search_term = st.text_input("Search", label_visibility="hidden")
 
 # If user types something, filter keywords dynamically
 if search_term:

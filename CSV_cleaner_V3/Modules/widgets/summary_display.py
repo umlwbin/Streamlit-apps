@@ -192,7 +192,7 @@ def _show_header_metadata(meta):
     for original, details in meta.items():
         rows.append({
             "Original Header": original,
-            "Variable": details.get("variable"),  # still shown, but not used for filtering
+            "Cleaned Variable": details.get("variable"),  # still shown, but not used for filtering
             "Units": details.get("units"),
             "Media":details.get("media"),
             "Sensor Model": details.get("sensor_model"),

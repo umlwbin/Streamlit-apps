@@ -29,6 +29,7 @@ def headers_widgets(df=None, show_button=True):
         ["Preserve units", "Strip units"],
         key="header_units"
     )
+    st.info("The units will still be added to a metadata table below; you can add this to your **data dictionary**")
 
     st.markdown("##### Advanced Extraction")
 

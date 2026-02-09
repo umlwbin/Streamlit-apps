@@ -56,7 +56,7 @@ def sidebar():
             - fixes duplicate column names  
             - normalizes case  
             - detects header rows and mixed types  
-            - cleans scientific headers  
+            - cleans scientific headers
 
             **2. Apply additional tasks**  
             Use the tools on the right to reshape, rename, merge, or further refine your data.

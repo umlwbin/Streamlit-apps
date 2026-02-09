@@ -18,6 +18,8 @@ from Modules.cleaning_tasks import (
     merge_header_rows,
     add_rvqs
 )
+import importlib
+importlib.reload(headers)
 
 # Import all widget functions
 from Modules.widgets import (

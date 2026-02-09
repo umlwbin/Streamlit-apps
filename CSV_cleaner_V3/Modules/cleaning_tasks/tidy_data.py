@@ -132,26 +132,6 @@ def trim_whitespace(df):
     return cleaned_df, summary
 
 
-
-# ---------------------------------------------------------
-# 6. Normalize column name case (lower, upper, title)
-# ---------------------------------------------------------
-def normalize_case(df, mode="none"):
-    cleaned_df = df.copy()
-
-    # Apply the selected casing mode.
-    if mode == "lower":
-        cleaned_df.columns = [str(c).lower() for c in cleaned_df.columns]
-    elif mode == "upper":
-        cleaned_df.columns = [str(c).upper() for c in cleaned_df.columns]
-    elif mode == "title":
-        cleaned_df.columns = [str(c).title() for c in cleaned_df.columns]
-
-    summary = {"case_normalization": mode}
-    return cleaned_df, summary
-
-
-
 # ---------------------------------------------------------
 # 7. Detect columns that contain mixed data types
 # ---------------------------------------------------------
@@ -210,7 +190,15 @@ def detect_header_rows(df):
 # Returns:
 #     cleaned_df, combined_summary
 # =========================================================
-def basic_cleaning(df, nans=None, case_mode="none"):
+def basic_cleaning(
+    df,
+    nans=None,
+    naming_style="snake_case",
+    preserve_units=True,
+    extract_sensors=True,
+    extract_scales=True,
+    extract_processing_notes=True
+    ):    
     """
     Run a lightweight, safe, automatic cleaning pipeline that prepares a dataset
     for downstream processing. This pipeline focuses on structural issues that
@@ -282,24 +270,26 @@ def basic_cleaning(df, nans=None, case_mode="none"):
     df, s5 = fix_duplicate_columns(df)
     summary.update(s5)
 
-    # Step 6 — Normalize case
-    df, s6 = normalize_case(df, mode=case_mode)
+    # Step 6 — Detect mixed data types
+    df, s6 = detect_mixed_types(df)
     summary.update(s6)
 
-    # Step 7 — Detect mixed data types
-    df, s7 = detect_mixed_types(df)
+    # Step 7 — Detect header-like rows
+    df, s7 = detect_header_rows(df)
     summary.update(s7)
 
-    # Step 8 — Detect header-like rows
-    df, s8 = detect_header_rows(df)
-    summary.update(s8)
-
-    # Step 9 — Clean column headers using advanced scientific cleaner (external module)
-    df, s9 = advanced_clean_headers(
+    # ---------------------------------------------------------
+    # Step 8 — Clean column headers using the unified cleaner
+    # ---------------------------------------------------------
+    df, s8 = advanced_clean_headers(
         df,
-        naming_style="none",
-        preserve_units=True
+        naming_style=naming_style,
+        preserve_units=preserve_units,
+        extract_sensors=extract_sensors,
+        extract_scales=extract_scales,
+        extract_processing_notes=extract_processing_notes
     )
-    summary.update({"header_cleaning": s9})
+
+    summary.update({"header_cleaning": s8})
 
     return df, summary

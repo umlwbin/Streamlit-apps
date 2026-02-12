@@ -44,7 +44,7 @@ def sidebar():
     """, unsafe_allow_html=True)
 
     # --- Workflow Section ---
-    with st.expander("🧭 Recommended Workflow"):
+    with st.expander("Recommended Workflow"):
         st.markdown("""
             ### Recommended workflow
 
@@ -74,7 +74,7 @@ def sidebar():
         Provincial chemistry datasets have a **unique structure** that differs from regular tidy data tables.
         To help you choose the right tool, here’s how the provincial‑specific options differ from the standard reshape tools.
 
-        ### 🔍 Why provincial chemistry files are different
+        ### Why provincial chemistry files are different
         These files often contain:
         - a **Variable/Parameter** column  
         - a **Value** column  
@@ -121,7 +121,7 @@ def sidebar():
 
         ---
 
-        ### 🧩 Merge Header Rows (Units + VMV)
+        ### Merge Header Rows (Units + VMV)
         Use this when:
         - your file has **Units** in row 2  
         - **VMV codes** in row 3  

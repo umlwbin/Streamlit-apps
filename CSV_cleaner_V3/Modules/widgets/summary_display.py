@@ -192,13 +192,12 @@ def _show_header_metadata(meta):
     for original, details in meta.items():
         rows.append({
             "Original Header": original,
-            "Cleaned Variable": details.get("variable"),  # still shown, but not used for filtering
+            "Cleaned Variable Name": details.get("cleaned_header"),
+            "Core Variable Name": details.get("variable"),
             "Units": details.get("units"),
-            "Media":details.get("media"),
-            "Sensor Model": details.get("sensor_model"),
-            "Calibration Settings": details.get("calibration_settings"),
-            "Processing Notes": details.get("processing_notes"),
+            "Additional Notes": details.get("additional_notes"),
         })
+
 
     st.dataframe(pd.DataFrame(rows), use_container_width=True)
 

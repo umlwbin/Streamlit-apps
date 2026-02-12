@@ -195,9 +195,8 @@ def basic_cleaning(
     nans=None,
     naming_style="snake_case",
     preserve_units=True,
-    extract_sensors=True,
-    extract_scales=True,
-    extract_processing_notes=True
+    extract_additional=True,
+    no_units_in_header=False
     ):    
     """
     Run a lightweight, safe, automatic cleaning pipeline that prepares a dataset
@@ -217,33 +216,91 @@ def basic_cleaning(
         8. Detect header-like rows inside the data.
         9. Clean column headers using the advanced scientific header cleaner.
 
+    --------------------------------------------------------------------------
     Parameters
-    ----------
+    --------------------------------------------------------------------------
     df : pandas.DataFrame
         The input dataset to clean.
 
     nans : list[str], optional
         Additional tokens that should be treated as missing values.
-        These are added to the default list of NaN-like strings.
+        These are added to the default list of NaN‑like strings:
+            "NA", "N/A", "?", "", "Nan", "NaN"
+        All matching values are standardized to a single representation
+        (empty string).
 
-    case_mode : {"none", "lower", "upper", "title"}, optional
-        How to normalize column name casing.
-        "none" leaves casing unchanged.
+    naming_style : {"snake_case", "camelCase", "Title Case"}, optional
+        Naming convention applied to cleaned column headers during the final
+        header‑cleaning step. Default is "snake_case".
 
+    preserve_units : bool, optional
+        If True (default), detected units are included in the cleaned header.
+        Ignored when `no_units_in_header=True`.
+
+    extract_additional : bool, optional
+        If True (default), extract additional metadata from headers,
+        e.g,: Temperature (deg C, ITS‑90) (ITS-90 would be removed)
+        Extracted metadata is stored in the header‑cleaning summary.
+
+    no_units_in_header : bool, optional
+        If True, assume the dataset does *not* include units in the header.
+        Bracket content is treated as descriptive text rather than units, and
+        units are never included in the cleaned header. Useful for datasets
+        where brackets contain notes or sensor information rather than
+        measurement units.
+
+    --------------------------------------------------------------------------
     Returns
-    -------
+    --------------------------------------------------------------------------
     cleaned_df : pandas.DataFrame
         The cleaned dataset after all steps have been applied.
 
     summary : dict
         A combined dictionary containing the summaries from all steps.
         Each key corresponds to a cleaning step and records what was changed,
-        detected, or standardized.
+        detected, or standardized. The header‑cleaning summary is stored under
+        the key "header_cleaning".
 
-    Example
-    -------
-    from tidy_data import basic_cleaning
-    cleaned, summary = basic_cleaning(raw, nans=["?"], case_mode="lower")
+    --------------------------------------------------------------------------
+    Example (default behavior)
+    --------------------------------------------------------------------------
+
+    >>> from tidy_data import basic_cleaning
+    >>> cleaned, summary = basic_cleaning(raw_df)
+
+    This applies:
+        - empty row/column removal
+        - NaN standardization
+        - whitespace trimming
+        - duplicate column fixing
+        - mixed‑type detection
+        - header‑row detection
+        - scientific header cleaning (snake_case, units preserved)
+
+    --------------------------------------------------------------------------
+    Example: Custom NaN tokens + Title Case headers
+    --------------------------------------------------------------------------
+
+    >>> cleaned, summary = basic_cleaning(
+    ...     raw_df,
+    ...     nans=["--", "missing"],
+    ...     naming_style="Title Case"
+    ... )
+
+    --------------------------------------------------------------------------
+    Example: No units in header + camelCase
+    --------------------------------------------------------------------------
+
+    >>> cleaned, summary = basic_cleaning(
+    ...     raw_df,
+    ...     naming_style="camelCase",
+    ...     preserve_units=False,
+    ...     no_units_in_header=True
+    ... )
+
+    In this mode, bracket content is treated as descriptive text and units
+    are never included in the cleaned header.
+
 
     """
 
@@ -285,11 +342,10 @@ def basic_cleaning(
         df,
         naming_style=naming_style,
         preserve_units=preserve_units,
-        extract_sensors=extract_sensors,
-        extract_scales=extract_scales,
-        extract_processing_notes=extract_processing_notes
+        extract_additional=extract_additional,
+        no_units_in_header=no_units_in_header
     )
 
-    summary.update({"header_cleaning": s8})
+    summary.update(s8)
 
     return df, summary

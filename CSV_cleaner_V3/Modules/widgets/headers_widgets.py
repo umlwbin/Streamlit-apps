@@ -1,65 +1,67 @@
 import streamlit as st
+
 def headers_widgets(df=None, show_button=True):
     """
-    Render header-cleaning widgets.
+    Render header-cleaning widgets for the updated clean_headers() logic.
 
-    If show_button=True (default):
+    If show_button=True:
         - Show the "Let's Go" button
-        - Return settings only when the button is pressed
+        - Return settings only when pressed
 
     If show_button=False:
-        - Do NOT show the button
-        - Always return the settings immediately
+        - Always return settings immediately
     """
 
     st.markdown("#### Header Cleaning Settings")
 
-    # Naming style toggle
-    st.markdown("##### Choose a naming style for the headers")
+    # ---------------------------------------------------------
+    # Naming style
+    # ---------------------------------------------------------
     naming_style = st.radio(
-        "Select",
+        "Choose a naming style for cleaned headers",
         ["snake_case", "camelCase", "Title Case"],
         key="header_style"
     )
 
-    # Unit handling toggle
-    st.markdown("##### How should units be handled?")
-    preserve_units = st.radio(
-        "Select",
-        ["Preserve units", "Strip units"],
-        key="header_units"
-    )
-    st.info("The units will still be added to a metadata table below; you can add this to your **data dictionary**")
-
-    st.markdown("##### Advanced Extraction")
-
-    extract_sensors = st.checkbox(
-        "Extract sensor model names",
-        value=True,
-        key="extract_sensors"
-    )
-
-    extract_scales = st.checkbox(
-        "Extract calibration scales",
-        value=True,
-        key="extract_scales"
-    )
-
-    extract_processing_notes = st.checkbox(
-        "Extract processing notes",
-        value=True,
-        key="extract_processing_notes"
+    # ---------------------------------------------------------
+    # NEW: No units in header
+    # ---------------------------------------------------------
+    no_units_in_header = st.checkbox(
+        "No units in header (dataset does not include units in column names)",
+        value=False,
+        key="no_units_in_header"
     )
 
     # ---------------------------------------------------------
-    # Behavior depends on show_button
+    # Unit handling (disabled if no_units_in_header=True)
+    # ---------------------------------------------------------
+    if no_units_in_header:
+        preserve_units = False
+        st.info("Unit handling disabled because 'No units in header' is selected.")
+    else:
+        preserve_units = st.radio(
+            "How should units be handled?",
+            ["Preserve units", "Strip units"],
+            key="header_units"
+        ) == "Preserve units"
+
+    # ---------------------------------------------------------
+    # Additional metadata extraction
+    # ---------------------------------------------------------
+    extract_additional = st.checkbox(
+        "Extract additional information in header (sensor information, scales, media, notes)",
+        value=True,
+        key="extract_additional"
+    )
+
+    # ---------------------------------------------------------
+    # Return settings
     # ---------------------------------------------------------
     settings = {
         "naming_style": naming_style,
-        "preserve_units": (preserve_units == "Preserve units"),
-        "extract_sensors": extract_sensors,
-        "extract_scales": extract_scales,
-        "extract_processing_notes": extract_processing_notes,
+        "preserve_units": preserve_units,
+        "extract_additional": extract_additional,
+        "no_units_in_header": no_units_in_header,
     }
 
     if show_button:
@@ -67,5 +69,4 @@ def headers_widgets(df=None, show_button=True):
             return settings
         return None
 
-    # If show_button=False → always return settings
     return settings

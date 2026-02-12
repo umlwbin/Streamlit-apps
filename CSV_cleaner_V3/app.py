@@ -39,7 +39,7 @@ session_initializer.init_session_state()
 # ---------------------------------------------------------
 def run_csv_curation_studio():
 
-    st.markdown("## 🛠️ CSV Curation Studio")
+    st.markdown("## CSV Curation Studio")
     toolbar()
 
     tab1, tab2 = st.tabs(["🧰 Main App", "👀 Live Data Preview"])
@@ -61,7 +61,7 @@ def run_csv_curation_studio():
                 st.markdown("")
 
                 with st.container(border=True):
-                    st.markdown(f"#### {task}")
+                    st.markdown(f"### {task}")
                     task_inputs = tasks.get_task_inputs(task)
 
                     if task_inputs:

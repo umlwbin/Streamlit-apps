@@ -1,145 +1,147 @@
 """
-    Clean and standardize messy scientific column headers, while also extracting
-    useful metadata such as units, media, sensor models, calibration scales, and
-    processing notes. For example:
+Clean and standardize messy scientific column headers, while also extracting
+useful metadata such as units, sensor models, calibration scales, media types,
+and processing notes.
 
-        "Oxygen, SBE 43 [ml/l], WS = 2"
-        "Potential Temperature [ITS-90, deg C]"
-        "Beam Transmission, WET Labs C-Star [%]"
+This function supports two modes:
 
-    The function separates this information into structured metadata and
-    produces clean, machine‑friendly column names.
+1. **Normal mode (default)**  
+   Units are expected to appear inside brackets (e.g., "[ml/l]") and are
+   preserved or removed depending on user settings.
 
-    --------------------------------------------------------------------------
-    What the function does
-    --------------------------------------------------------------------------
-    1. Normalizes text:
-        - Converts accented or special characters to plain ASCII
-        - Lowercases everything for consistency
+2. **No-units mode**  
+   Use when the dataset does *not* include units in the header. Bracket content
+   is treated as part of the variable name, and units are never included in the
+   cleaned header.
 
-    2. Extracts scientific metadata:
-        - Units inside parentheses or square brackets (e.g., "[ml/l]")
-        - Sensor model names (e.g., "SBE 43", "WET Labs C-Star")
-        - Calibration scales (e.g., "ITS-90")
-        - Processing notes after the units (e.g., "WS = 2")
+---------------------------------------------------------------------------
+What the function does
+---------------------------------------------------------------------------
 
-    3. Cleans the variable name:
-        - Removes sensor names, calibration scales, and notes
-        - Keeps only the core variable name (e.g., "Oxygen")
+1. **Normalize text**
+   - Converts accented or special characters to plain ASCII
+   - Lowercases everything for consistent parsing
 
-    4. Builds a clean column name:
-        - Optionally keeps units (e.g., "oxygen_ml_l")
-        - Replaces symbols like "%" and "/" with readable words
-        - Replaces non‑alphanumeric characters with underscores
-        - Collapses repeated underscores
-        - Applies a naming style:
-            • "snake_case"   → water_temperature_c
-            • "camelCase"    → waterTemperatureC
-            • "Title Case"   → Water Temperature C
+2. **Extract scientific metadata**
+   - Units inside brackets (e.g., "[ml/l]", "(deg C)")
+   - Sensor model names (e.g., "SBE 43", "WET Labs C-Star")
+   - Calibration scales (e.g., "ITS-90")
+   - Media types (e.g., "salt water")
+   - Processing notes after commas (e.g., "WS = 2")
 
-    5. Ensures all final column names are unique.
+3. **Clean the variable name**
+   - Removes sensor names, scales, media, and notes
+   - Removes bracket blocks
+   - Removes stray punctuation and separators
+   - Leaves only the core scientific variable name
 
-    --------------------------------------------------------------------------
-    Parameters
-    --------------------------------------------------------------------------
-    df : pandas.DataFrame
-        The DataFrame whose column names you want to clean.
+4. **Build the cleaned header**
+   - Optionally includes units (normal mode only)
+   - Replaces symbols (e.g., "%" → "percent", "/" → "_per_")
+   - Replaces non-alphanumeric characters with underscores
+   - Collapses repeated underscores
+   - Applies naming style:
+        • "snake_case"   → water_temperature_c  
+        • "camelCase"    → waterTemperatureC  
+        • "Title Case"   → Water Temperature C  
 
-    naming_style : str, optional
-        Naming convention for the cleaned column names.
-        Options:
-            - "snake_case"  (default)
-            - "camelCase"
-            - "Title Case"
+5. **Ensure uniqueness**
+   - Appends suffixes (_2, _3, …) when duplicate names occur
 
-    preserve_units : bool, optional
-        If True (default), units are included in the cleaned column name.
-        If False, units are removed entirely.
+---------------------------------------------------------------------------
+Parameters
+---------------------------------------------------------------------------
 
-    extract_sensors : bool, optional
-        If True (default), known sensor model names are detected and removed
-        from the cleaned header, and stored in metadata.
+df : pandas.DataFrame  
+    The DataFrame whose column names should be cleaned.
 
-    extract_scales : bool, optional
-        If True (default), known calibration scales are detected and removed
-        from the cleaned header, and stored in metadata.
+naming_style : {"snake_case", "camelCase", "Title Case"}, optional  
+    Naming convention for the cleaned column names.  
+    Default is "snake_case".
 
-    extract_processing_notes : bool, optional
-        If True (default), text after the units (e.g., "WS = 2") is extracted
-        and stored in metadata.
+preserve_units : bool, optional  
+    If True (default), units are included in the cleaned header.  
+    Ignored when `no_units_in_header=True`.
 
-    --------------------------------------------------------------------------
-    Returns
-    --------------------------------------------------------------------------
-    cleaned_df : pandas.DataFrame
-        A copy of the original DataFrame with cleaned column names.
+extract_additional : bool, optional  
+    If True (default), extract sensor models, calibration scales, media types,
+    and processing notes into metadata.
 
-    summary : dict
-        A dictionary describing:
-            - which column names changed
-            - which stayed the same
-            - extracted metadata for each original header
+no_units_in_header : bool, optional  
+    If True, assume the dataset does *not* include units in the header.  
+    - Units are never included in the cleaned header  
+    - Bracket content is treated as part of the variable name  
+    - Unit detection is disabled  
+    Default is False.
 
-        Structure:
-            {
-                "changed": {original_name: new_name, ...},
-                "unchanged": [...],
-                "header_metadata": {
-                    original_name: {
-                        "variable": ...,
-                        "units": ...,
-                        "sensor_model": ...,
-                        "calibration_settings": ...,
-                        "processing_notes": ...
-                    },
-                    ...
-                }
+---------------------------------------------------------------------------
+Returns
+---------------------------------------------------------------------------
+
+cleaned_df : pandas.DataFrame  
+    A copy of the original DataFrame with cleaned column names.
+
+summary : dict  
+    A dictionary describing:
+        - which column names changed
+        - which stayed the same
+        - extracted metadata for each original header
+
+    Structure:
+        {
+            "changed": {original_name: new_name, ...},
+            "unchanged": [...],
+            "header_metadata": {
+                original_name: {
+                    "variable": ...,
+                    "units": ...,
+                    "additional_notes": ...,
+                    "cleaned_header": ...
+                },
+                ...
             }
+        }
 
-    --------------------------------------------------------------------------
-    Basic Example (uses all default settings)
-    --------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Basic Example (normal mode)
+---------------------------------------------------------------------------
 
-    >>> import pandas as pd
-    >>> df = pd.DataFrame(columns=[
-    ...     "Oxygen, SBE 43 [ml/l], WS = 2",
-    ...     "Potential Temperature [ITS-90, deg C]",
-    ...     "Sample ID"
-    ... ])
+>>> import pandas as pd
+>>> df = pd.DataFrame(columns=[
+...     "Oxygen, SBE 43 [ml/l], WS = 2",
+...     "Potential Temperature [ITS-90, deg C]",
+...     "Sample ID"
+... ])
 
-    >>> cleaned_df, summary = clean_headers(df)
+>>> cleaned_df, summary = clean_headers(df)
 
-    >>> cleaned_df.columns
-    Index(['oxygen_ml_l', 'potential_temperature_deg_c', 'sample_id'], dtype='object')
+---------------------------------------------------------------------------
+Example (no-units mode)
+---------------------------------------------------------------------------
 
-    --------------------------------------------------------------------------
-    Advanced Example (custom options)
-    --------------------------------------------------------------------------
-
-    >>> cleaned_df, summary = clean_headers(
-    ...     df,
-    ...     naming_style="camelCase",
-    ...     preserve_units=False,
-    ...     extract_sensors=False,
-    ...     extract_scales=True,
-    ...     extract_processing_notes=False,
-    ...     extract_media=True
-    ... )
-
-    >>> cleaned_df.columns
-    Index(['oxygen', 'potentialTemperature', 'sampleId'], dtype='object')
-
+>>> cleaned_df, summary = clean_headers(
+...     df,
+...     naming_style="camelCase",
+...     preserve_units=False,
+...     extract_additional=True,
+...     no_units_in_header=True
+... )
 """
+
+
 import re
 import unicodedata
 import pandas as pd
 
 # -----------------------------------------
 # Controlled vocabularies
-# These act like "lookup tables" that help us
-# recognize known scientific terms inside headers.
-# Please add to these tables as you notice new metadata in headers.
 # -----------------------------------------
+
+KNOWN_UNITS = {
+    "utc", "degrees north", "degrees east", "m", "db", "ms/cm", "psu",
+    "deg c", "kg/m^3", "10^-8 m^3/kg", "ml/l", "umol/kg", "% saturation",
+    "mg/m^3", "umol photons/m^2/sec", "%", "1/m"
+}
 
 KNOWN_SENSORS = {
     "sbe 43": "SBE 43",
@@ -156,7 +158,8 @@ KNOWN_SCALES = {
 }
 
 KNOWN_MEDIA = {
-    "salt water": "salt water"
+    "salt water": "salt water",
+    "fresh water": "fresh water"
 }
 
 
@@ -164,159 +167,163 @@ def clean_headers(
     df,
     naming_style="snake_case",
     preserve_units=True,
-    extract_sensors=True,
-    extract_scales=True,
-    extract_processing_notes=True,
-    extract_media=True,
+    extract_additional=True,
+    no_units_in_header=False
 ):
-    """
-    Header cleaning function.
-    (Docstring omitted here — you already have a great one.)
-    """
 
-    # Store original column names
+
     original = list(df.columns)
-
-    # These lists will hold the cleaned names and summary info
     cleaned = []
     summary = {"changed": {}, "unchanged": []}
     metadata = {}
 
-    # Regex patterns:
-    # bracket_pattern → finds anything inside [...] or (...)
-    # processing_pattern → finds text after a comma (processing notes)
     bracket_pattern = r"\[[^\]]*\]|\([^\)]*\)"
     processing_pattern = r",\s*(.*)$"
 
-    # Process each column name one by one
     for col in original:
-        raw = col  # keep the original name for reference
-
-        # Each column gets a metadata dictionary
-        meta = {
-            "variable": None,
-            "units": None,
-            "media": None,
-            "sensor_model": None,
-            "calibration_settings": None,
-            "processing_notes": None,
-        }
+        raw = col
+        meta = {"variable": None, "units": None, "additional_notes": None}
+        notes = []
 
         # -----------------------------------------
         # STEP 1 — Normalize text
         # -----------------------------------------
-        # Many scientific files contain special characters (°, µ, ³, etc.)
-        # This converts them into plain ASCII so our regexes work reliably.
         new = unicodedata.normalize("NFKD", raw)
         new = new.encode("ascii", "ignore").decode("ascii")
 
         # -----------------------------------------
-        # STEP 2 — Extract ALL bracket blocks
+        # STEP 2 — Extract bracket blocks
         # -----------------------------------------
-        # Example: "[salt water, m]" or "(deg C)"
-        # We extract them first so we can safely remove them later.
         bracket_blocks = re.findall(bracket_pattern, new)
 
         # -----------------------------------------
-        # STEP 3 — Parse metadata from bracket blocks
+        # IF no units in header
         # -----------------------------------------
+        if no_units_in_header:
+            # Remove brackets but keep content
+            new_no_brackets = re.sub(bracket_pattern, "", new)
+
+            # Extract bracket content as potential metadata
+            for block in bracket_blocks:
+                content = block.strip("[]()")
+                parts = re.split(r"[ ,_\-]+", content.lower())
+
+                for p in parts:
+                    if p in KNOWN_SENSORS:
+                        notes.append(KNOWN_SENSORS[p])
+                    elif p in KNOWN_SCALES:
+                        notes.append(KNOWN_SCALES[p])
+                    elif p in KNOWN_MEDIA:
+                        notes.append(KNOWN_MEDIA[p])
+                    # KNOWN_UNITS ignored because user said "no units in header"
+
+            # Now treat entire header (minus brackets) as variable name
+            variable = new_no_brackets.strip().rstrip(",")
+
+            # Extract metadata from variable text
+            tokens = re.split(r"[ ,_\-]+", variable.lower())
+            for t in tokens:
+                if t in KNOWN_SENSORS:
+                    notes.append(KNOWN_SENSORS[t])
+                    variable = re.sub(t, "", variable, flags=re.IGNORECASE)
+                elif t in KNOWN_SCALES:
+                    notes.append(KNOWN_SCALES[t])
+                    variable = re.sub(t, "", variable, flags=re.IGNORECASE)
+                elif t in KNOWN_MEDIA:
+                    notes.append(KNOWN_MEDIA[t])
+                    variable = re.sub(t, "", variable, flags=re.IGNORECASE)
+
+            variable = variable.strip(" ,_-")
+            meta["variable"] = variable
+            meta["units"] = None
+            if extract_additional and notes:
+                meta["additional_notes"] = ", ".join(notes)
+
+            # Build cleaned header
+            header = variable.lower()
+            header = re.sub(r"[^a-z0-9]+", "_", header)
+            header = re.sub(r"_+", "_", header).strip("_")
+
+            if naming_style == "camelCase":
+                parts = header.split("_")
+                header = parts[0] + "".join(p.capitalize() for p in parts[1:])
+            elif naming_style == "Title Case":
+                header = " ".join(p.capitalize() for p in header.split("_"))
+
+            cleaned.append(header)
+            meta["cleaned_header"] = header
+            metadata[raw] = meta
+            continue
+
+        # -----------------------------------------
+        # NORMAL MODE: units expected in header
+        # -----------------------------------------
+
+        # STEP 3 — Parse bracket metadata
         for block in bracket_blocks:
-            # Remove the surrounding brackets
             content = block.strip("[]()")
+            parts = [p.strip().lower() for p in content.split(",")]
 
-            # Split by comma → ["salt water", "m"]
-            parts = []
-            for p in content.split(","):
-                # Clean whitespace and lowercase for matching
-                p = p.strip().lower()
-                p = " ".join(p.split())  # collapse weird spacing
-                parts.append(p)
-
-            # Now classify each piece
             for p in parts:
-                if extract_sensors and p in KNOWN_SENSORS:
-                    meta["sensor_model"] = KNOWN_SENSORS[p]
-                elif extract_scales and p in KNOWN_SCALES:
-                    meta["calibration_settings"] = KNOWN_SCALES[p]
-                elif extract_media and p in KNOWN_MEDIA:
-                    meta["media"] = KNOWN_MEDIA[p]
+                if p in KNOWN_UNITS:
+                    meta["units"] = p
+                elif p in KNOWN_SENSORS:
+                    notes.append(KNOWN_SENSORS[p])
+                elif p in KNOWN_SCALES:
+                    notes.append(KNOWN_SCALES[p])
+                elif p in KNOWN_MEDIA:
+                    notes.append(KNOWN_MEDIA[p])
                 else:
-                    # If it's not a known sensor/scale/media,
-                    # we assume it's a unit (e.g., "m", "deg c")
+                    # Unknown token: treat as unit if none assigned yet
                     if meta["units"] is None:
                         meta["units"] = p
+                    else:
+                        notes.append(p)
 
-        # -----------------------------------------
-        # STEP 4 — Remove bracket blocks from the header
-        # -----------------------------------------
+        # Remove bracket blocks
         new = re.sub(bracket_pattern, "", new)
 
-        # -----------------------------------------
-        # STEP 5 — Extract processing notes
-        # -----------------------------------------
-        # Processing notes may appear after a comma:
-        # "Depth [m], using lat = 64.4264"
+        # STEP 4 — Extract processing notes after comma
         m = re.search(processing_pattern, new)
         if m:
-            if extract_processing_notes:
-                meta["processing_notes"] = m.group(1).strip()
-            # Remove the notes from the header text
+            if extract_additional:
+                notes.append(m.group(1).strip())
             new = new[:m.start()]
 
-        # -----------------------------------------
-        # STEP 6 — Extract the variable name
-        # -----------------------------------------
-        # After removing brackets + notes, the remaining text
-        # should be the "core" variable name.
+        # STEP 5 — Extract variable name
         variable = new.strip().rstrip(",")
+        variable = re.sub(r"^[^A-Za-z0-9]+", "", variable)
 
-        # -----------------------------------------
-        # STEP 7 — Detect sensors/scales inside the variable text
-        # -----------------------------------------
-        # Sometimes sensors appear *outside* brackets:
-        # "Oxygen SBE 43"
-        lower_var = variable.lower()
+        # STEP 6 — Detect metadata inside variable text
+        tokens = re.split(r"[ ,_\-]+", variable.lower())
+        for t in tokens:
+            if t in KNOWN_SENSORS:
+                notes.append(KNOWN_SENSORS[t])
+                variable = re.sub(t, "", variable, flags=re.IGNORECASE)
+            elif t in KNOWN_SCALES:
+                notes.append(KNOWN_SCALES[t])
+                variable = re.sub(t, "", variable, flags=re.IGNORECASE)
+            elif t in KNOWN_MEDIA:
+                notes.append(KNOWN_MEDIA[t])
+                variable = re.sub(t, "", variable, flags=re.IGNORECASE)
+            elif t in KNOWN_UNITS and meta["units"] is None:
+                meta["units"] = t
 
-        for key, label in KNOWN_SENSORS.items():
-            if extract_sensors and key in lower_var:
-                meta["sensor_model"] = label
-                variable = re.sub(key, "", lower_var).strip(" ,")
-                lower_var = variable
-
-        for key, label in KNOWN_SCALES.items():
-            if extract_scales and key in lower_var:
-                meta["calibration_settings"] = label
-                variable = re.sub(key, "", lower_var).strip(" ,")
-                lower_var = variable
-
+        variable = variable.strip(" ,_-")
         meta["variable"] = variable
 
-        # -----------------------------------------
-        # STEP 8 — Build the cleaned header name
-        # -----------------------------------------
+        # STEP 7 — Build cleaned header
         header = variable
-
-        # Optionally append units to the name
         if preserve_units and meta["units"]:
             header = f"{header} ({meta['units']})"
 
-        # Lowercase everything for consistency
         header = header.lower()
-
-        # Replace symbols with readable words
         header = header.replace("%", "percent")
         header = header.replace("/", "_per_")
-
-        # Replace parentheses with underscores
         header = re.sub(r"[()]", "_", header)
-
-        # Replace anything not a-z or 0-9 with underscores
         header = re.sub(r"[^a-z0-9]+", "_", header)
-
-        # Collapse multiple underscores into one
         header = re.sub(r"_+", "_", header).strip("_")
 
-        # Apply naming style
         if naming_style == "camelCase":
             parts = header.split("_")
             header = parts[0] + "".join(p.capitalize() for p in parts[1:])
@@ -324,13 +331,16 @@ def clean_headers(
             header = " ".join(p.capitalize() for p in header.split("_"))
 
         cleaned.append(header)
+        meta["cleaned_header"] = header
+
+        if extract_additional and notes:
+            meta["additional_notes"] = ", ".join(notes)
+
         metadata[raw] = meta
 
     # -----------------------------------------
-    # STEP 9 — Ensure uniqueness
+    # STEP 8 — Ensure uniqueness
     # -----------------------------------------
-    # If two columns clean to the same name,
-    # we append _2, _3, etc.
     final = []
     seen = {}
     for name in cleaned:
@@ -342,7 +352,7 @@ def clean_headers(
             final.append(f"{name}_{seen[name]}")
 
     # -----------------------------------------
-    # STEP 10 — Build summary
+    # STEP 9 — Build summary
     # -----------------------------------------
     for old, new in zip(original, final):
         if old != new:
@@ -352,7 +362,6 @@ def clean_headers(
 
     summary["header_metadata"] = metadata
 
-    # Return cleaned DataFrame + summary
     cleaned_df = df.copy()
     cleaned_df.columns = final
 

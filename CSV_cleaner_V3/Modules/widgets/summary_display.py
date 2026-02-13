@@ -26,8 +26,8 @@ def show_summary(summary, title="Task Summary", filename=None):
         # HEADER CLEANING (standalone or nested)
         # =========================================================
         if "changed" in summary or "header_metadata" in summary or "header_cleaning" in summary:
-            with st.expander("🔤 Header Cleaning", expanded=False):
-                _show_header_cleaning(summary)
+            st.markdown("##### 🔤 Header Cleaning")
+            _show_header_cleaning(summary)
 
         # =========================================================
         # COLUMN OPERATIONS
@@ -36,8 +36,8 @@ def show_summary(summary, title="Task Summary", filename=None):
             "columns_added", "removed_columns", "requested_order",
             "final_order", "duplicate_columns_found"
         ]):
-            with st.expander("🧩 Column Operations", expanded=False):
-                _show_column_operations(summary)
+            st.markdown("##### 🧩 Column Operations")
+            _show_column_operations(summary)
 
         # =========================================================
         # DATE & TIME OPERATIONS
@@ -47,8 +47,9 @@ def show_summary(summary, title="Task Summary", filename=None):
             "unparsed_dates", "unparsed_times", "ambiguous_rows",
             "new_column", "new_columns"
         ]):
-            with st.expander("⏱️ Date & Time Operations", expanded=False):
-                _show_datetime_operations(summary)
+
+            st.markdown("##### ⏱️ Date & Time Operations")
+            _show_datetime_operations(summary)
 
         # =========================================================
         # RESHAPE / MERGE OPERATIONS
@@ -56,14 +57,14 @@ def show_summary(summary, title="Task Summary", filename=None):
         if any(k in summary for k in [
             "operation", "merged_files", "added_source_column"
         ]):
-            with st.expander("🔁 Reshape / Merge Operations", expanded=False):
-                _show_reshape_operations(summary)
+            st.markdown("##### 🔁 Reshape / Merge Operations")
+            _show_reshape_operations(summary)
 
         # =========================================================
         # DATA TYPE ASSIGNMENT
         # =========================================================
         if any(k in summary for k in ["converted", "failed", "skipped"]):
-            with st.expander("🔢 Data Type Assignment", expanded=False):
+                st.markdown("##### 🔢 Data Type Assignment")
                 _show_dtype_assignment(summary)
 
         # =========================================================
@@ -74,8 +75,8 @@ def show_summary(summary, title="Task Summary", filename=None):
             "nans_replaced", "whitespace_trimmed",
             "mixed_type_columns", "header_rows_detected"
         ]):
-            with st.expander("🧹 Tidy Data Structural Checks", expanded=False):
-                _show_tidy_checks(summary)
+            st.markdown("##### 🧹 Tidy Data Structural Checks")
+            _show_tidy_checks(summary)
 
 
 # =========================================================
@@ -251,9 +252,10 @@ def _show_reshape_operations(summary):
     if "merged_files" in summary:
         files = summary["merged_files"]
         st.write(f"Files merged: {len(files)}")
-        with st.expander("View merged file list"):
-            for f in files:
-                st.write(f"• {f}")
+        st.markdown(" ")
+        st.markdown("##### Merged file list")
+        for f in files:
+            st.write(f"• {f}")
 
     if "added_source_column" in summary:
         if summary["added_source_column"]:

@@ -15,7 +15,7 @@ from io import BytesIO
 
 from .column_map import COLUMN_MAP
 from .qualifier_columns import QUALIFIER_COLUMNS
-
+from .units_map import UNITS_MAP
 
 # =====================================================================
 # Helper: Logging for beginners
@@ -163,15 +163,15 @@ def apply_qc_rules(df, filename=None):
     - Special rules for wind speed and gusts
     """
 
-    df["Date_and_time"] = pd.to_datetime(
-        df["Date_and_time"],
+    df["date_and_time"] = pd.to_datetime(
+        df["date_and_time"],
         format="%m/%d/%y %H:%M:%S",
         errors="coerce"
     )
 
-    df["year"] = df["Date_and_time"].dt.year
-    df["month"] = df["Date_and_time"].dt.month
-    df["day"] = df["Date_and_time"].dt.day
+    df["year"] = df["date_and_time"].dt.year
+    df["month"] = df["date_and_time"].dt.month
+    df["day"] = df["date_and_time"].dt.day
 
     # Air pressure
     q = QUALIFIER_COLUMNS["air_pressure"]
@@ -179,9 +179,9 @@ def apply_qc_rules(df, filename=None):
     df.loc[df["air_pressure"] < 660, q] = "BDL"
 
     # PAR
-    q = QUALIFIER_COLUMNS["Photosynthetically_Active_Radiation"]
-    df.loc[df["Photosynthetically_Active_Radiation"] > 2500, q] = "ADL"
-    df.loc[df["Photosynthetically_Active_Radiation"] < 0, q] = "BDL"
+    q = QUALIFIER_COLUMNS["photosynthetically_active_radiation"]
+    df.loc[df["photosynthetically_active_radiation"] > 2500, q] = "ADL"
+    df.loc[df["photosynthetically_active_radiation"] < 0, q] = "BDL"
 
     # Temperature
     q = QUALIFIER_COLUMNS["air_temperature"]
@@ -193,10 +193,10 @@ def apply_qc_rules(df, filename=None):
     df.loc[df["relative_humidity"] > 100, q] = "ADL"
     df.loc[df["relative_humidity"] < 0, q] = "BDL"
 
-    # Precip
-    q = QUALIFIER_COLUMNS["Precip"]
-    df.loc[df["Precip"] > 127, q] = "ADL"
-    df.loc[df["Precip"] < 0, q] = "BDL"
+    # precip
+    q = QUALIFIER_COLUMNS["precip"]
+    df.loc[df["precip"] > 127, q] = "ADL"
+    df.loc[df["precip"] < 0, q] = "BDL"
 
     # Wind speed
     q = QUALIFIER_COLUMNS["wind_speed"]
@@ -219,7 +219,7 @@ def apply_qc_rules(df, filename=None):
     df.loc[(df["wind_from_direction"] > 355) & (df["wind_from_direction"] < 360), q] = "prob_bad"
 
     # Winter precip
-    q = QUALIFIER_COLUMNS["Precip"]
+    q = QUALIFIER_COLUMNS["precip"]
     winter_mask = (df["month"] == 12) | (df["month"] < 3)
     df.loc[winter_mask, q] = "prob_bad"
 
@@ -231,26 +231,13 @@ def apply_qc_rules(df, filename=None):
 # 6. WIND UNIT CONVERSION
 # =====================================================================
 
-def convert_wind_units(df, raw_units, convert_choice):
-    """
-    Convert wind units only if explicitly requested.
-
-    raw_units:
-        "km/h (recommended)"
-        "m/s"
-        "I'm not sure"
-
-    convert_choice:
-        "No (keep original units)"
-        "Convert to m/s"
-    """
-    if convert_choice == "No (keep original units)":
+def convert_wind_units(df, convert_choice):
+    if convert_choice != "Convert to m/s":
         return df
 
-    if raw_units.startswith("km/h") and convert_choice == "Convert to m/s":
-        for col in ["wind_speed", "wind_speed_of_gust"]:
-            if col in df.columns:
-                df[col] = df[col] / 3.6
+    for col in ["wind_speed", "wind_speed_of_gust"]:
+        if col in df.columns:
+            df[col] = df[col] / 3.6
 
     return df
 
@@ -265,12 +252,12 @@ def order_columns(df):
     Reorders columns into a predictable, curator‑friendly order.
 
     The order is:
-    1. Timestamp columns (Date_and_time, year, month, day)
+    1. Timestamp columns (date_and_time, year, month, day)
     2. Standardized measurement columns (from COLUMN_MAP)
     3. Their qualifier columns (from QUALIFIER_COLUMNS)
     4. Any remaining columns
     """
-    front = ["Date_and_time", "year", "month", "day"]
+    front = ["date_and_time", "year", "month", "day"]
 
     ordered_vars = []
     for raw, std in COLUMN_MAP.items():
@@ -303,14 +290,14 @@ def finalize(df):
     - Reorders columns
     - Removes helper columns (year, month, day)
     """
-    df = df.sort_values("Date_and_time").drop_duplicates()
+    df = df.sort_values("date_and_time").drop_duplicates()
     df = order_columns(df)
 
     for col in ["year", "month", "day"]:
         if col in df.columns:
             df = df.drop(columns=[col])
 
-    df["Date_and_time"] = df["Date_and_time"].dt.strftime("%Y-%m-%dT%H:%M:%S")
+    df["date_and_time"] = df["date_and_time"].dt.strftime("%Y-%m-%dT%H:%M:%S")
     return df
 
 
@@ -319,7 +306,7 @@ def finalize(df):
 # 9. UNIFIED CLEANING PIPELINE
 # =====================================================================
 
-def clean_dataframe(df: pd.DataFrame, *, raw_units, convert_choice):
+def clean_dataframe(df: pd.DataFrame, *, convert_choice):
     """
     The unified cleaning pipeline.
     All workflows call this function.
@@ -327,25 +314,23 @@ def clean_dataframe(df: pd.DataFrame, *, raw_units, convert_choice):
     df = drop_unnamed_columns(df)
     df = standardize_columns(df)
     df = add_qualifier_columns(df)
-    df = convert_wind_units(df, raw_units, convert_choice)
+    df = convert_wind_units(df, convert_choice)
     df = apply_qc_rules(df)
     df = finalize(df)
     return df
 
 
 
-def clean_file_bytes(file_bytes: bytes, *, raw_units, convert_choice, remove_metadata=True):
+def clean_file_bytes(file_bytes: bytes, *, convert_choice, remove_metadata=True):
     df = read_datagarrison_bytes(file_bytes, remove_metadata=remove_metadata)
     return clean_dataframe(df,
-                           raw_units=raw_units,
                            convert_choice=convert_choice)
 
 
 
-def clean_file_path(path: Path, *, raw_units, convert_choice, remove_metadata=True):
+def clean_file_path(path: Path, *, convert_choice, remove_metadata=True):
     df = read_datagarrison_path(path, remove_metadata=remove_metadata)
     return clean_dataframe(df,
-                           raw_units=raw_units,
                            convert_choice=convert_choice)
 
 
@@ -371,7 +356,43 @@ def compile_files(list_of_dfs):
 
     df = pd.concat(list_of_dfs, ignore_index=True)
 
-    if "Date_and_time" in df.columns:
-        df = df.sort_values("Date_and_time")
+    if "date_and_time" in df.columns:
+        df = df.sort_values("date_and_time")
 
     return df
+
+
+
+# =====================================================================
+# 11. DICTIONARY TABLE BUILDER
+# =====================================================================
+
+def build_dictionary_table(df, convert_choice):
+    """
+    Build a dictionary table in the exact order of the cleaned DataFrame columns.
+
+    Columns:
+        original_name
+        cleaned_name
+        units
+    """
+
+    reverse_map = {v: k for k, v in COLUMN_MAP.items()}
+    rows = []
+
+    for col in df.columns:
+        original = reverse_map.get(col, "")
+        units = UNITS_MAP.get(original, "")
+
+        # Override wind units if conversion was applied
+        if convert_choice == "Convert to m/s" and col in ["wind_speed", "wind_speed_of_gust"]:
+            units = "m/s"
+
+        rows.append({
+            "original_name": original,
+            "cleaned_name": col,
+            "units": units
+        })
+
+    return pd.DataFrame(rows)
+

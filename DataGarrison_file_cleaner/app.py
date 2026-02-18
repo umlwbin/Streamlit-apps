@@ -9,8 +9,9 @@ from widgets import (
     step_3_wind_units,
     step_4_clean_files,
     step_5_preview_cleaned,
-    step_6_compile,
-    step_7_download,
+    step_6_preview_dictionary,
+    step_7_compile,
+    step_8_download,
 )
 
 
@@ -24,9 +25,9 @@ def main():
     step_3_wind_units()
     step_4_clean_files()
     step_5_preview_cleaned()
-
-    step_6_compile()
-    step_7_download()
+    step_6_preview_dictionary()
+    step_7_compile()
+    step_8_download()
 
 
 

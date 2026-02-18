@@ -1,14 +1,8 @@
 COLUMN_MAP = {
-    "Date_Time": "Date_and_time",
-    "Date/Time": "Date_and_time",
-    "Date Time": "Date_and_time",
-    "Datetime": "Date_and_time",
-    "DATE_TIME": "Date_and_time",
-    "date_time": "Date_and_time",
-
+    "Date_Time": "date_and_time",
     "Pressure_20812849_mbar": "air_pressure",
-    "PAR_21181960_uE": "Photosynthetically_Active_Radiation",
-    "Rain_21201869_mm": "Precip",
+    "PAR_21181960_uE": "photosynthetically_active_radiation",
+    "Rain_21201869_mm": "precip",
     "Temperature_21238286_deg_C": "air_temperature",
     "RH_21238286_%": "relative_humidity",
     "Wind Speed_21292310_km/h": "wind_speed",

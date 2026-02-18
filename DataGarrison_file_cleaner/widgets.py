@@ -237,25 +237,7 @@ def step_3_wind_units():
     st.markdown("##### Confirm Wind Speed Units")
 
     # ---------------------------------------------------------
-    # Q1 — What units are the raw wind speed values in?
-    #
-    # Why we ask this:
-    # Datagarrison files usually store wind speed in km/h, but not always.
-    # The cleaning pipeline needs to know the original units so it can
-    # convert them correctly (or leave them unchanged).
-    #
-    # st.radio() creates a set of radio buttons where the user can choose
-    # exactly one option.
-    # ---------------------------------------------------------
-    raw_units = st.radio(
-        "What units are the *raw* wind speed and gust values in?",
-        ["km/h (recommended)", "m/s", "I'm not sure"],
-        index=0,
-        key="dg_raw_units"
-    )
-
-    # ---------------------------------------------------------
-    # Q2 — Should we convert the wind speeds?
+    # Q — Should we convert the wind speeds?
     #
     # Why we ask this:
     # Some workflows prefer m/s, others prefer to keep the original units.
@@ -270,7 +252,6 @@ def step_3_wind_units():
 
     # Store the user's choices in session_state so later steps
     # (especially the cleaning pipeline) can access them.
-    st.session_state.wind_raw_units = raw_units
     st.session_state.wind_convert_choice = convert_choice
 
     # ---------------------------------------------------------
@@ -337,7 +318,7 @@ def step_4_clean_files():
     3. Drop unnamed or empty columns
     4. Standardize column names using the instrument’s column map
     5. Add qualifier columns (string‑typed)
-    6. Wind unit handling: raw = **{st.session_state.get('wind_raw_units', 'km/h')}**, convert = **{st.session_state.get('wind_convert_choice', 'No')}**
+    6. Wind unit handling: convert = **{st.session_state.get('wind_convert_choice', 'No (keep km/h)')}**
     7. Apply QC rules (upper/lower bounds, winter precip, wind consistency)
     8. Parse timestamps into a unified format
     9. Sort rows by timestamp and remove duplicates
@@ -443,13 +424,62 @@ def step_5_preview_cleaned():
         advance_step()
 
 
+
+
 # ---------------------------------------------------------
-# Step 6 — Compile Files
+# Step 6 — Preview Dictionary Table
 # ---------------------------------------------------------
-def step_6_compile():
-    st.markdown("#### 6. Compile Cleaned Files")
+def step_6_preview_dictionary():
+    st.markdown("#### 6 Preview Dictionary Table")
 
     active = (st.session_state.step == 6)
+
+    # COMPLETED STEP
+    if not active:
+        if st.session_state.get("dictionary_preview_done"):
+            st.success("Dictionary table previewed.")
+            if st.button("Re-preview Dictionary Table", key="dg_repreview_dict"):
+                go_to_step(6)
+        else:
+            st.info("Waiting to preview dictionary table…")
+        return
+
+    # ACTIVE STEP
+    if not st.session_state.files_cleaned:
+        st.warning("No cleaned files available.")
+        return
+
+    # Use the first cleaned file to build the dictionary
+    df = st.session_state.files_cleaned[0]
+
+    dictionary = processing.build_dictionary_table(df, st.session_state.wind_convert_choice)
+
+    st.markdown("##### Dictionary Table")
+    st.dataframe(dictionary)
+
+    # Store it for later (optional)
+    st.session_state.dictionary_table = dictionary
+
+    if st.button("Next", key="dg_next_dict_preview"):
+        st.session_state.dictionary_preview_done = True
+        advance_step()
+
+
+
+
+
+
+
+
+
+
+# ---------------------------------------------------------
+# Step 7 — Compile Files
+# ---------------------------------------------------------
+def step_7_compile():
+    st.markdown("#### 7. Compile Cleaned Files")
+
+    active = (st.session_state.step == 7)
 
     # ---------------------------------------------------------
     # COMPLETED STEP (user already compiled files earlier)
@@ -461,7 +491,7 @@ def step_6_compile():
 
             # Allow the user to re-run the compile step if needed
             if st.button("Re-compile Files", key="dg_recompile"):
-                go_to_step(5)
+                go_to_step(7)
         else:
             st.info("Waiting to compile files…")
         return
@@ -519,12 +549,12 @@ def step_6_compile():
 
 
 # ---------------------------------------------------------
-# Step 7 — Download Outputs
+# Step 8 — Download Outputs
 # ---------------------------------------------------------
-def step_7_download():
-    st.markdown("#### 7. Download Cleaned & Compiled Data")
+def step_8_download():
+    st.markdown("#### 8. Download Cleaned & Compiled Data")
 
-    active = (st.session_state.step == 7)
+    active = (st.session_state.step == 8)
 
     # ---------------------------------------------------------
     # COMPLETED STEP (user already reached the download screen)

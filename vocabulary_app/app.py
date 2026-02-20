@@ -14,11 +14,12 @@ st.sidebar.markdown(
     ## How to use this tool
 
     This app helps you find **standardized variable names** for common arctic, marine, and freshwater measurements. 
+    
     Using standardized vocabularies makes your datasets more interoperable, reusable, and aligned with international standards such as **BODC** and **CF**.
 
     ### Steps
-    1. Select a **variable category** from the dropdown.
-    2. Browse the list of **standardized variable names** under that category.
+    1. Select a common name for the variable from the dropdown. 
+    2. Browse the list of **standardized variable names** under that common name.
     3. Choose the term whose **definition** best matches your variable.
     4. Add the **Source Link** to your data dictionary.
     5. All done 🎉
@@ -33,7 +34,7 @@ categories = list(var_dict.keys())
 # -----------------------------
 # Dropdown 1: Category
 # -----------------------------
-st.markdown("#### 👩🏽‍🔬 Choose a variable category")
+st.markdown("#### 👩🏽‍🔬 Choose a variable")
 var_selection = st.selectbox("Select an option", categories)
 
 selected_category = var_dict[var_selection]
@@ -103,6 +104,9 @@ st.write(selected_category["source_names"][idx])
 
 st.markdown("#### 🔗 Source link")
 st.write(selected_category["links"][idx])
+
+st.markdown("#### ✅ CanWIN Common Name")
+st.write(var_selection)
 
 st.markdown("---")
 

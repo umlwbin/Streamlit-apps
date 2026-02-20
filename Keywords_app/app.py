@@ -5,6 +5,27 @@ from rapidfuzz import process
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 
+# Sidebar intro
+with st.sidebar:
+    st.title("CanWIN Keyword Explorer")
+
+    st.markdown(
+        """
+        A lightweight tool for browsing and searching CanWIN curated keyword lists.
+
+        Main keyword source is the Polar Data Catalogue (PDC).
+
+        Use this app to:
+        - Explore keywords visually through grouped sections  
+        - Search directly if you know what you're looking for  
+        """
+    )
+    st.markdown("---")
+
+    st.image("img/UM-EarthObservationScience-cmyk-left.png", width=250)
+
+
+
 # --- Load and prepare data ---
 # Load the cleaned DataFrame from Google Sheets
 df = load_keywords()
@@ -15,9 +36,6 @@ groups = group_columns(df, chunk_size=3)
 # Build dropdown options (not currently used in this version,
 # but available if you want a flat selectbox with headings)
 dropdown_options = build_dropdown_options(df)
-
-# --- App Title ---
-st.title("CanWIN Keyword Explorer")
 
 
 # --- Word Cloud View ---

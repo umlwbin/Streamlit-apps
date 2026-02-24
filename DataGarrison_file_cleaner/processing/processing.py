@@ -1,9 +1,9 @@
 """
 Unified Datagarrison processing engine.
 
-This file is now the *single source of truth* for:
-- Streamlit workflow (bytes-based)
-- Pure Python workflow (path-based)
+This file is the source procesing file for:
+- Streamlit workflow
+- Pure Python workflow
 
 All cleaning logic lives here.
 Only the file-reading entry point differs.
@@ -131,27 +131,70 @@ def add_qualifier_columns(df):
 
     If the measurement column exists:
         Insert the qualifier column immediately after it.
-    If not:
-        Add the qualifier column at the end (filled with NaN).
     """
     for col, qcol in QUALIFIER_COLUMNS.items():
         if col in df.columns:
             idx = df.columns.get_loc(col)
             df.insert(idx + 1, qcol, pd.NA)
-        else:
-            df[qcol] = pd.NA
+            df[qcol] = df[qcol].astype("string")
 
-        df[qcol] = df[qcol].astype("string")
+    return df
 
+
+# =====================================================================
+# 5. WIND UNIT CONVERSION
+# =====================================================================
+
+def convert_wind_units(df, raw_units, convert_choice):
+    """
+    Convert wind units based on raw units and user output choice.
+
+    Rules:
+    - If user wants to KEEP raw units → do nothing.
+    - If raw is km/h and user wants m/s → convert km/h → m/s.
+    - If raw is m/s and user wants km/h → convert m/s → km/h.
+    """
+
+    # ---------------------------------------------------------------
+    # 0. If user wants to keep raw units, do NOTHING
+    # ---------------------------------------------------------------
+    if convert_choice == "Keep raw units":
+        return df
+
+    # ---------------------------------------------------------------
+    # 1. RAW km/h → user wants m/s
+    # ---------------------------------------------------------------
+    if raw_units == "km/h" and convert_choice == "Convert to m/s":
+        if "wind_speed" in df.columns:
+            df["wind_speed"] = df["wind_speed"] / 3.6
+        if "wind_speed_of_gust" in df.columns:
+            df["wind_speed_of_gust"] = df["wind_speed_of_gust"] / 3.6
+        return df
+
+    # ---------------------------------------------------------------
+    # 2. RAW m/s → user wants km/h
+    # ---------------------------------------------------------------
+    if raw_units == "m/s" and convert_choice == "Convert to km/h":
+        if "wind_speed" in df.columns:
+            df["wind_speed"] = df["wind_speed"] * 3.6
+        if "wind_speed_of_gust" in df.columns:
+            df["wind_speed_of_gust"] = df["wind_speed_of_gust"] * 3.6
+        return df
+
+    # ---------------------------------------------------------------
+    # 3. RAW m/s → user wants m/s (no change)
+    # ---------------------------------------------------------------
+    # RAW km/h → user wants km/h (no change)
+    # Already covered by "Keep raw units", but safe to return
     return df
 
 
 
 # =====================================================================
-# 5. APPLY QC RULES
+# 6. APPLY QC RULES
 # =====================================================================
 
-def apply_qc_rules(df, filename=None):
+def apply_qc_rules(df, convert_choice, filename=None):
     """
     Applies Datagarrison-specific QC rules to the dataset.
 
@@ -173,74 +216,132 @@ def apply_qc_rules(df, filename=None):
     df["month"] = df["date_and_time"].dt.month
     df["day"] = df["date_and_time"].dt.day
 
+
+
+    # ---------------------------------------------------------------
+    # QC RULES (all columns checked safely)
+    # ---------------------------------------------------------------
+
+    # -------------------------
     # Air pressure
-    q = QUALIFIER_COLUMNS["air_pressure"]
-    df.loc[df["air_pressure"] > 1070, q] = "ADL"
-    df.loc[df["air_pressure"] < 660, q] = "BDL"
+    # -------------------------
+    if "air_pressure" in df.columns:
+        q = QUALIFIER_COLUMNS["air_pressure"]
+        df.loc[df["air_pressure"] > 1070, q] = "ADL"
+        df.loc[df["air_pressure"] < 660, q] = "BDL"
 
+    # -------------------------
     # PAR
-    q = QUALIFIER_COLUMNS["photosynthetically_active_radiation"]
-    df.loc[df["photosynthetically_active_radiation"] > 2500, q] = "ADL"
-    df.loc[df["photosynthetically_active_radiation"] < 0, q] = "BDL"
+    # -------------------------
+    if "photosynthetically_active_radiation" in df.columns:
+        q = QUALIFIER_COLUMNS["photosynthetically_active_radiation"]
+        df.loc[df["photosynthetically_active_radiation"] > 2500, q] = "ADL"
+        df.loc[df["photosynthetically_active_radiation"] < 0, q] = "BDL"
 
+    # -------------------------
     # Temperature
-    q = QUALIFIER_COLUMNS["air_temperature"]
-    df.loc[df["air_temperature"] > 75, q] = "ADL"
-    df.loc[df["air_temperature"] < -40, q] = "BDL"
+    # -------------------------
+    if "air_temperature" in df.columns:
+        q = QUALIFIER_COLUMNS["air_temperature"]
+        df.loc[df["air_temperature"] > 75, q] = "ADL"
+        df.loc[df["air_temperature"] < -40, q] = "BDL"
 
+    # -------------------------
     # Relative humidity
-    q = QUALIFIER_COLUMNS["relative_humidity"]
-    df.loc[df["relative_humidity"] > 100, q] = "ADL"
-    df.loc[df["relative_humidity"] < 0, q] = "BDL"
+    # -------------------------
+    if "relative_humidity" in df.columns:
+        q = QUALIFIER_COLUMNS["relative_humidity"]
+        df.loc[df["relative_humidity"] > 100, q] = "ADL"
+        df.loc[df["relative_humidity"] < 0, q] = "BDL"
 
-    # precip
-    q = QUALIFIER_COLUMNS["precip"]
-    df.loc[df["precip"] > 127, q] = "ADL"
-    df.loc[df["precip"] < 0, q] = "BDL"
+    # -------------------------
+    # Precipitation
+    # -------------------------
+    if "precip" in df.columns:
+        q = QUALIFIER_COLUMNS["precip"]
+        df.loc[df["precip"] > 127, q] = "ADL"
+        df.loc[df["precip"] < 0, q] = "BDL"
 
+        # Winter precip rule
+        winter_mask = (df["month"] == 12) | (df["month"] < 3)
+        df.loc[winter_mask, q] = "prob_bad"
+
+
+    # -------------------------
+    # Wind direction
+    # -------------------------
+    if "wind_from_direction" in df.columns:
+        q = QUALIFIER_COLUMNS["wind_from_direction"]
+        df.loc[(df["wind_from_direction"] > 355) & (df["wind_from_direction"] < 360), q] = "prob_bad"
+
+
+    # -------------------------
+    # Precip
+    # -------------------------
+    if "precip" in df.columns:
+        # Winter precip
+        q = QUALIFIER_COLUMNS["precip"]
+        winter_mask = (df["month"] == 12) | (df["month"] < 3)
+        df.loc[winter_mask, q] = "prob_bad"
+
+
+
+    # ---------------------------------------------------------------
+    # Wind QC (based on final output units)
+    # ---------------------------------------------------------------
+
+    # Determine the units currently in the DataFrame
+    # After convert_wind_units(), values are either km/h or m/s
+    wind_in_ms = (convert_choice == "Convert to m/s")
+
+    # Sensor detection limits always 0–100 m/s → convert to km/h if needed
+    upper_sensor_limit = 100 if wind_in_ms else 360
+    lower_sensor_limit = 0
+
+    # Environmental thresholds - Inland Manitoba: ~25–30 m/s (90–108 km/h) are rare; are rare; https://www.weather.gov/media/epz/mesonet/CWOP-WMO8.pdf. chapter 5
+    wind_prob_bad = 30 if wind_in_ms else 90  # sustained wind
+    gust_prob_bad = 35 if wind_in_ms else 110 #gusts are slightly higher
+
+    # -------------------------
     # Wind speed
-    q = QUALIFIER_COLUMNS["wind_speed"]
-    df.loc[df["wind_speed"] > 50, q] = "ADL"
-    df.loc[df["wind_speed"] < 0, q] = "BDL"
+    # -------------------------
+    if "wind_speed" in df.columns:
+        q = QUALIFIER_COLUMNS["wind_speed"]
 
+        # Sensor limits
+        df.loc[df["wind_speed"] < lower_sensor_limit, q] = "BDL"
+        df.loc[df["wind_speed"] > upper_sensor_limit, q] = "ADL"
+
+        # Environmental plausibility
+        df.loc[df["wind_speed"] > wind_prob_bad, q] = "prob_bad"
+
+    # -------------------------
     # Gust speed
-    q = QUALIFIER_COLUMNS["wind_speed_of_gust"]
-    df.loc[df["wind_speed_of_gust"] > 50, q] = "ADL"
-    df.loc[df["wind_speed_of_gust"] < 0, q] = "BDL"
+    # -------------------------
+    if "wind_speed_of_gust" in df.columns:
+        q = QUALIFIER_COLUMNS["wind_speed_of_gust"]
 
-    # Wind speed == gust speed > 40
-    q1 = QUALIFIER_COLUMNS["wind_speed"]
-    q2 = QUALIFIER_COLUMNS["wind_speed_of_gust"]
-    mask = (df["wind_speed"] == df["wind_speed_of_gust"]) & (df["wind_speed"] > 40)
-    df.loc[mask, [q1, q2]] = "prob_bad"
+        # Sensor limits
+        df.loc[df["wind_speed_of_gust"] < lower_sensor_limit, q] = "BDL"
+        df.loc[df["wind_speed_of_gust"] > upper_sensor_limit, q] = "ADL"
 
-    # Wind direction dead zone
-    q = QUALIFIER_COLUMNS["wind_from_direction"]
-    df.loc[(df["wind_from_direction"] > 355) & (df["wind_from_direction"] < 360), q] = "prob_bad"
+        # Environmental plausibility
+        df.loc[df["wind_speed_of_gust"] > gust_prob_bad, q] = "prob_bad"
 
-    # Winter precip
-    q = QUALIFIER_COLUMNS["precip"]
-    winter_mask = (df["month"] == 12) | (df["month"] < 3)
-    df.loc[winter_mask, q] = "prob_bad"
+    # -------------------------
+    # Gust should exceed sustained wind at higher speeds
+    # -------------------------
+    if "wind_speed" in df.columns and "wind_speed_of_gust" in df.columns:
+        q1 = QUALIFIER_COLUMNS["wind_speed"]
+        q2 = QUALIFIER_COLUMNS["wind_speed_of_gust"]
 
-    return df
+        # Once winds exceed roughly 40 km/h, gusts should almost always be higher than sustained wind
+        equal_threshold = 11 if wind_in_ms else 40  # ~40 km/h ≈ 11 m/s
 
-
-
-# =====================================================================
-# 6. WIND UNIT CONVERSION
-# =====================================================================
-
-def convert_wind_units(df, convert_choice):
-    if convert_choice != "Convert to m/s":
-        return df
-
-    for col in ["wind_speed", "wind_speed_of_gust"]:
-        if col in df.columns:
-            df[col] = df[col] / 3.6
+        mask = (df["wind_speed"] == df["wind_speed_of_gust"]) & (df["wind_speed"] > equal_threshold)
+        df.loc[mask, [q1, q2]] = "prob_bad"
 
     return df
-
 
 
 # =====================================================================
@@ -306,32 +407,50 @@ def finalize(df):
 # 9. UNIFIED CLEANING PIPELINE
 # =====================================================================
 
-def clean_dataframe(df: pd.DataFrame, *, convert_choice):
+def clean_dataframe(df: pd.DataFrame, *, raw_units, convert_choice):
     """
-    The unified cleaning pipeline.
-    All workflows call this function.
+    The unified cleaning pipeline. All workflows call this function.
+
+    raw_units:       units in the RAW file ("km/h" or "m/s")
+    convert_choice:  desired output units ("Keep raw units", "Convert to m/s", "Convert to km/h")
     """
+
+    # 1. Remove unnamed/empty columns
     df = drop_unnamed_columns(df)
+
+    # 2. Standardize column names
     df = standardize_columns(df)
+
+    # 3. Add qualifier columns
     df = add_qualifier_columns(df)
-    df = convert_wind_units(df, convert_choice)
-    df = apply_qc_rules(df)
+
+    # 4. Convert wind units (raw → internal → output units)
+    df = convert_wind_units(df, raw_units, convert_choice)
+
+    # 5. Apply QC rules (based on FINAL units)
+    df = apply_qc_rules(df, convert_choice)
+
+    # 6. Final cleanup (sort, reorder, drop helper cols)
     df = finalize(df)
+
     return df
 
 
 
-def clean_file_bytes(file_bytes: bytes, *, convert_choice, remove_metadata=True):
+def clean_file_bytes(file_bytes: bytes, *, raw_units, convert_choice, remove_metadata=True):
+    """
+    Read raw bytes, parse into a DataFrame, and run the full cleaning pipeline. For streamlit reading.
+    """
     df = read_datagarrison_bytes(file_bytes, remove_metadata=remove_metadata)
-    return clean_dataframe(df,
-                           convert_choice=convert_choice)
+    return clean_dataframe(df, raw_units=raw_units, convert_choice=convert_choice)
 
 
-
-def clean_file_path(path: Path, *, convert_choice, remove_metadata=True):
+def clean_file_path(path: Path, *, raw_units, convert_choice, remove_metadata=True):
+    """
+    Read a file from disk and run the full cleaning pipelin. For the pure python workflow.
+    """
     df = read_datagarrison_path(path, remove_metadata=remove_metadata)
-    return clean_dataframe(df,
-                           convert_choice=convert_choice)
+    return clean_dataframe(df, raw_units=raw_units, convert_choice=convert_choice)
 
 
 

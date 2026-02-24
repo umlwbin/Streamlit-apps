@@ -21,8 +21,8 @@ def workflow_intro():
         reset_workflow()
         st.rerun()
 
-    # --- Progress bar ---
-    total_steps = 7
+    # --- Progress bar --- *****UPDATE if adding new steps*******
+    total_steps = 8
     
     # If no files uploaded yet, show progress as 0
     if not st.session_state.files_raw:
@@ -47,8 +47,6 @@ def workflow_intro():
         )
 
         st.image('img/mmf.png',width=200)
-
-
 
 
 # ---------------------------------------------------------
@@ -87,16 +85,12 @@ def step_1_upload_files():
 
     # This checkbox lets the user decide whether the workflow should
     # automatically remove metadata rows before the header.
-    st.session_state.remove_metadata = st.checkbox(
-        "These files contain metadata rows before the header (auto-detect and remove)",
-        value=True
-    )
+    st.session_state.remove_metadata = st.checkbox("These files contain metadata rows before the header (auto-detect and remove)",value=True)
 
     # Streamlit's file_uploader returns a list of UploadedFile objects.
     # These objects behave like file handles — you must call .read() to get the bytes.
     uploaded = st.file_uploader(
-        "Upload one or more DataGarrison .csv or .txt files",
-        type=["csv", "txt"],
+        "Upload one or more DataGarrison .txt files",type=["txt"],
         accept_multiple_files=True
     )
 
@@ -214,16 +208,12 @@ def step_3_wind_units():
     # COMPLETED STEP (user already answered these questions)
     # ---------------------------------------------------------
     if not active:
-        # We only show the "completed" message if the user has actually
-        # finished this step earlier. This is tracked with a flag we set
-        # when they click "Next".
         if st.session_state.wind_settings_done:
             st.success(
                 f"Raw units: {st.session_state.wind_raw_units} | "
-                f"Conversion: {st.session_state.wind_convert_choice}"
+                f"Convert output: {st.session_state.wind_convert_choice}"
             )
 
-            # Allow the user to return and change their answers
             if st.button("Change Wind Unit Settings", key="dg_change_wind_units"):
                 go_to_step(3)
         else:
@@ -231,35 +221,35 @@ def step_3_wind_units():
         return
 
     # ---------------------------------------------------------
-    # ACTIVE STEP (user is answering the wind unit questions now)
+    # ACTIVE STEP
     # ---------------------------------------------------------
 
-    st.markdown("##### Confirm Wind Speed Units")
-
+    st.markdown("##### What units are the RAW wind values in?")
     # ---------------------------------------------------------
-    # Q — Should we convert the wind speeds?
-    #
-    # Why we ask this:
-    # Some workflows prefer m/s, others prefer to keep the original units.
-    # The user decides what the final cleaned dataset should use.
+    # Older DataGarrison files used m/s. Newer files use km/h.
+    # ---------------------------------------------------------
+    raw_units = st.radio(
+        "Select",
+        ["km/h", "m/s"],
+        index=0,
+        key="dg_raw_units"
+    )
+    st.session_state.wind_raw_units = raw_units
+
+    st.markdown("##### Do you want to convert wind speeds in the cleaned output?")
+    # ---------------------------------------------------------
+    # This determines the final units in the cleaned dataset.
     # ---------------------------------------------------------
     convert_choice = st.radio(
-        "Do you want to convert the wind speeds?",
-        ["No (keep original units)", "Convert to m/s"],
+        "Select",
+        ["Keep raw units", "Convert to m/s", "Convert to km/h"],
         index=0,
         key="dg_convert_units"
     )
-
-    # Store the user's choices in session_state so later steps
-    # (especially the cleaning pipeline) can access them.
     st.session_state.wind_convert_choice = convert_choice
 
     # ---------------------------------------------------------
-    # Move to the next step
-    #
-    # When the user clicks "Next", we:
-    #   1. Mark this step as completed (wind_settings_done = True)
-    #   2. Advance to the next step in the workflow
+    # Move to next step
     # ---------------------------------------------------------
     if st.button("Next", key="dg_next_wind_units"):
         st.session_state.wind_settings_done = True
@@ -352,6 +342,7 @@ def step_4_clean_files():
                 convert_choice=st.session_state.wind_convert_choice,
                 remove_metadata=st.session_state.remove_metadata
             )
+
 
             cleaned.append(df)
 
@@ -465,14 +456,6 @@ def step_6_preview_dictionary():
         advance_step()
 
 
-
-
-
-
-
-
-
-
 # ---------------------------------------------------------
 # Step 7 — Compile Files
 # ---------------------------------------------------------
@@ -508,8 +491,6 @@ def step_7_compile():
         return
 
     # ---------------------------------------------------------
-    # Explain what “compiling” means
-    #
     # Compiling simply means:
     #   - If there is more than one cleaned file, combine them
     #     into a single DataFrame.

@@ -7,6 +7,8 @@ UNITS_MAP = {
     "RH_21238286_%": "%",
     "Wind Speed_21292310_km/h": "km/h",
     "Gust Speed_21292310_km/h": "km/h",
+    "Wind Speed_21292310_m/s": "m/s",
+    "Gust Speed_21292310_m/s": "m/s",
     "Wind Direction_21292310_deg": "deg",
     "Backup_Batts_21296930_V": "V",
 }

@@ -1,6 +1,6 @@
 QUALIFIER_COLUMNS = {
     "air_pressure": "air_pressure_result_value_qualifier",
-    "photosynthetically_active_radiation": "photosynthetically_active_radiation_RVQ",
+    "photosynthetically_active_radiation": "photosynthetically_active_radiation_result_value_qualifier",
     "precip": "precip_result_value_qualifier",
     "air_temperature": "air_temperature_result_value_qualifier",
     "relative_humidity": "relative_humidity_result_value_qualifier",

@@ -8,6 +8,7 @@ from group_metadata import get_group_metadata, list_groups
 from data_dictionary_uploader import read_excel_dictionary, map_excel_to_ckan, upload_data_dictionary, get_ckan_schema, clean_excel_dictionary, find_mismatches
 
 
+st.set_page_config(layout="wide")
 st.title("CKAN Management App")
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs(["Resource Checker", "Dataset Search", "Dataset Delete", "Date Filter", "User Management", "Metadata Extractor", "Keyword Analysis", "ERDDAP Metadata Attributes", "CSV variables", "Theme Metadata", "Data Dictionary Uploader"])
 
@@ -15,7 +16,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs(["R
 st.sidebar.header("Authentication")
 password = st.sidebar.text_input("Enter app password", type="password")
 
-# Hardcoded password (change this to your secret)
+# Hardcoded password
 APP_PASSWORD = "C3osE&Gdm"
 
 if password != APP_PASSWORD:

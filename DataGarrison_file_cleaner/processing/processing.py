@@ -42,8 +42,6 @@ def read_datagarrison_path(path: Path, remove_metadata=True):
     file_bytes = path.read_bytes() # read the whole file into memeory as a bytes object
     return read_datagarrison_bytes(file_bytes, remove_metadata=remove_metadata)
 
-
-
 # =====================================================================
 # 1. READ RAW FILE (Streamlit version: uses file_bytes)
 # =====================================================================
@@ -58,6 +56,8 @@ def read_datagarrison_bytes(file_bytes, remove_metadata=True):
     3. Uses pandas to read the file into a DataFrame.
     4. Removes metadata rows if requested.
     """
+
+    _log("Reading raw DataGarrison file (bytes)…") # for log output when running from command line
 
     text = file_bytes.decode("utf-8", errors="replace") # convert to a python string
     lines = text.splitlines() #get all the lines
@@ -77,14 +77,13 @@ def read_datagarrison_bytes(file_bytes, remove_metadata=True):
     if header_row is None:
         return pd.read_csv(BytesIO(file_bytes), sep=delim, engine="python")
 
-    # if there is a header row, return the dataframe with the header_row index 
+    # if there is a header row, return the dataframe with the header_row index
     return pd.read_csv(
         BytesIO(file_bytes),
         sep=delim,
         engine="python",
         header=header_row
     )
-
 
 
 # =====================================================================
@@ -98,10 +97,11 @@ def drop_unnamed_columns(df):
 
     Also removes columns that are entirely empty.
     """
+    _log("Dropping unnamed or empty columns…")
+
     df = df.loc[:, ~df.columns.str.contains("^Unnamed")] # Keep only those columns that DO NOT have "Unanamed"
     df = df.dropna(axis=1, how="all") # Drop all empty columns
     return df
-
 
 
 # =====================================================================
@@ -115,8 +115,9 @@ def standardize_columns(df):
     COLUMN_MAP is a dictionary like:
         {"RawName": "standard_name"}
     """
-    return df.rename(columns=COLUMN_MAP)
+    _log("Standardizing column names using COLUMN_MAP…")
 
+    return df.rename(columns=COLUMN_MAP)
 
 
 # =====================================================================
@@ -133,6 +134,8 @@ def add_qualifier_columns(df):
     If the measurement column exists:
         Insert the qualifier column immediately after it.
     """
+    _log("Adding qualifier columns…")
+
     for col, qcol in QUALIFIER_COLUMNS.items():
         if col in df.columns:
             idx = df.columns.get_loc(col)
@@ -155,6 +158,8 @@ def convert_wind_units(df, raw_units, convert_choice):
     - If raw is km/h and user wants m/s → convert km/h → m/s.
     - If raw is m/s and user wants km/h → convert m/s → km/h.
     """
+    _log(f"Converting wind units: raw={raw_units}, output={convert_choice}…")
+
 
     # ---------------------------------------------------------------
     # 0. If user wants to keep raw units, do NOTHING
@@ -190,7 +195,6 @@ def convert_wind_units(df, raw_units, convert_choice):
     return df
 
 
-
 # =====================================================================
 # 6. APPLY QC RULES
 # =====================================================================
@@ -206,6 +210,7 @@ def apply_qc_rules(df, convert_choice, filename=None):
     - Special rules for winter precipitation
     - Special rules for wind speed and gusts
     """
+    _log("Applying QC rules (bounds, winter precip, wind checks)…")
 
     df["date_and_time"] = pd.to_datetime(
         df["date_and_time"],
@@ -378,7 +383,6 @@ def order_columns(df):
     return df[final_cols]
 
 
-
 # =====================================================================
 # 8. FINAL CLEANUP
 # =====================================================================
@@ -392,6 +396,8 @@ def finalize(df):
     - Reorders columns
     - Removes helper columns (year, month, day)
     """
+    _log("Finalizing dataset: sorting, removing duplicates, ordering columns…")
+
     df = df.sort_values("date_and_time").drop_duplicates()
     df = order_columns(df)
 
@@ -401,7 +407,6 @@ def finalize(df):
 
     df["date_and_time"] = df["date_and_time"].dt.strftime("%Y-%m-%dT%H:%M:%S")
     return df
-
 
 
 # =====================================================================
@@ -415,6 +420,8 @@ def clean_dataframe(df: pd.DataFrame, *, raw_units, convert_choice):
     raw_units:       units in the RAW file ("km/h" or "m/s")
     convert_choice:  desired output units ("Keep raw units", "Convert to m/s", "Convert to km/h")
     """
+    _log("Starting unified cleaning pipeline…")
+
 
     # 1. Remove unnamed/empty columns
     df = drop_unnamed_columns(df)
@@ -437,11 +444,14 @@ def clean_dataframe(df: pd.DataFrame, *, raw_units, convert_choice):
     return df
 
 
-
 def clean_file_bytes(file_bytes: bytes, *, raw_units, convert_choice, remove_metadata=True):
     """
     Read raw bytes, parse into a DataFrame, and run the full cleaning pipeline. For streamlit reading.
     """
+    # Validate wind settings
+    assert raw_units in ["km/h", "m/s"]
+    assert convert_choice in ["Keep raw units", "Convert to m/s", "Convert to km/h"]
+
     df = read_datagarrison_bytes(file_bytes, remove_metadata=remove_metadata)
     return clean_dataframe(df, raw_units=raw_units, convert_choice=convert_choice)
 
@@ -450,9 +460,12 @@ def clean_file_path(path: Path, *, raw_units, convert_choice, remove_metadata=Tr
     """
     Read a file from disk and run the full cleaning pipelin. For the pure python workflow.
     """
+    # Validate wind settings
+    assert raw_units in ["km/h", "m/s"]
+    assert convert_choice in ["Keep raw units", "Convert to m/s", "Convert to km/h"]
+    
     df = read_datagarrison_path(path, remove_metadata=remove_metadata)
     return clean_dataframe(df, raw_units=raw_units, convert_choice=convert_choice)
-
 
 
 # =====================================================================
@@ -474,7 +487,6 @@ def compile_files(list_of_dfs):
         df = df.sort_values("date_and_time")
 
     return df
-
 
 
 # =====================================================================

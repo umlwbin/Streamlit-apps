@@ -10,8 +10,6 @@ from ui_utils import big_caption
 def workflow_intro():
     """
     Display the introduction in the sidebar.
-    This gives curators context about what the Castaway CTD workflow does,
-    and shows an example file so they know what to expect.
     """
 
     st.title("Data Garrison Data Cleaner 🌨️")
@@ -29,7 +27,6 @@ def workflow_intro():
         current_step = 0
     else:
         current_step = st.session_state.step
-
     progress = current_step / total_steps
 
     with st.container(border=True):
@@ -65,10 +62,7 @@ def step_1_upload_files():
             count = len(st.session_state.files_raw)
             st.success(f"{count} raw file(s) uploaded.")
 
-            st.write(
-                "Metadata removal is "
-                + ("enabled." if st.session_state.remove_metadata else "disabled.")
-            )
+            st.write("Metadata removal is " + ("enabled." if st.session_state.remove_metadata else "disabled."))
 
             # Allow user to restart the workflow and upload new files
             if st.button("Change Uploads", key="dg_change_uploads"):
@@ -88,11 +82,8 @@ def step_1_upload_files():
     st.session_state.remove_metadata = st.checkbox("These files contain metadata rows before the header (auto-detect and remove)",value=True)
 
     # Streamlit's file_uploader returns a list of UploadedFile objects.
-    # These objects behave like file handles — you must call .read() to get the bytes.
-    uploaded = st.file_uploader(
-        "Upload one or more DataGarrison .txt files",type=["txt"],
-        accept_multiple_files=True
-    )
+    # These objects behave like file handles, you must call .read() to get the bytes.
+    uploaded = st.file_uploader("Upload one or more DataGarrison .txt files", type=["txt"], accept_multiple_files=True)
 
     # IMPORTANT:
     # UploadedFile objects can only be read ONCE.
@@ -142,13 +133,11 @@ def step_2_preview_raw():
         return
 
     # The selectbox shows the list of uploaded files.
-    # Each entry is a dictionary with:
-    #   {"name": "...", "bytes": b"..."}
-    file_entry = st.selectbox(
-        "Select a file to preview",
-        st.session_state.files_raw,
-        format_func=lambda f: f["name"]
-    )
+    # Each entry is a dictionary with: {"name": "...", "bytes": b"..."}
+    file_entry = st.selectbox("Select a file to preview", 
+                              st.session_state.files_raw, 
+                              format_func=lambda f: f["name"] ) # Format_func is actually a display customizer, 
+                                                                # so we are returning the entire dict, but only showing the names in the dropdown. 
 
     if file_entry:
         # Extract the raw bytes from the selected file.
@@ -195,8 +184,6 @@ def step_2_preview_raw():
     if st.button("Next", key="dg_next_preview"):
         st.session_state.raw_preview_done = True
         advance_step()
-
-
 
 
 def step_3_wind_units():
@@ -295,9 +282,6 @@ def step_4_clean_files():
 
     # ---------------------------------------------------------
     # Show a summary of what the cleaning pipeline will do
-    #
-    # This helps users understand the transformations that will
-    # happen to their data. It also builds trust in the workflow.
     # ---------------------------------------------------------
     st.markdown("###### Cleaning Steps That Will Be Applied")
 
@@ -316,33 +300,20 @@ def step_4_clean_files():
     """)
 
     # ---------------------------------------------------------
-    # Run the cleaning pipeline
-    #
     # When the user clicks "Run Cleaning Pipeline":
     #   - We loop through each uploaded file
     #   - Pass the raw bytes into processing.clean_file()
     #   - Store the cleaned DataFrames in session_state
-    #
-    # The processing.clean_file() function handles:
-    #   - reading the bytes
-    #   - detecting the header
-    #   - cleaning the data
-    #   - applying QC rules
-    #   - formatting the final output
-    #
-    # This keeps the UI simple and the logic centralized.
     # ---------------------------------------------------------
     if st.button("Run Cleaning Pipeline", key="dg_run_cleaning"):
         cleaned = []
 
         for f in st.session_state.files_raw:
-            df = processing.clean_file_bytes(
-                f["bytes"],
+            df = processing.clean_file_bytes(f["bytes"],
                 raw_units=st.session_state.wind_raw_units,
                 convert_choice=st.session_state.wind_convert_choice,
                 remove_metadata=st.session_state.remove_metadata
             )
-
 
             cleaned.append(df)
 
@@ -409,7 +380,7 @@ def step_5_preview_cleaned():
     # ---------------------------------------------------------
     # Move to the next step
     #
-    # Once the user clicks "Next", we advance the workflow.
+    # Once the user clicks "Next", advance the workflow.
     # ---------------------------------------------------------
     if st.button("Next", key="dg_next_cleaned_preview"):
         advance_step()
@@ -495,9 +466,6 @@ def step_7_compile():
     #   - If there is more than one cleaned file, combine them
     #     into a single DataFrame.
     #   - If there is only one cleaned file, return it unchanged.
-    #
-    # This keeps the workflow flexible for both single-file and
-    # multi-file uploads.
     # ---------------------------------------------------------
     if len(cleaned_files) == 1:
         st.info(
@@ -569,9 +537,7 @@ def step_8_download():
 
     # ---------------------------------------------------------
     # Display a styled message box to celebrate completion
-    #
-    # This uses a small block of HTML/CSS to make the final step feel
-    # polished and friendly. Streamlit allows this when we set
+    # This uses a small block of HTML/CSS. Streamlit allows this when we set
     # unsafe_allow_html=True.
     # ---------------------------------------------------------
     st.markdown(

@@ -18,7 +18,7 @@ from .qualifier_columns import QUALIFIER_COLUMNS
 from .units_map import UNITS_MAP
 
 # =====================================================================
-# Helper: Logging for beginners
+# Helper: Logging messages
 # =====================================================================
 
 def _log(message: str):
@@ -31,7 +31,7 @@ def _log(message: str):
 
 
 # =====================================================================
-# 1. READ RAW FILE (Pure Python Workflow - uses Path)
+# 1. READ RAW FILE (Pure Python Workflow: uses Path)
 # =====================================================================
 
 def read_datagarrison_path(path: Path, remove_metadata=True):
@@ -39,7 +39,7 @@ def read_datagarrison_path(path: Path, remove_metadata=True):
     Read a Datagarrison file from disk.
     Used by the pure‑Python workflow.
     """
-    file_bytes = path.read_bytes()
+    file_bytes = path.read_bytes() # read the whole file into memeory as a bytes object
     return read_datagarrison_bytes(file_bytes, remove_metadata=remove_metadata)
 
 
@@ -59,22 +59,25 @@ def read_datagarrison_bytes(file_bytes, remove_metadata=True):
     4. Removes metadata rows if requested.
     """
 
-    text = file_bytes.decode("utf-8", errors="replace")
-    lines = text.splitlines()
+    text = file_bytes.decode("utf-8", errors="replace") # convert to a python string
+    lines = text.splitlines() #get all the lines
 
-    delim = "\t"
+    delim = "\t" 
 
     if not remove_metadata:
         return pd.read_csv(BytesIO(file_bytes), sep=delim, engine="python")
 
+    # Searches the first 20 lines and returns the index of first line that has "temperature" or None
     header_row = next(
         (i for i, line in enumerate(lines[:20]) if "temperature" in line.lower()),
         None
     )
 
+    # If we didnt find temp, than read the entire file
     if header_row is None:
         return pd.read_csv(BytesIO(file_bytes), sep=delim, engine="python")
 
+    # if there is a header row, return the dataframe with the header_row index 
     return pd.read_csv(
         BytesIO(file_bytes),
         sep=delim,
@@ -95,8 +98,8 @@ def drop_unnamed_columns(df):
 
     Also removes columns that are entirely empty.
     """
-    df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
-    df = df.dropna(axis=1, how="all")
+    df = df.loc[:, ~df.columns.str.contains("^Unnamed")] # Keep only those columns that DO NOT have "Unanamed"
+    df = df.dropna(axis=1, how="all") # Drop all empty columns
     return df
 
 
@@ -111,8 +114,6 @@ def standardize_columns(df):
 
     COLUMN_MAP is a dictionary like:
         {"RawName": "standard_name"}
-
-    This ensures that downstream steps always see consistent column names.
     """
     return df.rename(columns=COLUMN_MAP)
 
@@ -461,12 +462,6 @@ def clean_file_path(path: Path, *, raw_units, convert_choice, remove_metadata=Tr
 def compile_files(list_of_dfs):
     """
     Combines multiple cleaned DataFrames into one.
-
-    This is useful when:
-    - Cleaning multiple raw files at once
-    - Creating a single dataset for export
-
-    The function:
     - Concatenates all DataFrames
     - Sorts by timestamp if available
     """

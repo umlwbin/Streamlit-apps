@@ -3,6 +3,18 @@ import pandas as pd
 # =========================================================
 # Helper functions
 # =========================================================
+def dedupe_columns(cols):
+    seen = {}
+    new_cols = []
+    for c in cols:
+        if c not in seen:
+            seen[c] = 0
+            new_cols.append(c)
+        else:
+            seen[c] += 1
+            new_cols.append(f"{c}_{seen[c]}")
+    return new_cols
+
 
 def transpose(df):
     """Transpose the dataframe."""
@@ -11,25 +23,36 @@ def transpose(df):
     # .transpose() returns a new DataFrame where:
     #   - original columns become rows
     #   - original rows become columns
-    # .reset_index() turns the old row labels into a normal column.
-    transposed = df.transpose().reset_index()
+    
+    # Step 1- transpose
+    t = df.transpose()
+
+    # Step 2- promote first row to header
+    t.columns = t.iloc[0].astype(str)
+    t = t.drop(t.index[0])
+
+    # Step 3- prevent duplicates (add _1, _2, etc)
+    t.columns = dedupe_columns(list(t.columns))
+
+    # Step 4- reste the index    
+    t = t.reset_index(drop=True)
 
     summary = {
         "operation": "transpose",
         "rows_before": df.shape[0],
         "cols_before": df.shape[1],
-        "rows_after": transposed.shape[0],
-        "cols_after": transposed.shape[1],
+        "rows_after": t.shape[0],
+        "cols_after": t.shape[1],
     }
 
-    return transposed, summary
+    return t, summary
 
 
 
 def wide_to_long(df, id_cols, value_cols, var_name, value_name):
     """Convert wide format to long format."""
     
-    # pd.melt() is the standard tool for converting wide → long.
+    # pd.melt() is the standard tool for converting wide -> long.
     # id_vars: columns that stay the same (identifiers)
     # value_vars: columns that get unpivoted into rows
     # var_name: name of the new column that stores former column names
@@ -67,6 +90,8 @@ def long_to_wide(df, variable_col, value_col, id_cols):
         values=value_col,
         aggfunc="first"
     ).reset_index()
+
+    wide_df.columns = dedupe_columns(list(wide_df.columns))
 
     summary = {
         "operation": "long_to_wide",

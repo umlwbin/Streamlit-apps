@@ -35,10 +35,10 @@ def sidebar():
         <div style="font-size: 1rem; line-height: 1.45; color: #444;">
             This tool helps you clean and prepare CSV files for analysis or database ingestion.
             Upload one or more files, apply step‑by‑step cleaning tasks, and preview changes
-            in real time. Every transformation is tracked so you always know what was applied.
+            in real time <b>(Live Data Preview)</b>. Every transformation is tracked so you always know what was applied.
             <br><br>
             The Studio also includes specialized tools for <strong>provincial chemistry datasets</strong>,
-            which often contain multi‑row headers, Units/VMV metadata, and variable/value structures
+            which often contain multi‑row headers, and variable/value structures
             that require careful reshaping.
         </div>
     """, unsafe_allow_html=True)
@@ -71,9 +71,8 @@ def sidebar():
     # --- Provincial Chemistry Section ---
     with st.expander("🧪 Working with Provincial Chemistry Data"):
         st.markdown("""
-        Provincial chemistry datasets have a **unique structure** that differs from regular tidy data tables.
-        To help you choose the right tool, here’s how the provincial‑specific options differ from the standard reshape tools.
-
+        Provincial chemistry datasets have a **unique structure** that differs from regular data tables.
+                    
         ### Why provincial chemistry files are different
         These files often contain:
         - a **Variable/Parameter** column  
@@ -82,32 +81,7 @@ def sidebar():
         - header information spread across multiple rows  
         - repeated measurements for the same site/date/parameter  
 
-        This structure requires specialized reshaping.
-
-        ---
-
-        ### ↘️ Regular Pivot Wide → Long (Melt)
-        Use this when:
-        - your measurement columns are already separate (e.g., `Temp1`, `Temp2`, `Temp3`)
-        - you want to stack many columns into two columns (`Variable`, `Value`)
-        - your headers are already clean and in a single row
-
-        **Not suitable** for provincial chemistry files because their variables are *already* in a column.
-
-        ---
-
-        ### ↗️ Regular Pivot Long → Wide
-        Use this when:
-        - you have a `Variable` column and a `Value` column
-        - you want each variable to become its own column
-        - your headers are already clean and do not contain Units/VMV rows
-
-        **Works**, but does **not** handle:
-        - Units rows  
-        - VMV code rows  
-        - multi‑row headers  
-        - merging metadata into column names  
-
+            This structure requires specialized reshaping.
         ---
 
         ### 🧪 Provincial Chemistry Pivot (Recommended)
@@ -121,11 +95,12 @@ def sidebar():
 
         ---
 
-        ### Merge Header Rows (Units + VMV)
+        ### 🧪 Merge Header Rows
         Use this when:
-        - your file has **Units** in row 2  
-        - **VMV codes** in row 3  
-        - and the actual column names in row 1  
+        - your file has the actual column names in row 1  
+        - a **Units** row
+        - **VMV codes** row
+        
 
         This tool merges those rows into a single clean header before pivoting.
         """)

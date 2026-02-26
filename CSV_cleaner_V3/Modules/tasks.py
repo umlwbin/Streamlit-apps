@@ -152,11 +152,11 @@ def define_task_functions():
             )
         },
 
-        "🧪 Merge Header Rows (Units + VMV)": {
+        "🧪 Merge Header Rows": {
             "type": "single",
             "func": merge_header_rows.merge_header_rows,
             "widget": merge_header_rows_widgets.merge_header_rows_widget,
-            "description": "Merge Units and VMV code rows into the header row."
+            "description": "Merge rows into the header row."
         },
 
         "Add Result Value Qualifiers (RVQs)":{

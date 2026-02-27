@@ -15,7 +15,7 @@ def workflow_intro():
     """
     Display the introduction in the sidebar.
     This gives curators context about what the Castaway CTD workflow does,
-    and shows an example file so they know what to expect.
+    and shows an example file so they know what to upload.
     """
 
     st.markdown("## Castaway CTD Workflow ⛴️")

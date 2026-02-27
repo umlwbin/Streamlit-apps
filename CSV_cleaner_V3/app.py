@@ -10,7 +10,7 @@ from Modules.widgets.toolbar import toolbar
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="CSV Curation Studio",
-    page_icon="📖",
+    page_icon="🔖",
     layout="wide"
 )
 

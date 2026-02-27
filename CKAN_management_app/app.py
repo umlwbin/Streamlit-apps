@@ -1,6 +1,7 @@
 # app.py
 import streamlit as st
 import pandas as pd
+import os
 from ckan_utils import get_all_packages, filter_datasets, classify_resources, search_datasets, delete_dataset, filter_by_date, list_users, extract_metadata,analyze_tags
 from erddap_metadata_profile import extract_erddap_attributes
 from data_dictionary import build_resource_table
@@ -17,7 +18,7 @@ st.sidebar.header("Authentication")
 password = st.sidebar.text_input("Enter app password", type="password")
 
 # Hardcoded password
-APP_PASSWORD = "C3osE&Gdm"
+APP_PASSWORD = os.getenv("APP_PASSWORD")
 
 if password != APP_PASSWORD:
     st.warning("Please enter the correct password in the sidebar to access the app.")

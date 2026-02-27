@@ -23,7 +23,7 @@ def sidebar():
 
     # Caption under the title
     big_caption(
-        "A dedicated workspace for cleaning, reshaping, and preparing CSV datasets.",
+        "A dedicated workspace for cleaning and preparing CSV datasets.",
         size="1.05rem",
         color="#6c757d"
     )

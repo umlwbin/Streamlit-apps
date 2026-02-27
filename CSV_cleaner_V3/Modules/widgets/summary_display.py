@@ -52,7 +52,7 @@ def show_summary(summary, title="Task Summary", filename=None):
             _show_datetime_operations(summary)
 
         # =========================================================
-        # RESHAPE / MERGE OPERATIONS
+        # RESHAPE / MERGE / SPLITTING OPERATIONS
         # =========================================================
         if any(k in summary for k in [
             "operation", "merged_files", "added_source_column"
@@ -245,10 +245,69 @@ def _show_datetime_operations(summary):
 
 
 def _show_reshape_operations(summary):
+    # Generic operation label
     if "operation" in summary:
         op = summary["operation"]
         st.success(f"🔁 Operation: {op}")
 
+    # ---------------------------------------------------------
+    # ADD ROW
+    # ---------------------------------------------------------
+    if summary.get("operation") == "add_row":
+        if summary.get("as_header"):
+            st.info("🆕 A new header row was added.")
+            st.write("**New header:**")
+            st.write(summary.get("new_header"))
+        else:
+            st.info("➕ A new row was inserted at the top of the table.")
+            st.write("**Inserted row values:**")
+            st.write(summary.get("inserted_row"))
+        return
+
+    # ---------------------------------------------------------
+    # SPLIT NUMERIC COLUMNS
+    # ---------------------------------------------------------
+    if summary.get("operation") == "split_numeric_columns":
+        st.info(" Numeric columns were split based on whitespace‑separated numeric pairs.")
+        for col, new_cols in summary.get("columns_split", {}).items():
+            st.write(f"**{col} → {new_cols[0]}, {new_cols[1]}**")
+            st.write(f"Rows split: {summary['rows_split'].get(col, 0)}")
+        return
+
+    # ---------------------------------------------------------
+    # TRANSPOSE
+    # ---------------------------------------------------------
+    if summary.get("operation") == "transpose":
+        st.write(f"Rows before: {summary.get('rows_before')}")
+        st.write(f"Columns before: {summary.get('cols_before')}")
+        st.write(f"Rows after: {summary.get('rows_after')}")
+        st.write(f"Columns after: {summary.get('cols_after')}")
+        return
+
+    # ---------------------------------------------------------
+    # WIDE → LONG
+    # ---------------------------------------------------------
+    if summary.get("operation") == "wide_to_long":
+        st.write("**ID columns:** " + ", ".join(summary.get("id_cols", [])))
+        st.write("**Value columns:** " + ", ".join(summary.get("value_cols", [])))
+        st.write(f"Rows before: {summary.get('rows_before')}")
+        st.write(f"Rows after: {summary.get('rows_after')}")
+        return
+
+    # ---------------------------------------------------------
+    # LONG → WIDE
+    # ---------------------------------------------------------
+    if summary.get("operation") == "long_to_wide":
+        st.write("**Variable column:** " + summary.get("variable_col", ""))
+        st.write("**Value column:** " + summary.get("value_col", ""))
+        st.write("**ID columns:** " + ", ".join(summary.get("id_cols", [])))
+        st.write(f"Rows before: {summary.get('rows_before')}")
+        st.write(f"Rows after: {summary.get('rows_after')}")
+        return
+
+    # ---------------------------------------------------------
+    # MERGED FILES (existing behavior)
+    # ---------------------------------------------------------
     if "merged_files" in summary:
         files = summary["merged_files"]
         st.write(f"Files merged: {len(files)}")
@@ -257,9 +316,10 @@ def _show_reshape_operations(summary):
         for f in files:
             st.write(f"• {f}")
 
-    if "added_source_column" in summary:
-        if summary["added_source_column"]:
-            st.info("🧩 Source filename column added.")
+    if summary.get("added_source_column"):
+        st.info("🧩 Source filename column added.")
+
+
 
 
 def _show_dtype_assignment(summary):

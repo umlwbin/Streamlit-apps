@@ -3,8 +3,10 @@ import streamlit as st
 # Import all processing functions
 from Modules.cleaning_tasks import (
     add_columns,
+    add_rows,
     remove_columns,
     reorder_columns,
+    split_numeric_cols,
     merge_files,
     headers,
     rename,
@@ -24,8 +26,10 @@ importlib.reload(headers)
 # Import all widget functions
 from Modules.widgets import (
     add_columns_widgets,
+    add_rows_widgets,
     remove_columns_widgets,
     reorder_columns_widgets,
+    split_numeric_cols_widgets,
     merge_files_widgets,
     headers_widgets,
     rename_widgets,
@@ -70,6 +74,13 @@ def define_task_functions():
             "description": "Add one or more new columns with user‑defined values."
         },
 
+        "Add rows": {
+            "type": "single",
+            "func": add_rows.add_row,
+            "widget": add_rows_widgets.add_row_widget,
+            "description": "Add new row at top of table."
+        },
+
         "Reorder columns": {
             "type": "single",
             "func": reorder_columns.reorder,
@@ -82,6 +93,13 @@ def define_task_functions():
             "func": remove_columns.remove_cols,
             "widget": remove_columns_widgets.which_cols_widgets,
             "description": "Remove one or more columns from the dataset."
+        },
+        
+        "Split numeric columns": {
+            "type": "single",
+            "func": split_numeric_cols.split_numeric_columns,
+            "widget": split_numeric_cols_widgets.split_numeric_columns_widget,
+            "description": "Split one numeric column into two columns"
         },
 
         "Merge multiple files": {

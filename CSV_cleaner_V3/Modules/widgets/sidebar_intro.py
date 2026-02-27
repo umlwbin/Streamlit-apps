@@ -46,8 +46,6 @@ def sidebar():
     # --- Workflow Section ---
     with st.expander("Recommended Workflow"):
         st.markdown("""
-            ### Recommended workflow
-
             **1. Start with _Tidy Data_**  
             This performs a general cleanup:
             - removes empty rows/columns  
@@ -84,7 +82,7 @@ def sidebar():
             This structure requires specialized reshaping.
         ---
 
-        ### 🧪 Provincial Chemistry Pivot (Recommended)
+        ### Provincial Chemistry Pivot (Recommended)
         This tool is designed specifically for provincial chemistry datasets.
 
         It:
@@ -95,7 +93,7 @@ def sidebar():
 
         ---
 
-        ### 🧪 Merge Header Rows
+        ### Merge Header Rows
         Use this when:
         - your file has the actual column names in row 1  
         - a **Units** row

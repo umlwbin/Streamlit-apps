@@ -16,6 +16,24 @@ def show_summary(summary, title="Task Summary", filename=None):
     with st.expander(label, expanded=False):
 
         # =========================================================
+        # Error handling
+        # =========================================================
+        def _show_errors(errors):
+            for err in errors:
+                etype = err.get("error_type", "Error")
+                msg = err.get("message", "")
+                st.error(f"**{etype}**: {msg}")
+
+        # =========================================================
+        # ERROR SECTION
+        # =========================================================
+        if "errors" in summary:
+            st.markdown("##### ❌ Errors")
+            _show_errors(summary["errors"])
+            return
+                
+
+        # =========================================================
         # RVQ SUMMARY (handled separately)
         # =========================================================
         if summary.get("_rvq_task", False):

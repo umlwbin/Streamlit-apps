@@ -4,6 +4,36 @@ from Modules import tasks
 from Modules.widgets.summary_display import show_summary
 
 
+# ---------------------------------------------------------
+# SAFE EXECUTION WRAPPER
+# ---------------------------------------------------------
+def _safe_execute(task_func, df, **kwargs):
+    """
+    Execute a task function safely.
+
+    Returns:
+        (result, error_summary)
+        - result: whatever the task function returns, or None on error
+        - error_summary: dict with structured error info, or None
+    """
+    try:
+        result = task_func(df, **kwargs)
+        return result, None
+
+    except Exception as e:
+        return None, {
+            "errors": [
+                {
+                    "error_type": type(e).__name__,
+                    "message": str(e),
+                }
+            ]
+        }
+
+
+# ---------------------------------------------------------
+# MAIN TASK RUNNER
+# ---------------------------------------------------------
 def run_task(task_name, **kwargs):
     if not st.session_state.current_data:
         st.warning("No data available to run tasks on.")
@@ -51,10 +81,20 @@ def run_task(task_name, **kwargs):
             st.session_state.history_stack[filename].append(df.copy())
             st.session_state.redo_stack[filename] = []
 
-            # Run the task
-            result = task_func(df.copy(), **kwargs)
+            # ---------------------------------------------------------
+            # SAFE EXECUTION
+            # ---------------------------------------------------------
+            result, error_summary = _safe_execute(task_func, df.copy(), **kwargs)
 
-            # Normalize return values
+            # If the task crashed, show error and DO NOT update df
+            if error_summary:
+                show_summary(error_summary, title="Error", filename=filename)
+                st.session_state.task_applied = False
+                continue
+
+            # ---------------------------------------------------------
+            # NORMAL RESULT HANDLING
+            # ---------------------------------------------------------
             cleaned_df, summary, summary_df = None, {}, None
 
             if isinstance(result, tuple):
@@ -84,7 +124,6 @@ def run_task(task_name, **kwargs):
                 summary["_rvq_task"] = True
                 summary["detection_limits"] = {}
 
-                # Build detection-limit structure
                 for _, row in summary_df.iterrows():
                     var = row["Variable"]
                     rvq = row["RVQ Code"]
@@ -95,7 +134,6 @@ def run_task(task_name, **kwargs):
                     summary["detection_limits"][var].setdefault(rvq, {})
                     summary["detection_limits"][var][rvq][limit] = count
 
-                # Store downloadable CSV
                 if "supplementary_outputs" not in st.session_state:
                     st.session_state.supplementary_outputs = {}
                 st.session_state.supplementary_outputs[
@@ -130,9 +168,15 @@ def run_task(task_name, **kwargs):
     # ---------------------------------------------------------
     elif task_type == "multi":
 
-        result = task_func(st.session_state.current_data, **kwargs)
+        result, error_summary = _safe_execute(
+            task_func, st.session_state.current_data, **kwargs
+        )
 
-        # Unpack (df, summary)
+        if error_summary:
+            show_summary(error_summary, title="Error", filename="merged_output.csv")
+            st.session_state.task_applied = False
+            return
+
         if isinstance(result, tuple):
             merged_df, summary = result
         else:
@@ -141,21 +185,16 @@ def run_task(task_name, **kwargs):
 
         merged_filename = "merged_output.csv"
 
-        # Store data
         st.session_state.original_data[merged_filename] = merged_df.copy()
         st.session_state.current_data[merged_filename] = merged_df.copy()
 
-        # Store summary
         if summary:
             st.session_state.all_summaries[merged_filename] = summary
-            
-        # Display summary
+
         if summary:
             show_summary(summary, title="Task Summary", filename=merged_filename)
         else:
             st.success(f"Task '{task_name}' applied successfully.")
-
-        st.session_state.task_applied = True
 
         st.session_state.task_history[merged_filename] = [task_name]
         st.session_state.history_stack[merged_filename] = []

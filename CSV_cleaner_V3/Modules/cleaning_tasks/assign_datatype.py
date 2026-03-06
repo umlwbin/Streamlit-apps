@@ -75,6 +75,7 @@ def assign(df, type_mapping):
 
     # Prepare a summary structure to record what happened.
     summary = {
+        "task_name": "assign_datatype",
         "converted": [],   # list of (column, dtype) pairs that succeeded
         "failed": {},      # columns that failed with error messages
         "skipped": []      # columns not found in the DataFrame

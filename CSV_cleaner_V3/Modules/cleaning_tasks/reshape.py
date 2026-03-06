@@ -38,6 +38,7 @@ def transpose(df):
     t = t.reset_index(drop=True)
 
     summary = {
+        "task_name":"reshape",
         "operation": "transpose",
         "rows_before": df.shape[0],
         "cols_before": df.shape[1],
@@ -65,6 +66,7 @@ def wide_to_long(df, id_cols, value_cols, var_name, value_name):
     )
 
     summary = {
+        "task_name":"reshape",
         "operation": "wide_to_long",
         "id_cols": id_cols,
         "value_cols": value_cols,
@@ -94,6 +96,7 @@ def long_to_wide(df, variable_col, value_col, id_cols):
     wide_df.columns = dedupe_columns(list(wide_df.columns))
 
     summary = {
+        "task_name":"reshape",
         "operation": "long_to_wide",
         "variable_col": variable_col,
         "value_col": value_col,

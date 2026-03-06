@@ -83,6 +83,7 @@ def merge(df, date_column, time_column):
 
     # This summary dictionary keeps track of everything that happens during merging.
     summary = {
+        "task_name":"merge_date_time",
         "merged_rows": 0,          # how many rows successfully produced a combined datetime
         "unparsed_dates": [],      # rows where the date could not be parsed
         "unparsed_times": [],      # rows where the time could not be parsed

@@ -83,6 +83,7 @@ def parse_func(df, date_time_col, extract_time=True):
 
     # This summary dictionary keeps track of everything that happens during parsing.
     summary = {
+        "task_name":"parse_dates",
         "parsed_rows": 0,                 # how many rows successfully parsed as datetimes
         "unparsed_rows": [],              # rows that could not be interpreted as dates
         "new_columns": ["Year", "Month", "Day"] + (["Time"] if extract_time else [])

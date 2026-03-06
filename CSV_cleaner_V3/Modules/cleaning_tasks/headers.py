@@ -174,7 +174,7 @@ def clean_headers(
 
     original = list(df.columns)
     cleaned = []
-    summary = {"changed": {}, "unchanged": []}
+    summary = {"task_name": "clean_headers","changed": {}, "unchanged": []}
     metadata = {}
 
     bracket_pattern = r"\[[^\]]*\]|\([^\)]*\)"

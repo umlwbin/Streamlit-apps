@@ -293,6 +293,26 @@ def _show_reshape_operations(summary):
         return
 
     # ---------------------------------------------------------
+    # SPLIT COLUMN BY DELIMITERS
+    # ---------------------------------------------------------
+    if summary.get("operation") == "split_column":
+        col = summary.get("column")
+        new_cols = summary.get("new_columns", [])
+        delims = summary.get("delimiters", [])
+        rows = summary.get("rows_split", 0)
+
+        st.info(f"Column **{col}** was split using delimiters: {', '.join(delims)}")
+
+        if new_cols:
+            st.write("**New columns created:** " + ", ".join(new_cols))
+        else:
+            st.write("No new columns were created.")
+
+        st.write(f"Rows split: {rows}")
+        return
+
+
+    # ---------------------------------------------------------
     # TRANSPOSE
     # ---------------------------------------------------------
     if summary.get("operation") == "transpose":

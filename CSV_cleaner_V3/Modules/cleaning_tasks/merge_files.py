@@ -90,6 +90,7 @@ def merge(dfs_dict, add_source=False):
 
     # Build a simple summary describing what happened.
     summary = {
+        "task_name":"merge_files",
         "merged_files": list(dfs_dict.keys()),   # which files were merged
         "added_source_column": add_source        # whether we added the source column
     }

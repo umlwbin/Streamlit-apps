@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from Modules import tasks
-from Modules.widgets.summary_display import show_summary
+from Modules.widgets.summaries.summary_display import show_summary
 
 
 # ---------------------------------------------------------
@@ -53,9 +53,10 @@ def run_task(task_name, **kwargs):
         cleaned = {}
         for k, v in summary.items():
 
-            # Remove None, False, empty string
-            if v in (None, False, ""):
+            # Remove None, empty string
+            if v is None or v == "":
                 continue
+
 
             # Remove empty list or empty dict
             if isinstance(v, (list, dict)) and len(v) == 0:
@@ -112,7 +113,7 @@ def run_task(task_name, **kwargs):
             st.session_state.task_history[filename].append(task_name)
 
             # ---------------------------------------------------------
-            # Detect RVQ task automatically
+            # Detect RVQ task automatically - (3-tuple with detection-limit table)
             # ---------------------------------------------------------
             is_rvq_task = (
                 summary_df is not None
@@ -121,24 +122,13 @@ def run_task(task_name, **kwargs):
             )
 
             if is_rvq_task:
-                summary["_rvq_task"] = True
-                summary["detection_limits"] = {}
-
-                for _, row in summary_df.iterrows():
-                    var = row["Variable"]
-                    rvq = row["RVQ Code"]
-                    limit = row["Detection Limit"]
-                    count = row["Count"]
-
-                    summary["detection_limits"].setdefault(var, {})
-                    summary["detection_limits"][var].setdefault(rvq, {})
-                    summary["detection_limits"][var][rvq][limit] = count
-
                 if "supplementary_outputs" not in st.session_state:
                     st.session_state.supplementary_outputs = {}
                 st.session_state.supplementary_outputs[
                     f"{filename}_RVQ_summary.csv"
                 ] = summary_df
+
+
 
             # ---------------------------------------------------------
             # Clean summary deeply

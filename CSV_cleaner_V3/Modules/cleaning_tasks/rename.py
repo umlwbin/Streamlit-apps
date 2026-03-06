@@ -106,6 +106,7 @@ def rename_cols(df, standardized_names):
 
     # Build a summary describing what changed.
     summary = {
+        "task_name":"rename",
         "renamed": True,
         "old_names": old_names,
         "new_names": safe_names,

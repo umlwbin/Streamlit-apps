@@ -10,6 +10,7 @@ def init_session_state():
         "redo_stack": {},         # filename → redo stack
 
         # File upload state
+        "non_rectangular_files": set(),
         "uploaded_files": [],
         "files_processed": False,
 

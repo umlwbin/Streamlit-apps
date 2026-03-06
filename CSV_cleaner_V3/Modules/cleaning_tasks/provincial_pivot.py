@@ -84,6 +84,7 @@ def provincial_pivot(df, var_col, value_col, additional_params=None):
 
     # Build summary
     summary = {
+        "task_name":"provincial_pivot",
         "variables_processed": len(variables),
         "variable_names": variables,
         "metadata_used": additional_params if additional_params else [],

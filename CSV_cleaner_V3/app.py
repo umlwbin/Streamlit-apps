@@ -42,19 +42,34 @@ def run_csv_curation_studio():
     st.markdown("## CSV Curation Studio")
     toolbar()
 
-    tab1, tab2 = st.tabs(["🧰 Main App", "👀 Live Data Preview"])
+    tab1, tab2 = st.tabs(["Main App", "Live Data Preview"])
 
-    # -----------------------------
-    # TAB 1 — MAIN APP
-    # -----------------------------
+    # -----------------------------------------------------
+    # TAB 1: MAIN APP
+    # -----------------------------------------------------
     with tab1:
         uploaded_files = file_uploads.fileuploadfunc()
 
+        # Only proceed if files are uploaded and stored
         if uploaded_files and st.session_state.current_data:
-            st.markdown(" ")
-            st.markdown("#### What would you like to do? 🤔")
 
-            task = task_selector.what_to_do_widgets()
+            st.markdown(" ")
+            st.markdown("#### What would you like to do")
+
+            # Determine whether we are in metadata-only mode
+            non_rectangular = bool(st.session_state.get("non_rectangular_files"))
+
+            if non_rectangular:
+                st.info(
+                    "One or more uploaded files are not rectangular. "
+                    "Only the **Remove metadata rows** task is available until the table is cleaned."
+                )
+                allowed_tasks = ["Remove Metadata Rows"]
+            else:
+                allowed_tasks = tasks.get_all_task_names()
+
+            # Task selection
+            task = task_selector.what_to_do_widgets(allowed_tasks)
 
             if task and task != "Choose an option":
                 st.markdown("")
@@ -67,7 +82,9 @@ def run_csv_curation_studio():
                     if task_inputs:
                         task_runner.run_task(task, **task_inputs)
 
-        # Download section
+        # -------------------------------------------------
+        # DOWNLOAD SECTION
+        # -------------------------------------------------
         if (
             uploaded_files
             and st.session_state.current_data
@@ -75,14 +92,14 @@ def run_csv_curation_studio():
         ):
             st.markdown("####")
             with st.container(border=True):
-                st.markdown("#### 📦 Download Your Cleaned Data")
+                st.markdown("#### Download Your Cleaned Data")
                 st.caption("These files update automatically after each task.")
                 download.download_output()
                 download.excel_download()
 
-    # -----------------------------
-    # TAB 2 — LIVE PREVIEW
-    # -----------------------------
+    # -----------------------------------------------------
+    # TAB 2: LIVE PREVIEW
+    # -----------------------------------------------------
     with tab2:
         preview.show_live_preview()
 

@@ -89,6 +89,7 @@ def convert_to_iso(df, date_time_col, ambiguous_mode="Flag ambiguous rows only")
 
     # This dictionary keeps track of what happened during conversion.
     summary = {
+        "task_name": "iso",
         "converted_rows": 0,       # how many rows were successfully parsed
         "ambiguous_rows": [],      # rows where the date could mean two different things
         "unparsed_rows": [],       # rows that could not be interpreted as dates at all

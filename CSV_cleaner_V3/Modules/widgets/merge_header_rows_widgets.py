@@ -7,10 +7,7 @@ def merge_header_rows_widget(df):
     """
 
     st.markdown("""
-        Some files include one or more metadata rows between the header and the actual data.
-        These rows may contain units, codes, instrument identifiers, or other descriptors.
-
-        This tool merges up to two such rows into the header so the file ends up with a single,
+        This function merges up to two additional rows into the header (for example, units), so the file ends up with a single,
         clean header row.
         """)
 

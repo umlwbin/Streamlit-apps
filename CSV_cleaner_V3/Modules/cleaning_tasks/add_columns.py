@@ -31,6 +31,7 @@ def add_cols(df, variable_names, values, columns):
 
     cleaned_df = df.copy()
     summary = {
+        "task_name": "add_column",
         "columns_added": [],
         "errors": []
     }

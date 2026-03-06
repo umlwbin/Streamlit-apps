@@ -91,6 +91,7 @@ def add_row(df, row_values=None, as_header=False, auto_headers=False):
         df.columns = new_header
 
         summary = {
+            "task_name": "add_row",
             "operation": "add_row",
             "as_header": True,
             "auto_headers": True,

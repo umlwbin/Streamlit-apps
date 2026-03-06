@@ -305,7 +305,7 @@ def basic_cleaning(
     """
 
 
-    summary = {}
+    summary = {"task_name":"tidy_data"}
 
     # Step 1 — Remove empty columns
     df, s1 = remove_empty_columns(df)

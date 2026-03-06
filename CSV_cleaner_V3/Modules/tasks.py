@@ -6,7 +6,7 @@ from Modules.cleaning_tasks import (
     add_rows,
     remove_columns,
     reorder_columns,
-    split_numeric_cols,
+    split_cols,
     merge_files,
     headers,
     rename,
@@ -18,7 +18,8 @@ from Modules.cleaning_tasks import (
     merge_date_time,
     provincial_pivot,
     merge_header_rows,
-    add_rvqs
+    add_rvqs,
+    remove_metadata_rows
 )
 import importlib
 importlib.reload(headers)
@@ -29,7 +30,7 @@ from Modules.widgets import (
     add_rows_widgets,
     remove_columns_widgets,
     reorder_columns_widgets,
-    split_numeric_cols_widgets,
+    split_cols_widgets,
     merge_files_widgets,
     headers_widgets,
     rename_widgets,
@@ -41,7 +42,8 @@ from Modules.widgets import (
     merge_date_time_widgets,
     provincial_pivot_widgets,
     merge_header_rows_widgets,
-    add_rvqs_widgets
+    add_rvqs_widgets,
+    remove_metadata_rows_widgets
 )
 
 
@@ -95,11 +97,11 @@ def define_task_functions():
             "description": "Remove one or more columns from the dataset."
         },
         
-        "Split numeric columns": {
+        "Split columns": {
             "type": "single",
-            "func": split_numeric_cols.split_numeric_columns,
-            "widget": split_numeric_cols_widgets.split_numeric_columns_widget,
-            "description": "Split one numeric column into two columns"
+            "func": split_cols.split_column,
+            "widget": split_cols_widgets.split_column_widget,
+            "description": "Scan a column and split any cells containing multiple values separated by user‑specified delimiters."
         },
 
         "Merge multiple files": {
@@ -183,9 +185,15 @@ def define_task_functions():
             "widget": add_rvqs_widgets.render,
             "description": "Detect numeric variables and add Result Value Qualifiers based on user-defined codes."
 
-        }
+        },
 
+        "Remove Metadata Rows":{
+            "type": "single",
+            "func": remove_metadata_rows.remove_metadata_rows,
+            "widget": remove_metadata_rows_widgets.remove_metadata_rows_widget,
+            "description": "Remove unwanted metadata rows above the data table."
 
+        },
 
     }
 
@@ -232,3 +240,11 @@ def get_task_inputs(task_name):
     # All other widgets receive only the dataframe
     # ---------------------------------------------------------
     return widget(df)
+
+
+def get_all_task_names():
+    """
+    Return a list of all task names defined in the task registry.
+    """
+    task_dict = define_task_functions()
+    return list(task_dict.keys())

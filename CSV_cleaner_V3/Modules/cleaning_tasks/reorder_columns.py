@@ -93,6 +93,7 @@ def reorder(df, reordered_variables):
 
     # Build a summary describing what happened.
     summary = {
+        "task_name":"reorder_columns",
         "requested_order": reordered_variables,     # what the user asked for
         "final_order": final_order,                 # what was actually applied
         "missing_columns": missing,                 # which requested columns didn't exist

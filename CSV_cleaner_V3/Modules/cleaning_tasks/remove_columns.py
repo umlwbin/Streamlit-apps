@@ -77,6 +77,7 @@ def remove_cols(df, variables_to_remove):
 
     # Build a summary describing what happened.
     summary = {
+        "task_name":"remove_columns",
         "removed_columns": variables_to_remove,      # what the user asked to remove
         "remaining_columns": list(cleaned_df.columns),  # what is left
         "removed_count": len(variables_to_remove),   # how many were requested

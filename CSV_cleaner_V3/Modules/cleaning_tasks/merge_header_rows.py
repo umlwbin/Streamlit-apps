@@ -44,8 +44,9 @@ def merge_header_rows(df, row1=None, row2=None):
 
     # Summary
     summary = {
-        "vmv_row_used": row1,
-        "unit_row_used": row2,
+        "task_name":"merge_header_rows",
+        "first_merged_row": row1,
+        "second_merged_row": row2,
     }
 
     return df, summary

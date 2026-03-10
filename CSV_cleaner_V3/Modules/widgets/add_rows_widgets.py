@@ -2,7 +2,7 @@ import streamlit as st
 
 def add_row_widget(df):
     """
-    Widget for inserting a new row and optionally promoting it to header.
+    Widget for inserting a new row or generating alphabetical headers.
     Supports:
       - manual entry
       - pasting a delimited list
@@ -10,12 +10,15 @@ def add_row_widget(df):
     """
 
     st.markdown("""
-    Add a new row to your table. You can enter values **manually**, **paste a delimited list**,  
-    or **auto‑generate alphabetical headers (A, B, C, …)**.
+    Add a new row to your table. You can enter values manually, paste a delimited list,  
+    or auto-generate alphabetical headers (A, B, C, ...).
     """)
 
-    st.markdown("##### Current Columns")
-    st.write(list(df.columns))
+    # ---------------------------------------------------------
+    # Show a small preview instead of listing column names
+    # ---------------------------------------------------------
+    st.markdown("##### Preview of your data")
+    st.dataframe(df.head(5))
 
     # ---------------------------------------------------------
     # Input mode selection
@@ -31,10 +34,10 @@ def add_row_widget(df):
     auto_headers = False
 
     # ---------------------------------------------------------
-    # AUTO‑GENERATE HEADERS
+    # AUTO-GENERATE HEADERS
     # ---------------------------------------------------------
     if mode == "Generate alphabetical headers":
-        st.info("Alphabetical headers (A, B, C, …) will replace the current column names.")
+        st.info("Alphabetical headers (A, B, C, ...) will replace the current column names.")
         auto_headers = True
 
     # ---------------------------------------------------------
@@ -42,7 +45,7 @@ def add_row_widget(df):
     # ---------------------------------------------------------
     elif mode == "Manual entry":
         row_values = []
-        st.markdown("#### Enter values for the new row")
+        st.markdown("##### Enter values for the new row")
         cols = st.columns(3)
 
         for i, col in enumerate(df.columns):
@@ -54,10 +57,10 @@ def add_row_widget(df):
     # DELIMITED LIST
     # ---------------------------------------------------------
     else:
-        st.markdown("#### Paste a comma, tab, semicolon, pipe, or newline‑delimited list")
+        st.markdown("#### Paste a comma, tab, semicolon, pipe, or newline-delimited list")
         raw = st.text_area(
             "Row values",
-            placeholder="Example:\nA, 10, mg/L, 2024‑01‑01"
+            placeholder="Example:\nA, 10, mg/L, 2024-01-01"
         )
 
         delimiter = st.selectbox(
@@ -79,8 +82,12 @@ def add_row_widget(df):
 
     # ---------------------------------------------------------
     # Header option
+    # Disable if alphabetical headers are selected
     # ---------------------------------------------------------
-    as_header = st.checkbox("Use this row as the new header")
+    as_header = st.checkbox(
+        "Use this row as the new header",
+        disabled=auto_headers
+    )
 
     st.markdown("---")
     apply_now = st.button("Add Row", type="primary")

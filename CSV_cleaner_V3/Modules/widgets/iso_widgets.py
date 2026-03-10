@@ -5,6 +5,12 @@ def iso_widgets(df):
     st.markdown("##### Choose the date-time column")
 
     cols = df.columns.tolist()
+
+    # Handle empty DataFrame
+    if not cols:
+        st.error("This dataset has no columns.")
+        return None
+
     col1, col2 = st.columns(2)
 
     date_time_col = col1.selectbox(

@@ -7,22 +7,25 @@ def render_merge_date_time_summary(summary):
 
     Expected summary keys:
         - task_name: "merge_date_time"
-        - merged_rows: int
         - unparsed_dates: list of (row_index, original_value)
         - unparsed_times: list of (row_index, original_value)
+        - errors: list of error messages
         - new_column: str
     """
 
-    st.success("Date + Time Merge")
+    st.success("Date + Time Merge Completed")
 
     # New column created
     new_col = summary.get("new_column")
     if new_col:
         st.write(f"**New merged column:** `{new_col}`")
 
-    # Successfully merged rows
-    merged = summary.get("merged_rows", 0)
-    st.write(f"**Successfully merged rows:** {merged}")
+    # Structural or parsing errors
+    errors = summary.get("errors", [])
+    if errors:
+        st.write("### Issues Encountered")
+        for err in errors:
+            st.error(err)
 
     # Unparsed dates
     unparsed_dates = summary.get("unparsed_dates", [])

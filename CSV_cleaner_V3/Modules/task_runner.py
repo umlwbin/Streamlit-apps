@@ -5,21 +5,11 @@ from Modules.widgets.summaries.summary_display import show_summary
 
 
 # ---------------------------------------------------------
-# SAFE EXECUTION WRAPPER
+# Run a task function safely so the app never crashes
 # ---------------------------------------------------------
 def _safe_execute(task_func, df, **kwargs):
-    """
-    Execute a task function safely.
-
-    Returns:
-        (result, error_summary)
-        - result: whatever the task function returns, or None on error
-        - error_summary: dict with structured error info, or None
-    """
     try:
-        result = task_func(df, **kwargs)
-        return result, None
-
+        return task_func(df, **kwargs), None
     except Exception as e:
         return None, {
             "errors": [
@@ -32,9 +22,154 @@ def _safe_execute(task_func, df, **kwargs):
 
 
 # ---------------------------------------------------------
-# MAIN TASK RUNNER
+# Normalize the return value from a task
+# Ensures we always get: cleaned_df, summary, summary_df
+# ---------------------------------------------------------
+def _normalize_result(result):
+    if not isinstance(result, tuple): #Is the result a tuple? If not treat the netire result as the cleaned df (no summary, no extra table)
+        return result, {}, None
+
+    if len(result) == 3:
+        return result #This is in the case of RVQs if you go to wheere it is called you'll see --> cleaned_df, summary, summary_df = _normalize_result(result)
+    if len(result) == 2:
+        cleaned_df, summary = result
+        return cleaned_df, summary, None
+
+    return result[0], {}, None
+
+
+# ---------------------------------------------------------
+# Remove empty or irrelevant fields from summaries
+# ---------------------------------------------------------
+def _clean_summary(summary):
+    if not summary:
+        return {}
+
+    cleaned = {}
+    for k, v in summary.items():
+
+        # Skip None or empty strings
+        if v is None or v == "":
+            continue
+
+        # Skip empty lists or dicts
+        if isinstance(v, (list, dict)) and len(v) == 0:
+            continue
+
+        # Skip empty DataFrames or Series
+        if hasattr(v, "empty") and v.empty: # Does the object have an emoty attribute? then skip.
+            continue
+
+        cleaned[k] = v
+
+    return cleaned
+
+
+# ---------------------------------------------------------
+# Handle RVQ tasks (these return a third DataFrame)
+# ---------------------------------------------------------
+def _handle_rvq_output(filename, summary_df):
+    if (
+        summary_df is not None
+        and isinstance(summary_df, pd.DataFrame)
+        and "Detection Limit" in summary_df.columns
+    ):
+        if "supplementary_outputs" not in st.session_state:
+            st.session_state.supplementary_outputs = {}
+
+        st.session_state.supplementary_outputs[
+            f"{filename}_RVQ_summary.csv"
+        ] = summary_df
+
+
+# ---------------------------------------------------------
+# Apply a task to a single file
+# ---------------------------------------------------------
+def _run_single_file(task_func, filename, df, kwargs):
+    # Save undo history
+    st.session_state.history_stack[filename].append(df.copy())
+    st.session_state.redo_stack[filename] = []
+
+    # Run the task safely
+    result, error_summary = _safe_execute(task_func, df.copy(), **kwargs)
+
+    if error_summary:
+        show_summary(error_summary, title="Error", filename=filename)
+        st.session_state.task_applied = False
+        return
+
+    # Normalize the result
+    cleaned_df, summary, summary_df = _normalize_result(result)
+
+    # Update stored data
+    st.session_state.current_data[filename] = cleaned_df
+    st.session_state.task_history[filename].append(task_func.__name__)
+
+    # Handle RVQ tasks
+    _handle_rvq_output(filename, summary_df)
+
+    # Clean summary
+    summary = _clean_summary(summary)
+
+    # Store summary
+    if summary:
+        st.session_state.all_summaries[filename] = summary
+        show_summary(summary, title="Task Summary", filename=filename)
+    else:
+        st.success(f"Task applied successfully to {filename}")
+
+    st.session_state.task_applied = True
+
+
+# ---------------------------------------------------------
+# Apply a multi-file task
+# ---------------------------------------------------------
+def _run_multi_file(task_func, kwargs):
+    result, error_summary = _safe_execute(
+        task_func, st.session_state.current_data, **kwargs
+    )
+
+    if error_summary:
+        show_summary(error_summary, title="Error", filename="merged_output.csv")
+        st.session_state.task_applied = False
+        return
+
+    merged_df, summary, _ = _normalize_result(result)
+    merged_filename = "merged_output.csv"
+
+    # Store merged output
+    st.session_state.original_data[merged_filename] = merged_df.copy()
+    st.session_state.current_data[merged_filename] = merged_df.copy()
+
+    # Store summary
+    if summary:
+        st.session_state.all_summaries[merged_filename] = summary
+        show_summary(summary, title="Task Summary", filename=merged_filename)
+    else:
+        st.success("Task applied successfully.")
+
+    # Initialize history
+    st.session_state.task_history[merged_filename] = [task_func.__name__]
+    st.session_state.history_stack[merged_filename] = []
+    st.session_state.redo_stack[merged_filename] = []
+
+    st.session_state.task_applied = True
+
+
+# ---------------------------------------------------------
+# MAIN ENTRY POINT
 # ---------------------------------------------------------
 def run_task(task_name, **kwargs):
+    """
+    Main entry point for running any task.
+
+    This function:
+        1. Looks up the task
+        2. Runs it safely
+        3. Updates session state
+        4. Displays summaries
+    """
+
     if not st.session_state.current_data:
         st.warning("No data available to run tasks on.")
         return
@@ -43,151 +178,9 @@ def run_task(task_name, **kwargs):
     task_type = task_info["type"]
     task_func = task_info["func"]
 
-    # ---------------------------------------------------------
-    # Helper: Deep-clean summary dict
-    # ---------------------------------------------------------
-    def _clean_summary(summary):
-        if not summary:
-            return {}
-
-        cleaned = {}
-        for k, v in summary.items():
-
-            # Remove None, empty string
-            if v is None or v == "":
-                continue
-
-
-            # Remove empty list or empty dict
-            if isinstance(v, (list, dict)) and len(v) == 0:
-                continue
-
-            # Remove empty DataFrame or empty Series
-            if hasattr(v, "empty") and v.empty:
-                continue
-
-            cleaned[k] = v
-
-        return cleaned
-
-    # ---------------------------------------------------------
-    # SINGLE-FILE TASKS
-    # ---------------------------------------------------------
     if task_type == "single":
+        for filename, df in st.session_state.current_data.items():
+            _run_single_file(task_func, filename, df, kwargs)
 
-        for filename in list(st.session_state.current_data.keys()):
-            df = st.session_state.current_data[filename]
-
-            # Save state for undo
-            st.session_state.history_stack[filename].append(df.copy())
-            st.session_state.redo_stack[filename] = []
-
-            # ---------------------------------------------------------
-            # SAFE EXECUTION
-            # ---------------------------------------------------------
-            result, error_summary = _safe_execute(task_func, df.copy(), **kwargs)
-
-            # If the task crashed, show error and DO NOT update df
-            if error_summary:
-                show_summary(error_summary, title="Error", filename=filename)
-                st.session_state.task_applied = False
-                continue
-
-            # ---------------------------------------------------------
-            # NORMAL RESULT HANDLING
-            # ---------------------------------------------------------
-            cleaned_df, summary, summary_df = None, {}, None
-
-            if isinstance(result, tuple):
-                if len(result) == 3:
-                    cleaned_df, summary, summary_df = result
-                elif len(result) == 2:
-                    cleaned_df, summary = result
-                else:
-                    cleaned_df = result[0]
-            else:
-                cleaned_df = result
-
-            # Update dataset
-            st.session_state.current_data[filename] = cleaned_df
-            st.session_state.task_history[filename].append(task_name)
-
-            # ---------------------------------------------------------
-            # Detect RVQ task automatically - (3-tuple with detection-limit table)
-            # ---------------------------------------------------------
-            is_rvq_task = (
-                summary_df is not None
-                and isinstance(summary_df, pd.DataFrame)
-                and "Detection Limit" in summary_df.columns
-            )
-
-            if is_rvq_task:
-                if "supplementary_outputs" not in st.session_state:
-                    st.session_state.supplementary_outputs = {}
-                st.session_state.supplementary_outputs[
-                    f"{filename}_RVQ_summary.csv"
-                ] = summary_df
-
-
-
-            # ---------------------------------------------------------
-            # Clean summary deeply
-            # ---------------------------------------------------------
-            summary = _clean_summary(summary)
-
-            # ---------------------------------------------------------
-            # Store summary only if non-empty
-            # ---------------------------------------------------------
-            if summary:
-                st.session_state.all_summaries[filename] = summary
-            else:
-                st.session_state.all_summaries.pop(filename, None)
-
-            # ---------------------------------------------------------
-            # Display summary or success message
-            # ---------------------------------------------------------
-            if summary:
-                show_summary(summary, title="Task Summary", filename=filename)
-            else:
-                st.success(f"Task '{task_name}' applied successfully.")
-
-            st.session_state.task_applied = True
-
-    # ---------------------------------------------------------
-    # MULTI-FILE TASKS
-    # ---------------------------------------------------------
     elif task_type == "multi":
-
-        result, error_summary = _safe_execute(
-            task_func, st.session_state.current_data, **kwargs
-        )
-
-        if error_summary:
-            show_summary(error_summary, title="Error", filename="merged_output.csv")
-            st.session_state.task_applied = False
-            return
-
-        if isinstance(result, tuple):
-            merged_df, summary = result
-        else:
-            merged_df = result
-            summary = {}
-
-        merged_filename = "merged_output.csv"
-
-        st.session_state.original_data[merged_filename] = merged_df.copy()
-        st.session_state.current_data[merged_filename] = merged_df.copy()
-
-        if summary:
-            st.session_state.all_summaries[merged_filename] = summary
-
-        if summary:
-            show_summary(summary, title="Task Summary", filename=merged_filename)
-        else:
-            st.success(f"Task '{task_name}' applied successfully.")
-
-        st.session_state.task_history[merged_filename] = [task_name]
-        st.session_state.history_stack[merged_filename] = []
-        st.session_state.redo_stack[merged_filename] = []
-
-        st.session_state.task_applied = True
+        _run_multi_file(task_func, kwargs)

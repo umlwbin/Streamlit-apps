@@ -49,7 +49,7 @@ def headers_widgets(df=None, show_button=True):
     # Additional metadata extraction
     # ---------------------------------------------------------
     extract_additional = st.checkbox(
-        "Extract additional information in header (sensor information, scales, media, notes)",
+        "Attempt to extract additional information in header (sensor information, media, notes)",
         value=True,
         key="extract_additional"
     )

@@ -8,13 +8,19 @@ def merge_date_time_widgets(df):
 
     st.markdown("#### Merge a date column and a time column into one ISO datetime")
 
+    # Handle empty DataFrame
+    if df.empty or df.columns.empty:
+        st.error("This dataset has no columns.")
+        return None
+
+    cols = df.columns
+
     # Auto-detect defaults
     def_date = next((i for i, c in enumerate(cols) if "date" in c.lower()), None)
     def_time = next((i for i, c in enumerate(cols) if "time" in c.lower()), None)
 
     col1, col2 = st.columns(2)
 
-    cols = df.columns
     date_column = col1.selectbox(
         "Date column",
         options=list(cols),
@@ -47,7 +53,6 @@ def merge_date_time_widgets(df):
             st.error("Date and time columns must be different.", icon="🚨")
             return None
 
-        # Return task inputs
         return {
             "date_column": date_column,
             "time_column": time_column

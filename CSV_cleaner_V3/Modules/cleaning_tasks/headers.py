@@ -2,39 +2,6 @@ import re
 import unicodedata
 import pandas as pd
 
-# -----------------------------------------
-# Controlled vocabularies
-# -----------------------------------------
-
-KNOWN_UNITS = {
-    # Add as many as needed - all will be detected even without brackets
-    "utc", "degrees north", "degrees east", "m", "db", "ms/cm", "psu",
-    "deg c", "degc", "us cm^-1", "mg l^-1", "ntu", "rfu", "rfub",
-    "ue m^-2 s^-1", "m s^-1", "kg/m^3", "10^-8 m^3/kg", "ml/l",
-    "umol/kg", "% saturation", "%sat", "% sat", "mg/m^3",
-    "umol photons/m^2/sec", "%", "1/m"
-}
-
-KNOWN_SENSORS = {
-    "sbe 43": "SBE 43",
-    "wet labs c-star": "WET Labs C-Star",
-    "wet labs eco-afl/fl": "WET Labs ECO-AFL/FL",
-    "wet labs cdom": "WET Labs CDOM",
-    "biospherical/licor": "Biospherical/Licor",
-    "strain gauge": "Strain Gauge"
-}
-
-KNOWN_SCALES = {
-    "its-90": "ITS-90",
-    "sigma-theta": "sigma-theta",
-}
-
-KNOWN_MEDIA = {
-    "salt water": "salt water",
-    "fresh water": "fresh water"
-}
-
-
 def clean_headers(
     df,
     naming_style="snake_case",
@@ -45,15 +12,72 @@ def clean_headers(
     """
     Clean and standardize messy scientific column headers while extracting metadata.
 
-    Improvements in this version:
-        • Detect units even when not inside brackets (e.g., Temp_degC, Chl_NTU)
-        • Detect multi-token units (e.g., "mg L^-1", "uS cm^-1")
-        • Beginner-friendly comments
-        • Safe fallbacks and error capturing
-        • Empty-header detection
-        • Duplicate-header resolution
+    This simplified version uses:
+        • A UNIT_MAP for known units (can extend this anytime)
+        • Bracket-first unit detection (e.g., [mg L^-1])
+        • Mapping-based detection for inline units (e.g., Temp_mg L^-1)
+        • A post-check for ambiguous units like _m, _g, _s
     """
 
+    # ---------------------------------------------------------
+    # 1. Known units (safe, unambiguous)
+    # ---------------------------------------------------------
+    UNIT_MAP = {
+        "deg c": "degc",
+        "degc": "degc",
+        "psu": "psu",
+        "db": "db",
+        "ntu": "ntu",
+        "rfu": "rfu",
+        "rfub": "rfub",
+        "%sat": "percent_sat",
+        "% saturation": "percent_sat",
+        "umol/kg": "umol_kg",
+        "mg/m^3": "mg_m_3",
+        "ml/l": "ml_l",
+        "us cm^-1": "us_cm_neg1",
+        "mg l^-1": "mg_l_neg1",
+        "ue m^-2 s^-1": "ue_m_neg2_s_neg1",
+        "m s^-1": "m_s_neg1",
+        "umol photons/m^2/sec": "umol_photons_m_neg2_sec_neg1",
+    }
+
+    # ---------------------------------------------------------
+    # 2. Ambiguous units (only detected if isolated at end)
+    # ---------------------------------------------------------
+    AMBIGUOUS_UNITS = {"m", "g", "s", "%", "h", "l"}
+
+    # ---------------------------------------------------------
+    # 3. Helper: detect units using brackets or UNIT_MAP
+    # ---------------------------------------------------------
+    def detect_units(text):
+        lower = text.lower()
+
+        # Step 1: Bracket units always win
+        bracket_match = re.findall(r"\[(.*?)\]|\((.*?)\)", text)
+        if bracket_match:
+            content = next(filter(None, bracket_match[0]))
+            return content.strip()
+
+        # Step 2: Check UNIT_MAP keys
+        for raw_unit in UNIT_MAP:
+            if raw_unit in lower:
+                return raw_unit
+
+        return None
+
+    # ---------------------------------------------------------
+    # 4. Helper: clean variable names
+    # ---------------------------------------------------------
+    def clean_variable_name(name):
+        name = name.lower()
+        name = re.sub(r"[^a-z0-9]+", "_", name)
+        name = re.sub(r"_+", "_", name).strip("_")
+        return name
+
+    # ---------------------------------------------------------
+    # 5. Prepare output structures
+    # ---------------------------------------------------------
     original = list(df.columns)
     cleaned = []
     metadata = {}
@@ -65,44 +89,17 @@ def clean_headers(
         "errors": []
     }
 
-    # Regex patterns
-    bracket_pattern = r"\[[^\]]*\]|\([^\)]*\)"
-    processing_pattern = r",\s*(.*)$"
-
-    # -----------------------------------------
-    # Helper: detect multi-token units inside raw text
-    # -----------------------------------------
-    def detect_units_in_text(text):
-        """
-        Detect units even when not in brackets, and return the exact substring
-        as it appears in the original header.
-        """
-        lower_text = text.lower()
-
-        for unit in KNOWN_UNITS:
-            u = unit.lower()
-            if u in lower_text:
-                # Find the exact substring in the original text
-                start = lower_text.index(u)
-                end = start + len(u)
-                return text[start:end]   # original formatting preserved
-
-        return None
-
-
-    # -----------------------------------------
-    # Process each header safely
-    # -----------------------------------------
+    # ---------------------------------------------------------
+    # 6. Process each column header
+    # ---------------------------------------------------------
     for raw in original:
 
-        # Handle empty or invalid header names
         if not isinstance(raw, str) or raw.strip() == "":
             fallback = "unnamed_column"
             cleaned.append(fallback)
             metadata[raw] = {
                 "variable": fallback,
                 "units": None,
-                "additional_notes": None,
                 "cleaned_header": fallback
             }
             summary["errors"].append(
@@ -111,189 +108,61 @@ def clean_headers(
             continue
 
         try:
-            # ---------------------------------------------------------
-            # BEGIN NORMAL PROCESSING
-            # ---------------------------------------------------------
-            col = raw
-            meta = {"variable": None, "units": None, "additional_notes": None}
-            notes = []
-
-            # STEP 1 - Normalize text (remove accents, enforce ASCII)
-            new = unicodedata.normalize("NFKD", col)
+            # Normalize text
+            new = unicodedata.normalize("NFKD", raw)
             new = new.encode("ascii", "ignore").decode("ascii")
 
-            # STEP 2 - Extract bracket blocks
-            bracket_blocks = re.findall(bracket_pattern, new)
+            # -------------------------------------------------
+            # Step A: Detect units (brackets or UNIT_MAP)
+            # -------------------------------------------------
+            raw_units = None if no_units_in_header else detect_units(new)
 
-            # ---------------------------------------------------------
-            # MODE: no units in header
-            # ---------------------------------------------------------
-            if no_units_in_header:
+            cleaned_units = None
+            units_raw_original = None
 
-                # Remove brackets but keep content
-                new_no_brackets = re.sub(bracket_pattern, "", new)
+            if raw_units:
+                # Cleaned unit from UNIT_MAP
+                cleaned_units = UNIT_MAP.get(raw_units.lower(), raw_units.lower())
 
-                # Extract metadata from bracket content
-                for block in bracket_blocks:
-                    content = block.strip("[]()")
-                    parts = re.split(r"[ ,_\-]+", content.lower())
+                # Capture the exact original substring from the header
+                match = re.search(re.escape(raw_units), new, flags=re.IGNORECASE)
+                if match:
+                    units_raw_original = match.group(0)
 
-                    for p in parts:
-                        if p in KNOWN_SENSORS:
-                            notes.append(KNOWN_SENSORS[p])
-                        elif p in KNOWN_SCALES:
-                            notes.append(KNOWN_SCALES[p])
-                        elif p in KNOWN_MEDIA:
-                            notes.append(KNOWN_MEDIA[p])
-                        # Units intentionally ignored in this mode
 
-                # Treat entire header as variable name
-                variable = new_no_brackets.strip().rstrip(",")
+            # -------------------------------------------------
+            # NEW: Remove the raw unit substring from the variable text
+            # -------------------------------------------------
+            if raw_units:
+                # Remove the exact raw unit substring (case-insensitive)
+                pattern = re.escape(raw_units)
+                variable = re.sub(pattern, "", new, flags=re.IGNORECASE)
+            else:
+                variable = new
 
-                # Extract metadata from variable text
-                tokens = re.split(r"[ ,_\-]+", variable.lower())
-                for t in tokens:
-                    if t in KNOWN_SENSORS:
-                        notes.append(KNOWN_SENSORS[t])
-                        variable = re.sub(t, "", variable, flags=re.IGNORECASE)
-                    elif t in KNOWN_SCALES:
-                        notes.append(KNOWN_SCALES[t])
-                        variable = re.sub(t, "", variable, flags=re.IGNORECASE)
-                    elif t in KNOWN_MEDIA:
-                        notes.append(KNOWN_MEDIA[t])
-                        variable = re.sub(t, "", variable, flags=re.IGNORECASE)
+            # IMPORTANT: remove bracket content AFTER removing units
+            variable = re.sub(r"\[[^\]]*\]|\([^\)]*\)", "", variable)
+            variable = variable.strip().rstrip(",")
 
-                variable = variable.strip(" ,_-")
-                meta["variable"] = variable
-                meta["units"] = None
-                if extract_additional and notes:
-                    meta["additional_notes"] = ", ".join(notes)
+            variable_clean = clean_variable_name(variable)
 
-                # Build cleaned header
-                header = variable.lower()
-                header = re.sub(r"[^a-z0-9]+", "_", header)
-                header = re.sub(r"_+", "_", header).strip("_")
+            # -------------------------------------------------
+            # Step C: Post-check ambiguous units
+            # -------------------------------------------------
+            if cleaned_units is None:
+                tokens = variable_clean.split("_")
+                last = tokens[-1]
 
-                # Naming style
-                if naming_style == "camelCase":
-                    parts = header.split("_")
-                    header = parts[0] + "".join(p.capitalize() for p in parts[1:])
-                elif naming_style == "Title Case":
-                    header = " ".join(p.capitalize() for p in header.split("_"))
+                if last in AMBIGUOUS_UNITS:
+                    cleaned_units = last
+                    variable_clean = "_".join(tokens[:-1])
 
-                # Detect empty header after cleaning
-                if header == "":
-                    header = "unnamed_column"
-                    summary["errors"].append(
-                        f"Header '{raw}' cleaned to an empty name and was replaced with 'unnamed_column'."
-                    )
-
-                cleaned.append(header)
-                meta["cleaned_header"] = header
-                metadata[raw] = meta
-                continue
-
-            # ---------------------------------------------------------
-            # NORMAL MODE (units expected)
-            # ---------------------------------------------------------
-
-            # STEP 3 - Parse bracket metadata
-            detected_units = []
-            for block in bracket_blocks:
-                content = block.strip("[]()")
-                parts = [p.strip().lower() for p in content.split(",")]
-
-                for p in parts:
-                    if p in KNOWN_UNITS:
-                        detected_units.append(p)
-                    elif p in KNOWN_SENSORS:
-                        notes.append(KNOWN_SENSORS[p])
-                    elif p in KNOWN_SCALES:
-                        notes.append(KNOWN_SCALES[p])
-                    elif p in KNOWN_MEDIA:
-                        notes.append(KNOWN_MEDIA[p])
-                    else:
-                        notes.append(p)
-
-            # STEP 3b - Detect units outside brackets (multi-token or single-token)
-            if not detected_units:
-                unit_found = detect_units_in_text(new)
-                if unit_found:
-                    detected_units.append(unit_found)
-
-            # Handle multiple units
-            if len(detected_units) > 1:
-                summary["errors"].append(
-                    f"Multiple units detected in '{raw}'. Using '{detected_units[0]}'."
-                )
-
-            if detected_units:
-                meta["units"] = detected_units[0]
-
-            # Remove bracket blocks
-            new = re.sub(bracket_pattern, "", new)
-
-            # STEP 4 - Extract processing notes after comma
-            m = re.search(processing_pattern, new)
-            if m:
-                if extract_additional:
-                    notes.append(m.group(1).strip())
-                new = new[:m.start()]
-
-            # STEP 5 - Extract variable name
-            variable = new.strip().rstrip(",")
-            variable = re.sub(r"^[^A-Za-z0-9]+", "", variable)
-
-            # STEP 6 - Detect metadata inside variable text
-            tokens = re.split(r"[ ,_\-]+", variable.lower())
-            for t in tokens:
-                if t in KNOWN_SENSORS:
-                    notes.append(KNOWN_SENSORS[t])
-                    variable = re.sub(t, "", variable, flags=re.IGNORECASE)
-                elif t in KNOWN_SCALES:
-                    notes.append(KNOWN_SCALES[t])
-                    variable = re.sub(t, "", variable, flags=re.IGNORECASE)
-                elif t in KNOWN_MEDIA:
-                    notes.append(KNOWN_MEDIA[t])
-                    variable = re.sub(t, "", variable, flags=re.IGNORECASE)
-                elif t in KNOWN_UNITS and meta["units"] is None:
-                    meta["units"] = t
-                    variable = re.sub(t, "", variable, flags=re.IGNORECASE)
-
-            variable = variable.strip(" ,_-")
-            meta["variable"] = variable
-
-            # ---------------------------------------------------------
-            # REMOVE DUPLICATED UNITS ()
-            # ---------------------------------------------------------
-            if meta["units"]:
-                # Remove exact unit (original formatting)
-                variable = re.sub(re.escape(meta["units"]), "", variable, flags=re.IGNORECASE)
-
-                # Remove normalized unit (after lowercasing + symbol normalization)
-                normalized_unit = (
-                    meta["units"]
-                    .lower()
-                    .replace("%", "percent")
-                    .replace("/", "_per_")
-                    .replace(" ", "_")
-                    .replace("-", "_")
-                )
-                variable = re.sub(normalized_unit, "", variable.lower(), flags=re.IGNORECASE)
-
-                variable = variable.strip(" ,_-")
-
-            # STEP 7 - Build cleaned header
-            header = variable
-            if preserve_units and meta["units"]:
-                header = f"{header} ({meta['units']})"
-
-            header = header.lower()
-            header = header.replace("%", "percent")
-            header = header.replace("/", "_per_")
-            header = re.sub(r"[()]", "_", header)
-            header = re.sub(r"[^a-z0-9]+", "_", header)
-            header = re.sub(r"_+", "_", header).strip("_")
+            # -------------------------------------------------
+            # Step D: Build final header (AFTER units finalized)
+            # -------------------------------------------------
+            header = variable_clean
+            if preserve_units and cleaned_units:
+                header = f"{header}_{cleaned_units}"
 
             # Naming style
             if naming_style == "camelCase":
@@ -302,29 +171,30 @@ def clean_headers(
             elif naming_style == "Title Case":
                 header = " ".join(p.capitalize() for p in header.split("_"))
 
-            # Detect empty header after cleaning
             if header == "":
                 header = "unnamed_column"
                 summary["errors"].append(
                     f"Header '{raw}' cleaned to an empty name and was replaced with 'unnamed_column'."
                 )
 
+            # -------------------------------------------------
+            # Step E: Save results
+            # -------------------------------------------------
             cleaned.append(header)
-            if extract_additional and notes:
-                meta["additional_notes"] = ", ".join(notes)
-            meta["cleaned_header"] = header
-            metadata[raw] = meta
+            metadata[raw] = {
+                "variable": variable_clean,
+                "units_raw": units_raw_original,
+                "units_clean": cleaned_units,
+                "cleaned_header": header
+            }
+
 
         except Exception as e:
-            # ---------------------------------------------------------
-            # SAFE FALLBACK
-            # ---------------------------------------------------------
-            fallback = raw if isinstance(raw, str) else "unnamed_column"
+            fallback = raw
             cleaned.append(fallback)
             metadata[raw] = {
                 "variable": fallback,
                 "units": None,
-                "additional_notes": None,
                 "cleaned_header": fallback
             }
             summary["errors"].append(
@@ -332,9 +202,10 @@ def clean_headers(
             )
             continue
 
-    # -----------------------------------------
-    # STEP 8 - Ensure uniqueness
-    # -----------------------------------------
+
+    # ---------------------------------------------------------
+    # 7. Ensure uniqueness
+    # ---------------------------------------------------------
     final = []
     seen = {}
     for name in cleaned:
@@ -345,9 +216,9 @@ def clean_headers(
             seen[name] += 1
             final.append(f"{name}_{seen[name]}")
 
-    # -----------------------------------------
-    # STEP 9 - Build summary
-    # -----------------------------------------
+    # ---------------------------------------------------------
+    # 8. Build summary
+    # ---------------------------------------------------------
     for old, new in zip(original, final):
         if old != new:
             summary["changed"][old] = new

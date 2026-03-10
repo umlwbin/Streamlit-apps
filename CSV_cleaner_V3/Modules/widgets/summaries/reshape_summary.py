@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-def render_reshape_summary(summary):
+def render_reshape_summary(summary, filename=None):
     """
     Summary renderer for the 'reshape' task.
 

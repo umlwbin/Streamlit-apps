@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-def render_remove_columns_summary(summary):
+def render_remove_columns_summary(summary, filename=None):
     """
     Summary renderer for the 'remove_columns' task.
 

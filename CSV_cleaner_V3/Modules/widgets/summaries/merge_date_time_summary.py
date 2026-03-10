@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-def render_merge_date_time_summary(summary):
+def render_merge_date_time_summary(summary, filename=None):
     """
     Summary renderer for the 'merge_date_time' task.
 

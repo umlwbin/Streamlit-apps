@@ -1,6 +1,6 @@
 import streamlit as st
 
-def render_add_column_summary(summary):
+def render_add_column_summary(summary, filename=None):
     """
     Summary renderer for the 'add_columns' task.
     Expected summary keys:

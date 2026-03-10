@@ -76,8 +76,9 @@ def show_summary(summary, title="Task Summary", filename=None):
         task_name = summary.get("task_name")
 
         if task_name in TASK_SUMMARY_RENDERERS:
-            TASK_SUMMARY_RENDERERS[task_name](summary)
+            TASK_SUMMARY_RENDERERS[task_name](summary, filename)
             return
+
 
         # ---------------------------------------------------------
         # Fallback: show raw summary if no renderer exists

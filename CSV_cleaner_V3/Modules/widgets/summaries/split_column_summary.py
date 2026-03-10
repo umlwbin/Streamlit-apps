@@ -1,6 +1,6 @@
 import streamlit as st
 
-def render_split_column_summary(summary):
+def render_split_column_summary(summary, filename=None):
     col = summary.get("column")
     new_cols = summary.get("new_columns", [])
     delims = summary.get("delimiters", [])

@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-def render_tidy_data_summary(summary):
+def render_tidy_data_summary(summary, filename=None):
     """
     Summary renderer for the 'tidy_data' task.
 

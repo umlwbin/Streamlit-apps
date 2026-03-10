@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-def render_rename_summary(summary):
+def render_rename_summary(summary, filename=None):
     """
     Summary renderer for the 'rename' task.
 

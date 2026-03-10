@@ -1,6 +1,6 @@
 import streamlit as st
 
-def render_assign_datatype_summary(summary):
+def render_assign_datatype_summary(summary, filename=None):
     """
     Summary renderer for the 'assign_datatype' task.
 

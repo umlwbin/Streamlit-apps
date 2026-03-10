@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-def render_merge_header_rows_summary(summary):
+def render_merge_header_rows_summary(summary, filename=None):
     """
     Summary renderer for the 'merge_header_rows' task.
 

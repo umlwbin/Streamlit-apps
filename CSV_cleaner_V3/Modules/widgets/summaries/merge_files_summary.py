@@ -1,6 +1,6 @@
 import streamlit as st
 
-def render_merge_files_summary(summary):
+def render_merge_files_summary(summary, filename=None):
     """
     Summary renderer for the 'merge_files' task.
 

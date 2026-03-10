@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-def render_add_rvqs_summary(summary, summary_df=None):
+def render_add_rvqs_summary(summary, summary_df=None, filename=None):
     """
     Renderer for RVQ tasks.
 

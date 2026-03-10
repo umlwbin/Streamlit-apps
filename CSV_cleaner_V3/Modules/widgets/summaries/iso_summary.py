@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-def render_iso_summary(summary):
+def render_iso_summary(summary, filename=None):
     """
     Summary renderer for the 'iso' task.
 

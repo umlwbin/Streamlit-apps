@@ -1,34 +1,46 @@
 import pandas as pd
 
-def remove_metadata_rows(df, identifiers):
+def remove_metadata_rows(df, identifiers, filename=None):
     """
     Remove metadata rows that appear above the true header row.
+
+    This version is written for clarity and transparency. It:
+        • detects the header row using user‑provided identifiers
+        • removes all rows above the header (metadata rows)
+        • promotes the detected header row to column names
+        • returns a preview of the metadata rows (first 10)
+        • includes the filename so the UI can combine metadata later
 
     Parameters
     ----------
     df : pandas.DataFrame
-        The input dataset, possibly containing metadata rows above the header.
+        The uploaded dataset. May contain metadata rows above the header.
 
     identifiers : list[str]
-        A list of three strings that must appear in the true header row.
-        Matching is case-insensitive and whitespace-trimmed.
+        A list of strings that must appear in the true header row.
+        Matching is case‑insensitive and whitespace‑trimmed.
+
+    filename : str, optional
+        The name of the file being processed. Used for provenance.
 
     Returns
     -------
     cleaned_df : pandas.DataFrame
-        The DataFrame with metadata rows removed and the detected header applied.
+        The dataset with metadata rows removed and a clean header applied.
 
     summary : dict
-        A minimal summary containing:
-            {
-                "task_name": "remove_metadata_rows",
-                "metadata_preview": [... up to 10 rows ...]
-            }
+        A summary containing:
+            - task name
+            - metadata preview (first 10 rows)
+            - filename (for combining metadata across files)
     """
 
+    # ---------------------------------------------------------
+    # Helper: ensure column names are unique
+    # ---------------------------------------------------------
     def make_unique(names):
         """
-        Ensure column names are unique by adding suffixes _1, _2, etc.
+        If a header row contains duplicate names, add suffixes (_1, _2, ...).
         """
         seen = {}
         unique = []
@@ -39,40 +51,50 @@ def remove_metadata_rows(df, identifiers):
                 unique.append(name)
             else:
                 seen[name] += 1
-                new_name = f"{name}_{seen[name]}"
-                unique.append(new_name)
+                unique.append(f"{name}_{seen[name]}")
 
         return unique
 
-
-
-    # Normalize identifiers for comparison
+    # ---------------------------------------------------------
+    # Normalize identifiers for matching
+    # ---------------------------------------------------------
     identifiers = [str(x).strip().lower() for x in identifiers]
 
-    # Convert all cell values to strings for safe comparison
+    # Convert all cells to lowercase strings for safe comparison
     df_str = df.astype(str).applymap(lambda x: x.strip().lower())
 
     header_index = None
 
-    # Scan each row to find the header row
+    # ---------------------------------------------------------
+    # Detect the header row
+    # ---------------------------------------------------------
     for idx, row in df_str.iterrows():
         row_values = set(row.tolist())
+
+        # Check if all identifiers appear in this row
         if all(identifier in row_values for identifier in identifiers):
             header_index = idx
             break
 
+    # ---------------------------------------------------------
+    # If no header row is found, return the dataset unchanged
+    # ---------------------------------------------------------
     if header_index is None:
-        # No header row found; return original df unchanged
         summary = {
             "task_name": "remove_metadata_rows",
-            "metadata_preview": []
+            "metadata_preview": [],
+            "filename": filename
         }
         return df.copy(), summary
 
-    # Extract metadata rows above the header
+    # ---------------------------------------------------------
+    # Extract metadata rows (everything above the header)
+    # ---------------------------------------------------------
     metadata_df = df.iloc[:header_index].copy()
 
+    # ---------------------------------------------------------
     # Promote the detected header row to column names
+    # ---------------------------------------------------------
     new_header = df.iloc[header_index].astype(str).tolist()
     new_header = make_unique(new_header)
 
@@ -80,12 +102,18 @@ def remove_metadata_rows(df, identifiers):
     cleaned_df.columns = new_header
     cleaned_df = cleaned_df.reset_index(drop=True)
 
-    # Build minimal summary
+    # ---------------------------------------------------------
+    # Build metadata preview (first 10 rows)
+    # ---------------------------------------------------------
     preview = metadata_df.head(10).to_dict(orient="records")
 
+    # ---------------------------------------------------------
+    # Build summary for the UI
+    # ---------------------------------------------------------
     summary = {
         "task_name": "remove_metadata_rows",
-        "metadata_preview": preview
+        "metadata_preview": preview,
+        "filename": filename
     }
 
     return cleaned_df, summary

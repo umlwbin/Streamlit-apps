@@ -1,6 +1,6 @@
 import streamlit as st
 
-def render_add_row_summary(summary):
+def render_add_row_summary(summary, filename=None):
     """
     Summary renderer for the 'add_row' task.
 

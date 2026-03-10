@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-def render_provincial_pivot_summary(summary):
+def render_provincial_pivot_summary(summary, filename=None):
     """
     Summary renderer for the 'provincial_pivot' task.
 

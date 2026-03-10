@@ -1,6 +1,7 @@
 import streamlit as st
+import pandas as pd
 
-def render_clean_headers_summary(summary):
+def render_clean_headers_summary(summary, filename=None):
     """
     Summary renderer for the 'clean_headers' task.
 
@@ -16,7 +17,7 @@ def render_clean_headers_summary(summary):
 
     # Changed headers
     if summary.get("changed"):
-        st.write("### Updated Column Names")
+        st.write("##### Updated Column Names")
         for old, new in summary["changed"].items():
             st.write(f"- **{old}** → {new}")
     else:
@@ -24,16 +25,27 @@ def render_clean_headers_summary(summary):
 
     # Unchanged headers
     if summary.get("unchanged"):
-        st.write("### Unchanged Columns")
+        st.write("##### Unchanged Columns")
         st.write(", ".join(summary["unchanged"]))
 
     # Errors
     if summary.get("errors"):
-        st.write("### Issues Encountered")
+        st.write("##### Issues Encountered")
         for err in summary["errors"]:
             st.error(err)
 
     # Metadata table (optional but helpful)
     if summary.get("header_metadata"):
-        st.write("### Extracted Metadata")
-        st.dataframe(summary["header_metadata"])
+        st.write("##### Variable Transformation Table")
+
+        # Convert to DataFrame
+        meta_df = pd.DataFrame(summary["header_metadata"])
+
+        # Transpose for readability
+        meta_df = meta_df.transpose()
+
+        # Optional: reset index so the row labels become a column
+        meta_df = meta_df.reset_index().rename(columns={"index": "field"})
+
+        st.dataframe(meta_df, use_container_width=True)
+

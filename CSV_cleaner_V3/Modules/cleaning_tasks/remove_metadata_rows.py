@@ -1,6 +1,6 @@
 import pandas as pd
 
-def remove_metadata_rows(df, identifiers, filename=None):
+def remove_metadata_rows(df, identifiers, filename=None, metadata_extract=None):
     """
     Remove metadata rows that appear above the true header row.
 
@@ -106,6 +106,28 @@ def remove_metadata_rows(df, identifiers, filename=None):
     # Build metadata preview (first 10 rows)
     # ---------------------------------------------------------
     preview = metadata_df.head(10).to_dict(orient="records")
+
+
+    # ---------------------------------------------------------
+    # Add extracted metadata as new columns
+    # ---------------------------------------------------------
+    if metadata_extract:
+        for new_col, info in metadata_extract.items():
+            row_idx = info["row"]
+            col_index = info["col_index"]
+
+            # Extract raw value from THIS file’s metadata
+            row = metadata_df.iloc[row_idx]
+            non_empty = [cell for cell in row.tolist() if str(cell).strip() != ""]
+            raw_value = non_empty[col_index]
+
+            # Apply user edit if provided
+            final_value = info["edit"] if info.get("edit") else raw_value
+
+            # Add the value to every row in the cleaned dataset
+            cleaned_df[new_col] = final_value
+
+            
 
     # ---------------------------------------------------------
     # Build summary for the UI

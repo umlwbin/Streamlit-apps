@@ -1,13 +1,10 @@
 import pandas as pd
-import re
-def merge_header_rows(df, row1=None, row2=None):
+import streamlit as st
+
+def merge_header_rows(df, filename, row1=None, row2=None):
     """
     Merge two user-selected rows (based on ORIGINAL row numbers)
     into the existing header row.
-
-    Works for:
-        • rectangular files (header already promoted)
-        • metadata-cleaned files
     """
 
     cleaned_df = df.copy()
@@ -20,21 +17,22 @@ def merge_header_rows(df, row1=None, row2=None):
     }
 
     # ---------------------------------------------------------
-    # Validate that _original_row exists
+    # Validate row_map exists
     # ---------------------------------------------------------
-    if "_original_row" not in cleaned_df.columns:
+    if "row_map" not in st.session_state or filename not in st.session_state.row_map:
         summary["errors"].append(
-            "Internal error: _original_row column missing. Cannot map row numbers."
+            "Internal error: row_map missing. Cannot map row numbers."
         )
         return cleaned_df, summary
+
+    row_map = st.session_state.row_map[filename]
 
     # ---------------------------------------------------------
     # Helper: map original row number → current DataFrame index
     # ---------------------------------------------------------
     def map_original_to_current(original_idx):
-        matches = cleaned_df.index[cleaned_df["_original_row"] == original_idx]
-        if len(matches) == 1:
-            return matches[0]
+        if original_idx in row_map:
+            return row_map.index(original_idx)
         return None
 
     # Map row1
@@ -57,13 +55,12 @@ def merge_header_rows(df, row1=None, row2=None):
     # Start with the existing header (already promoted)
     # ---------------------------------------------------------
     header = list(cleaned_df.columns.astype(str))
-    header.remove("_original_row")  # do not merge into this column
 
     # ---------------------------------------------------------
     # Merge row1
     # ---------------------------------------------------------
     if row1 is not None:
-        vals = list(cleaned_df.drop(columns=["_original_row"]).iloc[row1])
+        vals = list(cleaned_df.iloc[row1])
         header = [
             f"{h}_{v}" if pd.notna(v) and str(v).strip() != "" else h
             for h, v in zip(header, vals)
@@ -73,7 +70,7 @@ def merge_header_rows(df, row1=None, row2=None):
     # Merge row2
     # ---------------------------------------------------------
     if row2 is not None:
-        vals = list(cleaned_df.drop(columns=["_original_row"]).iloc[row2])
+        vals = list(cleaned_df.iloc[row2])
         header = [
             f"{h}_{v}" if pd.notna(v) and str(v).strip() != "" else h
             for h, v in zip(header, vals)
@@ -88,17 +85,27 @@ def merge_header_rows(df, row1=None, row2=None):
     if row2 is not None:
         rows_to_drop.append(row2)
 
-    cleaned_df = cleaned_df.drop(index=rows_to_drop)
-    cleaned_df = cleaned_df.reset_index(drop=True)
+    cleaned_df = cleaned_df.drop(index=rows_to_drop).reset_index(drop=True)
+
+    # ---------------------------------------------------------
+    # Update row_map to match the new DataFrame
+    # ---------------------------------------------------------
+    new_row_map = [
+        row_map[i] for i in range(len(row_map)) if i not in rows_to_drop
+    ]
+
+    # Safety: ensure row_map length matches df length
+    if len(new_row_map) != len(cleaned_df):
+        summary["errors"].append(
+            "Internal error: row_map and DataFrame length mismatch."
+        )
+        return cleaned_df, summary
+
+    st.session_state.row_map[filename] = new_row_map
 
     # ---------------------------------------------------------
     # Apply merged header
     # ---------------------------------------------------------
-    cleaned_df.columns = header + ["_original_row"]
-
-    # ---------------------------------------------------------
-    # Update _original_row after dropping rows
-    # ---------------------------------------------------------
-    cleaned_df["_original_row"] = range(len(cleaned_df))
+    cleaned_df.columns = header
 
     return cleaned_df, summary

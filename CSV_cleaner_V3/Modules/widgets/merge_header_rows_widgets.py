@@ -2,70 +2,57 @@ import streamlit as st
 
 def merge_header_rows_widget(df):
     """
-    Widget for selecting one or two metadata rows (e.g., units, VMV codes)
-    to merge into the header row. This helps clean files where important
-    descriptors are stored above the actual header.
+    Widget for selecting metadata rows to merge into the header.
     """
 
     st.markdown("""
         This tool merges up to two rows into the header row.  
-        Use it when units, codes, or other descriptors appear above the actual column names.
+        Row numbers refer to the **original file**, not the preview index.
     """)
 
     # ---------------------------------------------------------
-    # Clean up the DataFrame for preview
+    # Get filename and row_map
     # ---------------------------------------------------------
-    df = df.copy()
-
-    # Convert all column names to strings (prevents errors with numeric headers)
-    df.columns = df.columns.map(str)
-
-    # Remove "Unnamed" columns (common in messy CSV exports)
-    df = df.loc[:, ~df.columns.str.contains("^Unnamed", case=False)]
+    filenames = list(st.session_state.current_data.keys())
+    filename = filenames[0]
+    row_map = st.session_state.row_map[filename]
 
     # ---------------------------------------------------------
-    # Show a preview so the user can identify which rows to merge
+    # Show preview with ORIGINAL row numbers
     # ---------------------------------------------------------
-    st.markdown("#### Preview of the first few rows")
-    st.dataframe(df.head(5), use_container_width=True)
+    filenames = list(st.session_state.current_data.keys())
+    filename = filenames[0]
+    row_map = st.session_state.row_map[filename]
 
-    # Build a list of row indices as strings for the dropdowns
-    row_options = [str(i) for i in range(len(df))]
+    preview = df.copy()
 
-    st.markdown("#### Select metadata rows to merge (row numbers refer to the preview above)")
+    # Insert original row numbers as the first column
+    preview.insert(0, "original_row", row_map)
+
+    st.markdown("#### Preview (showing original row numbers)")
+    st.dataframe(preview.head(5), use_container_width=True)
+
+    # ---------------------------------------------------------
+    # Build dropdown options from ORIGINAL row numbers
+    # ---------------------------------------------------------
+    row_options = [str(orig) for orig in row_map]
+
+    st.markdown("#### Select metadata rows to merge (original row numbers)")
     c1, c2 = st.columns(2)
 
-    # First metadata row (required or optional)
-    row1 = c1.selectbox(
-        "First row to merge into header",
-        ["None"] + row_options,
-        index=0
-    )
+    row1 = c1.selectbox("First row to merge", ["None"] + row_options)
+    row2 = c2.selectbox("Second row to merge (optional)", ["None"] + row_options)
 
-    # Second metadata row (optional)
-    row2 = c2.selectbox(
-        "Second row to merge into header (optional)",
-        ["None"] + row_options,
-        index=0
-    )
-
-    # Convert dropdown values to integers or None
     row1 = int(row1) if row1 != "None" else None
     row2 = int(row2) if row2 != "None" else None
 
     st.markdown("---")
 
-    # ---------------------------------------------------------
-    # One-shot trigger: only run once when the user clicks the button
-    # ---------------------------------------------------------
-    apply_now = st.button("Merge Header Rows", type="primary")
-
-    if apply_now:
-        # Return the selected rows to the task runner
+    if st.button("Merge Header Rows", type="primary"):
         return {
+            "filename": filename,
             "row1": row1,
             "row2": row2
         }
 
-    # If the button wasn't pressed, do nothing yet
     return None

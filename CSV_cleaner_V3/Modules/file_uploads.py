@@ -46,6 +46,7 @@ def fileuploadfunc():
         st.session_state.history_stack = {}
         st.session_state.redo_stack = {}
         st.session_state.non_rectangular_files = set()
+        st.session_state.row_map = {}   # NEW: row map lives here
 
     uploaded_files = st.file_uploader(
         "Choose CSV file(s)",
@@ -62,7 +63,31 @@ def fileuploadfunc():
             raw_bytes = file.read().decode("utf-8", errors="replace")
 
             # ---------------------------------------------------------
-            # Load file safely using Python engine
+            # STEP 1: Detect metadata BEFORE loading into DataFrame
+            # ---------------------------------------------------------
+            raw_lines = raw_bytes.splitlines()
+            split_lines = [line.split(",") for line in raw_lines]
+
+            row_widths = [len(r) for r in split_lines]
+            max_width = max(row_widths)
+
+            HEADER_THRESHOLD = 0.9  # 90% of max width
+            candidate_header_index = None
+
+            for i, w in enumerate(row_widths):
+                # A header row must be "wide enough"
+                if w >= HEADER_THRESHOLD * max_width:
+                    candidate_header_index = i
+                    break
+
+            # If the first wide-enough row is NOT row 0 → metadata exists
+            file_has_metadata = candidate_header_index not in (0, None)
+
+            if file_has_metadata:
+                st.session_state.non_rectangular_files.add(filename)
+
+            # ---------------------------------------------------------
+            # STEP 2: Load file safely using Python engine
             # ---------------------------------------------------------
             try:
                 df = pd.read_csv(
@@ -74,48 +99,52 @@ def fileuploadfunc():
                 )
             except Exception:
                 rows = raw_bytes.splitlines()
-                split_rows = [r.split(",") for r in rows]
-                df = pd.DataFrame(split_rows)
+                df = pd.DataFrame([r.split(",") for r in rows])
 
             # ---------------------------------------------------------
-            # Detect metadata above header
+            # STEP 3: Initialize row_map BEFORE any modifications
             # ---------------------------------------------------------
-            header_len = df.shape[1]
-            first_row_len = df.iloc[0].count()
-
-            file_has_metadata = first_row_len < header_len
-
-            if file_has_metadata:
-                st.session_state.non_rectangular_files.add(filename)
+            st.session_state.row_map[filename] = list(range(len(df)))
 
             # ---------------------------------------------------------
-            # Promote header ONLY for rectangular files
+            # STEP 4: Fix completely empty columns (after detection)
+            # ---------------------------------------------------------
+            empty_cols = df.columns[
+                df.isna().all() |
+                (df.apply(lambda col: col.astype(str).str.strip() == "").all())
+            ]
+
+            for idx in empty_cols:
+                df[idx] = df[idx].fillna("")
+
+            # ---------------------------------------------------------
+            # STEP 5: Promote header ONLY for rectangular files
             # ---------------------------------------------------------
             if not file_has_metadata:
 
-                # Extract header row
                 header = df.iloc[0].astype(str).tolist()
 
-                # Deduplicate header names
+                header = [
+                    h if str(h).strip() != "" else f"unnamed_{i}"
+                    for i, h in enumerate(header)
+                ]
+
                 header = make_unique_columns(header)
 
                 # Drop header row
                 df = df.iloc[1:].reset_index(drop=True)
 
-                # Assign deduped header
+                # Update row_map to match
+                st.session_state.row_map[filename] = st.session_state.row_map[filename][1:]
+
                 df.columns = header
 
             else:
-                # Metadata-heavy files keep placeholder column names
+                # Metadata-heavy file → assign generic column names
                 df.columns = [f"col_{i}" for i in range(df.shape[1])]
 
             # ---------------------------------------------------------
-            # Add original row numbers AFTER header promotion
-            # ---------------------------------------------------------
-            df["_original_row"] = range(len(df))
-
-            # ---------------------------------------------------------
-            # Store file in session state
+            # STEP 6: Store file in session state
             # ---------------------------------------------------------
             st.session_state.original_data[filename] = df.copy()
             st.session_state.current_data[filename] = df.copy()

@@ -10,7 +10,7 @@ def remove_metadata_rows_widget(df):
       • requiring a 'Next' button before returning extraction instructions
     """
 
-    st.write("### Step 1 — Identify the true header row")
+    st.write("##### Step 1 - Identify the true header row")
     st.write("Enter three column names that appear in the real header row.")
 
     col1, col2, col3 = st.columns(3)
@@ -48,7 +48,7 @@ def remove_metadata_rows_widget(df):
     # ---------------------------------------------------------
     # Step 2 — Show metadata preview BEFORE extraction
     # ---------------------------------------------------------
-    st.write("### Step 2 — Metadata rows detected above the header")
+    st.write("##### Step 2 — Metadata rows detected above the header")
     st.dataframe(metadata_df)
 
     st.write("You can extract values from these metadata rows into new columns.")
@@ -56,7 +56,7 @@ def remove_metadata_rows_widget(df):
     # ---------------------------------------------------------
     # Step 3 — Let the user define metadata extractions
     # ---------------------------------------------------------
-    st.write("### Step 3 — Extract metadata into new columns")
+    st.write("##### Step 3 — Extract metadata into new columns")
 
     metadata_extract = {}
 

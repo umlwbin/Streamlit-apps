@@ -45,11 +45,13 @@ TASK_SUMMARY_RENDERERS = {
     "remove_metadata_rows": render_remove_metadata_rows_summary,
 }
 
-
 def show_summary(summary, title="Task Summary", filename=None):
     """
-    Minimal dispatcher for task summaries.
-    Each task provides its own renderer via TASK_SUMMARY_RENDERERS.
+    Robust summary renderer that safely handles:
+    - dict-based errors
+    - string-based errors
+    - mixed formats
+    - missing fields
     """
 
     if not summary:
@@ -60,18 +62,37 @@ def show_summary(summary, title="Task Summary", filename=None):
     with st.expander(label, expanded=False):
 
         # ---------------------------------------------------------
-        # Error handling (always shown first)
+        # ERROR HANDLING (always shown first)
         # ---------------------------------------------------------
         if "errors" in summary:
             st.markdown("##### ❌ Errors")
+
             for err in summary["errors"]:
-                etype = err.get("error_type", "Error")
-                msg = err.get("message", "")
+
+                # Case 1: error is a dict
+                if isinstance(err, dict):
+                    etype = err.get("error_type", "Error")
+                    msg = err.get("message", "")
+                    details = err.get("details")
+
+                # Case 2: error is a plain string
+                else:
+                    etype = "Error"
+                    msg = str(err)
+                    details = None
+
+                # Display the error
                 st.error(f"**{etype}**: {msg}")
-            return
+
+                # Optional details block
+                if details:
+                    with st.expander("Details"):
+                        st.write(details)
+
+            return  # stop after showing errors
 
         # ---------------------------------------------------------
-        # Task-specific summary rendering
+        # TASK-SPECIFIC SUMMARY RENDERING
         # ---------------------------------------------------------
         task_name = summary.get("task_name")
 
@@ -79,9 +100,8 @@ def show_summary(summary, title="Task Summary", filename=None):
             TASK_SUMMARY_RENDERERS[task_name](summary, filename)
             return
 
-
         # ---------------------------------------------------------
-        # Fallback: show raw summary if no renderer exists
+        # FALLBACK: raw summary
         # ---------------------------------------------------------
         st.warning("No summary renderer found for this task.")
         st.json(summary)

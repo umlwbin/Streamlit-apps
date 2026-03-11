@@ -155,14 +155,14 @@ TASKS = [
         "description": "Assign or standardize data types for selected columns.",
     },
     {
-        "name": "Provincial Chemistry Pivot",
+        "name": "🧪 Provincial Chemistry Pivot",
         "type": "single",
         "func": provincial_pivot.provincial_pivot,
         "widget": provincial_pivot_widgets.provincial_pivot_widget,
         "description": "Restructure provincial chemistry files by pivoting variables into columns.",
     },
     {
-        "name": "Merge Header Rows",
+        "name": "🧪 Merge Header Rows",
         "type": "single",
         "func": merge_header_rows.merge_header_rows,
         "widget": merge_header_rows_widgets.merge_header_rows_widget,

@@ -1,103 +1,119 @@
-import streamlit as st
 import pandas as pd
 
-def reorder(df, reordered_variables):
+
+def reorder_columns(
+    df: pd.DataFrame,
+    *,
+    reordered_variables
+):
     """
     Reorder the columns of a DataFrame in a safe and predictable way.
 
-    This function:
-        • works on a copy of the DataFrame (the original is never changed)
-        • checks which requested columns actually exist
-        • warns the user about any missing columns
-        • reorders the DataFrame using only the valid column names
-        • appends any leftover columns at the end to avoid data loss
-        • returns a summary describing the final order
+    This task:
+    - works on a copy of the DataFrame
+    - validates that reordered_variables is a list
+    - warns about requested columns that do not exist
+    - reorders using only valid column names
+    - appends leftover columns at the end to avoid data loss
+    - returns a summary describing the final order
 
     Parameters
     ----------
     df : pandas.DataFrame
-        The DataFrame whose columns you want to reorder.
+        Input dataset whose columns will be reordered.
 
     reordered_variables : list[str]
-        A list of column names in the order the user wants.
-        Columns that do not exist in the DataFrame are ignored safely.
-        Any columns not listed here will be added to the end automatically.
-
-        Example:
-            If df has columns ["A", "B", "C", "D"] and the user provides:
-                ["C", "A"]
-            the final order becomes:
-                ["C", "A", "B", "D"]
+        Desired column order. Columns not present in the DataFrame are ignored.
+        Columns not listed here are appended at the end.
 
     Returns
     -------
     cleaned_df : pandas.DataFrame
-        A copy of the original DataFrame with columns in the new order.
+        A copy of the input DataFrame with columns in the new order.
 
     summary : dict
-        Information about the reordering process.
-        Structure:
-            {
-                "requested_order": [...],   # what the user asked for
-                "final_order": [...],       # the actual order applied
-                "missing_columns": [...],   # columns that were requested but not found
-                "changed": True/False       # whether the order changed at all
-            }
+        {
+            "requested_order": list[str],
+            "final_order": list[str],
+            "missing_columns": list[str],
+            "changed": bool,
+            "warnings": list[str]
+        }
 
-    Example
-    -------
-    >>> df.columns
-    ["A", "B", "C"]
+    summary_df : None
+        Always None for this task (included for template consistency).
 
-    >>> cleaned_df, summary = reorder(df, ["C", "A"])
-
-    >>> cleaned_df.columns
-    ["C", "A", "B"]
-
-    >>> summary["missing_columns"]
-    []
+    Notes
+    -----
+    - Hard validation errors (e.g., wrong input types) raise exceptions.
+    - Soft validation issues (e.g., missing columns) appear in summary["warnings"]
+      but do not stop execution.
     """
 
-    # Work on a copy so the original DataFrame stays unchanged.
+    # -----------------------------------------------------
+    # 1. VALIDATION — Hard Errors (A, B, C…)
+    # -----------------------------------------------------
+
+    # A. df must be a DataFrame
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame.")
+
+    # B. reordered_variables must be a list
+    if not isinstance(reordered_variables, list):
+        raise ValueError("reordered_variables must be a list of column names.")
+
+    # C. All entries must be convertible to strings
+    try:
+        reordered_variables = [str(v) for v in reordered_variables]
+    except Exception:
+        raise ValueError("All values in reordered_variables must be convertible to strings.")
+
     cleaned_df = df.copy()
 
-    # Convert all column names to strings.
-    # This avoids issues where a column might be named 1 instead of "1".
+    # -----------------------------------------------------
+    # 2. VALIDATION — Soft Checks (A, B, C…)
+    # -----------------------------------------------------
+    warnings = []
+
+    # Ensure all column names are strings
     cleaned_df.columns = cleaned_df.columns.astype(str)
 
-    # Identify which requested columns do NOT exist in the DataFrame.
-    # This helps us warn the user instead of silently ignoring mistakes.
+    # A. Identify missing columns
     missing = [c for c in reordered_variables if c not in cleaned_df.columns]
-
     if missing:
-        st.warning(
-            f"Some columns were not found and could not be reordered: {missing}",
-            icon="⚠️"
-        )
+        warnings.append(f"Some requested columns were not found: {missing}")
 
-    # Keep only the requested columns that actually exist.
-    # This prevents errors if the user includes invalid names.
+    # -----------------------------------------------------
+    # 3. CORE PROCESSING
+    # -----------------------------------------------------
+
+    # Keep only valid requested columns
     valid_order = [c for c in reordered_variables if c in cleaned_df.columns]
 
-    # Identify any columns that were NOT included in the user's list.
-    # These will be added at the end to avoid losing data.
+    # Append leftover columns
     leftovers = [c for c in cleaned_df.columns if c not in valid_order]
 
-    # The final order is:
-    #   1. all valid requested columns (in the order the user gave)
-    #   2. all leftover columns (in their original order)
     final_order = valid_order + leftovers
 
-    # Reorder the DataFrame using the final order.
-    cleaned_df = cleaned_df[final_order] # the same syntax used for selecting/subsetting columns also controls their order!
+    cleaned_df = cleaned_df[final_order]
 
-    # Build a summary describing what happened.
+    # -----------------------------------------------------
+    # 4. SUMMARY
+    # -----------------------------------------------------
     summary = {
-        "task_name":"reorder_columns",
-        "requested_order": reordered_variables,     # what the user asked for
-        "final_order": final_order,                 # what was actually applied
-        "missing_columns": missing,                 # which requested columns didn't exist
-        "changed": reordered_variables != list(df.columns)  # did anything change?
+        "requested_order": reordered_variables,
+        "final_order": final_order,
+        "missing_columns": missing,
+        "changed": final_order != list(df.columns),
+        "warnings": warnings,
     }
 
-    return cleaned_df, summary
+    # -----------------------------------------------------
+    # 5. SUMMARY DATAFRAME
+    # -----------------------------------------------------
+    summary_df = None
+
+    # -----------------------------------------------------
+    # 6. RETURN
+    # -----------------------------------------------------
+    return cleaned_df, summary, summary_df

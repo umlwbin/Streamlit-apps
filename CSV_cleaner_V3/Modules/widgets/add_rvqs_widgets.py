@@ -1,9 +1,54 @@
 import streamlit as st
 import pandas as pd
-from Modules.cleaning_tasks.add_rvqs import detect_numeric_majority_columns
+
+# ---------------------------------------------------------
+# Helper: Detect numeric-majority columns
+# ---------------------------------------------------------
+def detect_numeric_majority_columns(df, threshold=0.6):
+    numeric_cols = []
+    for col in df.columns:
+        series = df[col]
+
+        # Ignore NaNs entirely
+        non_null = series.dropna()
+
+        # If the column is all NaN, skip it
+        if len(non_null) == 0:
+            continue
+
+        # Try converting remaining values to numeric
+        numeric = pd.to_numeric(non_null, errors="coerce")
+
+        # Compute ratio of numeric values among non-null values
+        ratio = numeric.notna().mean()
+
+        if ratio >= threshold:
+            numeric_cols.append(col)
+
+    return numeric_cols
 
 
-def render(df):
+
+
+def add_rvqs_widget(df):
+    """
+    Widget for configuring RVQ (Result Validation/Qualification) rules.
+
+    Returns
+    -------
+    dict or None
+        {
+            "columns": [...],
+            "rules": [...],
+            "keep_original": bool,
+            "negative_rule_enabled": bool,
+            "negative_rvq_code": str or None,
+            "negative_exceptions": [...],
+            "remove_empty_rvq_cols": bool
+        }
+        or None if the user has not completed the widget.
+    """
+
     st.markdown(
         "RVQs help identify values that are missing, unusual, or flagged by "
         "instrument codes. This tool scans selected variables and inserts "
@@ -21,16 +66,38 @@ def render(df):
             st.info("RVQ dictionary file not found (rvq_dict.csv).")
 
     # ---------------------------------------------------------
-    # Step 1 — Select measured variables
+    # Step 1 - Select measured variables
     # ---------------------------------------------------------
-    st.markdown("### 1. Select variables to scan for RVQ codes")
+    st.markdown("#### 1. Select variables to scan for RVQ codes")
 
+    # a) - detect numeric-majority columns
     detected = detect_numeric_majority_columns(df)
 
+    # b) - auto-exclude patterns
+    AUTO_EXCLUDE_PATTERNS = [
+        "day", "month", "year",
+        "date", "time", "datetime", "timestamp",
+        "lat", "latitude", "lon", "long", "longitude",
+        "coord", "xcoord", "ycoord",
+        "easting", "northing",
+        "station", "sample", "id",
+    ]
+
+    auto_excluded = []
+    candidate_cols = []
+
+    for col in detected:
+        col_lower = col.lower()
+        if any(pattern in col_lower for pattern in AUTO_EXCLUDE_PATTERNS):
+            auto_excluded.append(col)
+        else:
+            candidate_cols.append(col)
+
+    # c)- multiselect
     selected_cols = st.multiselect(
-        "Measured variables",
-        options=list(df.columns),
-        default=detected,
+        "Select columns to apply RVQ rules:",
+        options=list(df.columns),      # show all columns
+        default=candidate_cols,        # auto-select only the good ones
         help="These columns appear to be mostly numeric. Adjust as needed.",
         key="rvq_select_columns"
     )
@@ -38,20 +105,18 @@ def render(df):
     if selected_cols:
         st.info(f"Selected **{len(selected_cols)}** variable(s).")
 
-    # ---------------------------------------------------------
-    # Step 2 — Define RVQ rules
-    # ---------------------------------------------------------
-    st.markdown("### 2. Define RVQ rules")
 
     # ---------------------------------------------------------
-    # Guidance expander
+    # Step 2 - Define RVQ rules
     # ---------------------------------------------------------
+    st.markdown("#### 2. Define RVQ rules")
+
     with st.expander("How to enter RVQ rules"):
         st.markdown("""
         **Examples**
 
         • A data code **9999** may represent the RVQ **ND** (Not Detected).  
-        • To associate **empty data cells** with an RVQ, use **nan** as the Data Code.
+        • To associate **empty data cells** with an RVQ, use `'nan'` as the Data Code.
 
         **Detection Limits**
         - To capture detection limits, enter the starting letter (or number) before the actual limit.
@@ -60,20 +125,20 @@ def render(df):
         """)
 
     # ---------------------------------------------------------
-    # 2A — Negative number rule (now inside RVQ rules section)
+    # 2A - Negative number rule
     # ---------------------------------------------------------
-    st.markdown("#### 2A. Negative Number Rule (Optional)")
+    st.markdown("##### 2A. Negative Number Rule (Optional)")
 
     negative_rule_enabled = st.checkbox(
-        "Flag **any negative number** as an RVQ",
-        key="rvq_negative_rule"
+        "Flag any negative number as an RVQ",
+        key="rvq_negative_rule",
+        disabled=(len(selected_cols) == 0)
     )
 
     negative_rvq_code = None
     negative_exceptions = []
 
     if negative_rule_enabled:
-
         negative_rvq_code = st.selectbox(
             "RVQ code to assign to negative values",
             options=["BDL", "ADL", "ND", "NC", "FD", "LD", "EFAI", "FEF", "FEQ", "FFB", "FFD", "FFS"],
@@ -82,15 +147,15 @@ def render(df):
 
         negative_exceptions = st.multiselect(
             "Exceptions (variables allowed to have negative values)",
-            options=selected_cols,   # <-- ONLY measured variables
+            options=selected_cols,
             help="Temperature, depth, elevation, etc.",
             key="rvq_negative_exceptions"
         )
 
     # ---------------------------------------------------------
-    # 2B — Manual RVQ rules
+    # 2B - Manual RVQ rules
     # ---------------------------------------------------------
-    st.markdown("#### 2B. Manual RVQ Rules")
+    st.markdown("##### 2B. Manual RVQ Rules")
 
     rules = []
     for i in range(5):
@@ -115,18 +180,16 @@ def render(df):
         )
 
         if data_code and rvq_code:
-            rules.append(
-                {
-                    "data_code": data_code,
-                    "rvq_code": rvq_code,
-                    "match_type": match_type,
-                }
-            )
+            rules.append({
+                "data_code": data_code,
+                "rvq_code": rvq_code,
+                "match_type": match_type,
+            })
 
     # ---------------------------------------------------------
-    # Step 3 — Output Options
+    # Step 3 - Output Options
     # ---------------------------------------------------------
-    st.markdown("### 3. Output Options")
+    st.markdown("#### 3. Output Options")
 
     keep_original = st.radio(
         "Keep original data codes in the data column?",
@@ -141,7 +204,7 @@ def render(df):
     )
 
     # ---------------------------------------------------------
-    # Step 4 — NEXT BUTTON
+    # Step 4 - NEXT BUTTON
     # ---------------------------------------------------------
     st.markdown("---")
     st.button("Next", type="primary", key="rvq_next_button")
@@ -154,24 +217,23 @@ def render(df):
     # ---------------------------------------------------------
 
     if not selected_cols:
-        st.error("Please select at least one variable to scan.", icon="🚨")
+        st.error("Please select at least one variable to scan.")
         return None
 
     if not rules and not negative_rule_enabled:
         st.error(
-            "Please enter at least one RVQ rule, or enable the negative number rule.",
-            icon="🚨"
+            "Please enter at least one RVQ rule, or enable the negative number rule."
         )
         return None
 
     if negative_rule_enabled and not negative_rvq_code:
-        st.error("Please select an RVQ code for negative values.", icon="🚨")
+        st.error("Please select an RVQ code for negative values.")
         return None
 
     # Pre-scan for matches
     found_any = False
 
-    # Check manual rules
+    # Manual rules
     for col in selected_cols:
         series = df[col].astype(str)
         for rule in rules:
@@ -193,7 +255,7 @@ def render(df):
                 found_any = True
                 break
 
-    # Check negative rule
+    # Negative rule
     if negative_rule_enabled:
         for col in selected_cols:
             if col not in negative_exceptions:
@@ -210,12 +272,12 @@ def render(df):
         return None
 
     # ---------------------------------------------------------
-    # SUCCESS → Return parameters
+    # SUCCESS -> Return kwargs
     # ---------------------------------------------------------
     return {
         "columns": selected_cols,
         "rules": rules,
-        "keep_original": (st.session_state["rvq_keep_original"] == "Yes"),
+        "keep_original": (keep_original == "Yes"),
         "negative_rule_enabled": negative_rule_enabled,
         "negative_rvq_code": negative_rvq_code,
         "negative_exceptions": negative_exceptions,

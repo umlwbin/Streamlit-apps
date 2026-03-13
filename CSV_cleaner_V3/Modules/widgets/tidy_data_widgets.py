@@ -2,22 +2,25 @@ import streamlit as st
 from Modules.ui_utils import big_caption
 from Modules.widgets.headers_widgets import headers_widgets
 
-
 def tidy_data_widgets():
     """
-    Collect user settings for the Tidy Data pipeline.
+    Widget for collecting user settings for the Tidy Data pipeline.
 
-    This widget now reuses the same header-cleaning controls used by the
-    standalone "Clean Headers" task, ensuring that any updates to header
-    cleaning logic or UI are automatically reflected here.
-
-    Returns a dictionary with:
-    - nans: list of user-specified NaN tokens
-    - naming_style: header naming style
-    - preserve_units: bool
-    - extract_sensors: bool
-    - extract_scales: bool
-    - extract_processing_notes: bool
+    Includes:
+        - NaN token standardization
+        - Header cleaning settings (reusing the main header widget)
+    
+    Returns
+    -------
+    dict or None
+        {
+            "nans": list[str],
+            "naming_style": str,
+            "preserve_units": bool,
+            "extract_additional": bool,
+            "no_units_in_header": bool
+        }
+        or None if the user has not completed the widget.
     """
 
     big_caption("These settings will be applied to all uploaded files.")
@@ -37,13 +40,15 @@ def tidy_data_widgets():
     # Header Cleaning Settings (reused from main header widget)
     # ---------------------------------------------------------
     st.markdown("---")
-    header_settings = headers_widgets(show_button=False) or {} # df not needed for widget logic
+    header_settings = headers_widgets(show_button=False) or {}
 
     # ---------------------------------------------------------
-    # Return all settings when user continues
+    # Final confirmation
     # ---------------------------------------------------------
     if st.button("Continue", type="primary", key="cleanupContinue"):
         return {
             "nans": nans,
-            **(header_settings)  # merge header settings if returned
+            **header_settings
         }
+
+    return None

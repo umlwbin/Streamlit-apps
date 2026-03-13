@@ -15,18 +15,23 @@ st.set_page_config(
     layout="wide"
 )
 
-# Tab styling
-st.markdown("""
-<style>
-.stTabs button p {
-    font-size: 1.0rem !important;
-    font-weight: 500 !important;
-}
-.stTabs button {
-    margin-right: 1rem !important;
-}
-</style>
-""", unsafe_allow_html=True)
+# ---------------------------------------------------------
+# TAB STYLING (moved into a helper for clarity)
+# ---------------------------------------------------------
+def apply_tab_styling():
+    st.markdown("""
+    <style>
+    .stTabs button p {
+        font-size: 1.0rem !important;
+        font-weight: 500 !important;
+    }
+    .stTabs button {
+        margin-right: 1rem !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+apply_tab_styling()
 
 
 # ---------------------------------------------------------
@@ -46,7 +51,6 @@ def show_combined_metadata():
 
     all_metadata = []
 
-    # Collect metadata from all summaries
     for fname, summ in st.session_state.all_summaries.items():
         if "metadata_preview" in summ and summ["metadata_preview"]:
             for row in summ["metadata_preview"]:
@@ -54,7 +58,6 @@ def show_combined_metadata():
                 row_with_file["filename"] = fname
                 all_metadata.append(row_with_file)
 
-    # If no metadata exists, nothing to show
     if not all_metadata:
         return
 
@@ -62,7 +65,6 @@ def show_combined_metadata():
     combined_df = pd.DataFrame(all_metadata)
     st.dataframe(combined_df, use_container_width=True)
 
-    # One download button for all metadata
     st.download_button(
         label="Download All Metadata Previews",
         data=combined_df.to_csv(index=False),
@@ -76,6 +78,21 @@ def show_combined_metadata():
 # MAIN CSV CURATION WORKFLOW
 # ---------------------------------------------------------
 def run_csv_curation_studio():
+    """
+    Main entry point for the CSV Curation Studio UI.
+
+    Responsibilities:
+        • Handle file uploads
+        • Determine allowed tasks based on file structure
+        • Collect task inputs via widgets
+        • Run tasks on all uploaded files
+        • Display combined metadata previews
+        • Provide download options
+        • Show live preview in a separate tab
+
+    This function orchestrates the entire workflow but delegates
+    all logic to specialized modules (widgets, tasks, runner, etc.).
+    """
 
     st.markdown("## CSV Curation Studio")
     toolbar()
@@ -88,7 +105,6 @@ def run_csv_curation_studio():
     with tab1:
         uploaded_files = file_uploads.fileuploadfunc()
 
-        # Only proceed if files are uploaded and stored
         if uploaded_files and st.session_state.current_data:
 
             st.markdown(" ")
@@ -100,30 +116,30 @@ def run_csv_curation_studio():
             if non_rectangular:
                 st.info(
                     "One or more uploaded files are not rectangular. "
-                    "Only the **Remove metadata rows** task is available until the table is cleaned."
+                    "Only the **Remove Metadata Rows** task is available until the table is cleaned."
                 )
                 allowed_tasks = ["Remove Metadata Rows"]
             else:
                 allowed_tasks = tasks.get_all_task_names()
 
             # Task selection
-            task = task_selector.what_to_do_widgets(allowed_tasks)
+            selected_task = task_selector.what_to_do_widgets(allowed_tasks)
 
-            if task and task != "Choose an option":
+            if selected_task and selected_task != "Choose an option":
                 st.markdown("")
                 st.markdown("")
 
                 with st.container(border=True):
-                    st.markdown(f"### {task}")
-                    task_inputs = tasks.get_task_inputs(task)
+                    st.markdown(f"### {selected_task}")
 
-                    if task_inputs:
-                        # Run the selected task on all files
-                        task_runner.run_task(task, **task_inputs)
+                    # Collect kwargs from the widget for this task
+                    task_inputs = tasks.get_task_inputs(selected_task)
 
-                # -------------------------------------------------
-                # Show combined metadata once, after all summaries exist
-                # -------------------------------------------------
+                    # Only run if widget returned something meaningful
+                    if task_inputs is not None:
+                        task_runner.run_task(selected_task, **task_inputs)
+
+                # Show combined metadata after tasks run
                 if st.session_state.task_applied:
                     show_combined_metadata()
 

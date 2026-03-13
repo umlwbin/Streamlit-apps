@@ -1,87 +1,112 @@
-import streamlit as st
+import pandas as pd
 
-def remove_cols(df, variables_to_remove):
+
+def remove_columns(
+    df: pd.DataFrame,
+    *,
+    variables_to_remove
+):
     """
     Remove one or more columns from a DataFrame in a safe, predictable way.
 
-    This function:
-        • works on a copy of the DataFrame (the original is never modified)
-        • checks whether each requested column actually exists
-        • warns the user about any missing columns
-        • removes only the columns that are present
-        • returns a summary describing what was removed and what remains
+    This task:
+    - works on a copy of the DataFrame
+    - ensures column names are treated as strings
+    - removes only columns that exist
+    - records missing columns as warnings
+    - returns a summary describing what was removed and what remains
 
     Parameters
     ----------
     df : pandas.DataFrame
-        The DataFrame from which columns should be removed.
+        Input dataset from which columns should be removed.
 
     variables_to_remove : list[str]
-        A list of column names the user wants to remove.
-        Column names are treated as strings, so values like 1 or 2 will be
-        converted to "1" or "2" if needed.
+        List of column names to remove. Non-string values will be converted
+        to strings for comparison.
 
     Returns
     -------
     cleaned_df : pandas.DataFrame
-        A copy of the original DataFrame with the selected columns removed.
+        A copy of the input DataFrame with selected columns removed.
 
     summary : dict
-        Information about the removal process.
-        Structure:
-            {
-                "removed_columns": [...],     # the columns the user asked to remove
-                "remaining_columns": [...],   # the columns still in the DataFrame
-                "removed_count": int,         # how many columns were removed
-                "remaining_count": int        # how many columns remain
-            }
+        {
+            "removed_columns": list[str],
+            "remaining_columns": list[str],
+            "removed_count": int,
+            "remaining_count": int,
+            "warnings": list[str]
+        }
 
-    Example
-    -------
-    >>> df.columns
-    ["A", "B", "C", "D"]
+    summary_df : None
+        Always None for this task (included for template consistency).
 
-    >>> cleaned_df, summary = remove_cols(df, ["B", "D"])
-
-    >>> cleaned_df.columns
-    ["A", "C"]
-
-    >>> summary
-    {
-        "removed_columns": ["B", "D"],
-        "remaining_columns": ["A", "C"],
-        "removed_count": 2,
-        "remaining_count": 2
-    }
+    Notes
+    -----
+    - Hard validation errors (e.g., invalid input types) raise exceptions.
+    - Soft validation issues (e.g., missing columns) appear in summary["warnings"]
+      but do not stop execution.
     """
 
-    # Work on a copy so the original DataFrame is never changed.
+    # -----------------------------------------------------
+    # 1. VALIDATION - Hard Errors (A, B, C…)
+    # -----------------------------------------------------
+
+    # A. df must be a DataFrame
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame.")
+
+    # B. variables_to_remove must be a list
+    if not isinstance(variables_to_remove, list):
+        raise ValueError("variables_to_remove must be a list of column names.")
+
+    # C. All entries must be convertible to string
+    try:
+        variables_to_remove = [str(v) for v in variables_to_remove]
+    except Exception:
+        raise ValueError("All values in variables_to_remove must be convertible to strings.")
+
     cleaned_df = df.copy()
 
-    # Safety step:
-    # Ensure all column names are strings.
-    # This avoids issues where a column might be named 1 or 2 instead of "1" or "2".
+    # -----------------------------------------------------
+    # 2. VALIDATION - Soft Checks (A, B, C…)
+    # -----------------------------------------------------
+    warnings = []
+
+    # Ensure all column names are strings
     cleaned_df.columns = cleaned_df.columns.astype(str)
 
-    # Identify which requested columns do NOT exist in the DataFrame.
-    # This helps us warn the user instead of failing silently.
+    # A. Identify missing columns
     missing = [c for c in variables_to_remove if c not in cleaned_df.columns]
     if missing:
-        st.warning(f"Some selected columns were not found: {missing}")
+        warnings.append(f"Some selected columns were not found: {missing}")
 
-    # Drop only the columns that actually exist.
-    # This prevents errors if the user selected a column that isn't present.
-    cleaned_df = cleaned_df.drop(
-        columns=[c for c in variables_to_remove if c in cleaned_df.columns]
-    )
+    # -----------------------------------------------------
+    # 3. CORE PROCESSING
+    # -----------------------------------------------------
 
-    # Build a summary describing what happened.
+    # Remove only columns that exist
+    to_drop = [c for c in variables_to_remove if c in cleaned_df.columns]
+    cleaned_df = cleaned_df.drop(columns=to_drop)
+
+    # -----------------------------------------------------
+    # 4. SUMMARY
+    # -----------------------------------------------------
     summary = {
-        "task_name":"remove_columns",
-        "removed_columns": variables_to_remove,      # what the user asked to remove
-        "remaining_columns": list(cleaned_df.columns),  # what is left
-        "removed_count": len(variables_to_remove),   # how many were requested
-        "remaining_count": cleaned_df.shape[1],      # how many columns remain
+        "removed_columns": variables_to_remove,
+        "remaining_columns": list(cleaned_df.columns),
+        "removed_count": len(to_drop),
+        "remaining_count": cleaned_df.shape[1],
+        "warnings": warnings,
     }
 
-    return cleaned_df, summary
+    # -----------------------------------------------------
+    # 5. SUMMARY DATAFRAME
+    # -----------------------------------------------------
+    summary_df = None
+
+    # -----------------------------------------------------
+    # 6. RETURN
+    # -----------------------------------------------------
+    return cleaned_df, summary, summary_df

@@ -1,94 +1,190 @@
 import pandas as pd
 
-def provincial_pivot(df, var_col, value_col, additional_params=None):
+
+def provincial_pivot(
+    df: pd.DataFrame,
+    *,
+    var_col,
+    value_col,
+    additional_params=None
+):
     """
-    Provincial Chemistry Pivot
-    --------------------------
-    Restructures a provincial chemistry file where:
-      - one column contains variable/parameter names
-      - one column contains values
-    Each variable becomes its own column, and optional metadata columns
-    can be merged into the header names.
+    Pivot a provincial chemistry dataset where variables are stored in rows.
+
+    This task restructures a dataset where:
+    - one column contains variable/parameter names
+    - one column contains values
+    - optional metadata columns can be merged into the final header names
+
+    Each unique variable becomes its own column. Metadata values (if provided)
+    are appended to the header name using underscores.
 
     Parameters
     ----------
     df : pandas.DataFrame
-        Input dataframe.
+        Input dataset.
+
     var_col : str
         Column containing variable/parameter names.
+
     value_col : str
         Column containing values.
-    additional_params : list[str] or None
-        Optional metadata columns to merge into the header name.
+
+    additional_params : list[str] or None, optional
+        Optional metadata columns whose first-row values will be merged into
+        the new header names.
 
     Returns
     -------
     cleaned_df : pandas.DataFrame
+        A vertically concatenated table where each variable becomes its own
+        column, with metadata optionally merged into the header.
+
     summary : dict
-        Summary of transformations performed.
+        {
+            "variables_processed": int,
+            "variable_names": list[str],
+            "metadata_used": list[str],
+            "details": [
+                {
+                    "variable": str,
+                    "new_column_name": str,
+                    "rows": int
+                }
+            ],
+            "warnings": list[str]
+        }
+
+    summary_df : pandas.DataFrame or None
+        A table describing variable → new column name → row count.
+
+    Notes
+    -----
+    - Hard validation errors (e.g., missing required columns) raise exceptions.
+    - Soft validation issues (e.g., missing metadata values) appear in
+      summary["warnings"] but do not stop execution.
     """
 
-    # Make a copy to avoid modifying original
-    df = df.copy()
+    # -----------------------------------------------------
+    # 1. VALIDATION — Hard Errors (A, B, C…)
+    # -----------------------------------------------------
+
+    # A. df must be a DataFrame
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame.")
+
+    # B. Required columns must exist
+    for col in [var_col, value_col]:
+        if col not in df.columns:
+            raise ValueError(f"Required column '{col}' does not exist in the dataset.")
+
+    # C. additional_params must be list[str] or None
+    if additional_params is not None:
+        if not isinstance(additional_params, list) or not all(
+            isinstance(x, str) for x in additional_params
+        ):
+            raise ValueError("additional_params must be a list of strings or None.")
+
+        for col in additional_params:
+            if col not in df.columns:
+                raise ValueError(
+                    f"Metadata column '{col}' listed in additional_params does not exist."
+                )
+
+    cleaned_df = df.copy()
+
+    # -----------------------------------------------------
+    # 2. VALIDATION — Soft Checks (A, B, C…)
+    # -----------------------------------------------------
+    warnings = []
+
+    # A. Warn if var_col contains missing values
+    if cleaned_df[var_col].isna().any():
+        warnings.append(
+            f"Rows with missing values in '{var_col}' were dropped before pivoting."
+        )
+
+    # B. Warn if metadata columns contain missing values
+    if additional_params:
+        for col in additional_params:
+            if cleaned_df[col].isna().any():
+                warnings.append(
+                    f"Metadata column '{col}' contains missing values. "
+                    "Only the first non-missing value will be used."
+                )
+
+    # -----------------------------------------------------
+    # 3. CORE PROCESSING
+    # -----------------------------------------------------
 
     # Drop rows where variable is missing
-    df = df[df[var_col].notna()].copy()
+    cleaned_df = cleaned_df[cleaned_df[var_col].notna()].copy()
 
-    # Extract unique variables
-    variables = df[var_col].unique().tolist()
+    variables = cleaned_df[var_col].unique().tolist()
 
     filtered_dfs = []
-    summary_details = []
+    details = []
 
     for var in variables:
-        # Filter rows for this variable
-        sub = df[df[var_col] == var].copy()
+        sub = cleaned_df[cleaned_df[var_col] == var].copy()
 
-        # Rename VALUE column to the variable name
+        # Base column name
         new_col_name = var
 
-        # Merge metadata into header if requested
+        # Merge metadata into header
         if additional_params:
-            # Extract first-row metadata values
-            meta_values = [str(sub[param].iloc[0]) for param in additional_params]
+            meta_values = []
+            for param in additional_params:
+                # Use first non-null metadata value
+                first_val = sub[param].dropna().iloc[0] if sub[param].notna().any() else "NA"
+                meta_values.append(str(first_val))
+
             meta_str = "_".join(meta_values)
             new_col_name = f"{var}_{meta_str}"
 
             # Drop metadata columns
             sub = sub.drop(columns=additional_params)
 
-        # Rename VALUE → new header
+        # Rename value column
         sub = sub.rename(columns={value_col: new_col_name})
 
-        # Drop the variable column
+        # Drop variable column
         sub = sub.drop(columns=[var_col])
 
-        # Move the new variable column to the end
+        # Move new column to end
         extracted = sub[new_col_name]
         sub = sub.drop(columns=[new_col_name])
         sub[new_col_name] = extracted
 
-        # Reset index
         sub = sub.reset_index(drop=True)
-
         filtered_dfs.append(sub)
 
-        summary_details.append({
+        details.append({
             "variable": var,
             "new_column_name": new_col_name,
             "rows": len(sub)
         })
 
-    # Merge all filtered variable tables vertically
-    cleaned_df = pd.concat(filtered_dfs, ignore_index=True)
+    # Merge vertically
+    final_df = pd.concat(filtered_dfs, ignore_index=True)
 
-    # Build summary
+    # -----------------------------------------------------
+    # 4. SUMMARY
+    # -----------------------------------------------------
     summary = {
-        "task_name":"provincial_pivot",
         "variables_processed": len(variables),
         "variable_names": variables,
         "metadata_used": additional_params if additional_params else [],
-        "details": summary_details
+        "details": details,
+        "warnings": warnings,
     }
 
-    return cleaned_df, summary
+    # -----------------------------------------------------
+    # 5. SUMMARY DATAFRAME
+    # -----------------------------------------------------
+    summary_df = pd.DataFrame(details)
+
+    # -----------------------------------------------------
+    # 6. RETURN
+    # -----------------------------------------------------
+    return final_df, summary, summary_df

@@ -3,16 +3,29 @@ import streamlit as st
 def merge_widgets(df):
     """
     Widget for merging multiple uploaded files into one.
+
     Ensures:
-      • at least two files exist
-      • all files have matching column names
-      • one‑shot trigger behavior
-      • clear feedback for mismatches
+        - at least two files exist
+        - all files have matching column names
+        - clear feedback for mismatches
+        - one-shot trigger behavior
+
+    Returns
+    -------
+    dict or None
+        {
+            "add_source": bool
+        }
+        or None if the user has not completed the widget.
     """
 
     st.markdown("#### You have multiple files, let's merge them!")
 
+    # ---------------------------------------------------------
+    # Retrieve uploaded files from session state
+    # ---------------------------------------------------------
     files = st.session_state.current_data
+
     # Ignore previously merged files (they contain a 'source_file' column)
     files = {
         name: df
@@ -20,25 +33,25 @@ def merge_widgets(df):
         if "source_file" not in df.columns
     }
 
-
+    # ---------------------------------------------------------
     # If only one file, nothing to merge
+    # ---------------------------------------------------------
     if len(files) == 1:
         left, right = st.columns([0.8, 0.2])
         left.info("There is only one file uploaded, so no work for us 😌", icon="ℹ️")
         return None
 
-    # --- Check column consistency across files ---
+    # ---------------------------------------------------------
+    # Check column consistency across files
+    # ---------------------------------------------------------
     all_columns = {name: list(df.columns) for name, df in files.items()}
     unique_column_sets = {tuple(cols) for cols in all_columns.values()}
-
 
     if len(unique_column_sets) > 1:
         st.error("⚠️ Column mismatch detected across files. They must have identical columns to merge.")
 
         with st.expander("View column differences", expanded=False):
             file_names = list(all_columns.keys())
-
-            # Compare each file against the first one
             base_name = file_names[0]
             base_cols = set(all_columns[base_name])
 
@@ -61,11 +74,19 @@ def merge_widgets(df):
                 if not missing_in_this and not extra_in_this:
                     st.success(f"No differences found between {name} and {base_name}.")
 
+        # Do not stop the app - just return None
+        return None
 
-        st.stop()
-
+    # ---------------------------------------------------------
+    # Options
+    # ---------------------------------------------------------
     add_source = st.checkbox("Add source filename column", value=True)
+
+    # ---------------------------------------------------------
+    # Trigger
+    # ---------------------------------------------------------
     clicked = st.button("Merge Files", type="primary", key="merge_files_button")
+
     if clicked:
         return {"add_source": add_source}
 

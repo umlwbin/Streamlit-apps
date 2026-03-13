@@ -1,18 +1,8 @@
 import streamlit as st
 
 def render_merge_files_summary(summary, filename=None):
-    """
-    Summary renderer for the 'merge_files' task.
-
-    Expected summary keys:
-        - task_name: "merge_files"
-        - merged_files: list of filenames
-        - added_source_column: bool
-    """
-
     st.success("Merged Files")
 
-    # List of merged files
     merged = summary.get("merged_files", [])
     if merged:
         st.write("**Files merged:**")
@@ -21,8 +11,13 @@ def render_merge_files_summary(summary, filename=None):
     else:
         st.info("No files were merged.")
 
-    # Whether a source column was added
     if summary.get("added_source_column"):
         st.write("**Source column added:** `source_file`")
     else:
         st.write("**Source column added:** No")
+
+    warnings = summary.get("warnings", [])
+    if warnings:
+        st.write("### Warnings")
+        for msg in warnings:
+            st.warning(msg)

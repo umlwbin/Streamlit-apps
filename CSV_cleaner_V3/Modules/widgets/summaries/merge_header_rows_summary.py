@@ -3,36 +3,21 @@ import pandas as pd
 
 def render_merge_header_rows_summary(summary, filename=None):
     """
-    Summary renderer for the 'merge_header_rows' task.
-
-    Expected summary keys:
-        - task_name: "merge_header_rows"
-        - first_merged_row: int or None
-        - second_merged_row: int or None
-        - errors: list of error messages
+    Summary renderer for the merge_header_rows task.
     """
 
     st.success("Header Row Merge Completed")
 
-    # Rows merged
-    vmv = summary.get("first_merged_row")
-    units = summary.get("second_merged_row")
-
     st.write("### Rows Merged")
 
-    if vmv is not None:
-        st.write(f"- **First merged row:** {vmv}")
-    else:
-        st.write("- **First merged row:** None")
+    row1 = summary.get("first_merged_row")
+    row2 = summary.get("second_merged_row")
 
-    if units is not None:
-        st.write(f"- **Second merged row:** {units}")
-    else:
-        st.write("- **Second merged row:** None")
+    st.write(f"- **First merged row:** {row1 if row1 is not None else 'None'}")
+    st.write(f"- **Second merged row:** {row2 if row2 is not None else 'None'}")
 
-    # Errors
-    errors = summary.get("errors", [])
-    if errors:
-        st.write("### Issues Encountered")
-        for err in errors:
-            st.error(err)
+    warnings = summary.get("warnings", [])
+    if warnings:
+        st.write("### Warnings")
+        for msg in warnings:
+            st.warning(msg)

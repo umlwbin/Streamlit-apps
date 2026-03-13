@@ -1,9 +1,23 @@
 import streamlit as st
 
 # ---------------------------------------------------------
-# STEP 1 — Choose number of fields
+# STEP 1 - Choose number of fields to add
 # ---------------------------------------------------------
 def how_many_vars_widget(df):
+    """
+    Widget for adding new columns to a dataset.
+
+    Returns
+    -------
+    dict or None
+        {
+            "variable_names": [...],
+            "values": [...],
+            "columns": [...]
+        }
+        or None if the user has not completed the widget.
+    """
+
     cols = df.columns
 
     st.markdown("##### How many fields would you like to add?")
@@ -20,7 +34,7 @@ def how_many_vars_widget(df):
         key="addcols_num"
     )
 
-    # Step 1 button — activates Step 2
+    # Step 1 button - activates Step 2
     if st.button("Next", key="addcols_step1"):
         st.session_state.addColsStep2_active = True
 
@@ -33,9 +47,22 @@ def how_many_vars_widget(df):
 
 
 # ---------------------------------------------------------
-# STEP 2 — Enter column details
+# STEP 2 - Enter column details
 # ---------------------------------------------------------
 def fields_to_add_widgets(cols, var_num):
+    """
+    Widget for entering details of new columns.
+
+    Returns
+    -------
+    dict or None
+        {
+            "variable_names": [...],
+            "values": [...],
+            "columns": [...]
+        }
+        or None if the user has not completed the widget.
+    """
 
     st.markdown("##### Steps")
     st.markdown("1. Enter the name of the column to add")
@@ -76,7 +103,7 @@ def fields_to_add_widgets(cols, var_num):
         variable_values.append(value)
         column_numbers.append(colnum)
 
-    # Step 2 Next button — closes Step 2 and returns inputs
+    # Step 2 Next button - closes Step 2 and returns inputs
     if st.button("Next", key="addcols_step2"):
         st.session_state.addColsStep2_active = False
 

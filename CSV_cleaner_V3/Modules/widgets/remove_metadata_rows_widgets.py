@@ -4,22 +4,39 @@ import pandas as pd
 def remove_metadata_rows_widget(df):
     """
     Widget for:
-      • collecting header identifiers
-      • previewing metadata rows
-      • letting the user extract metadata values into new columns
-      • requiring a 'Next' button before returning extraction instructions
+        - collecting header identifiers
+        - detecting metadata rows above the true header
+        - previewing metadata rows
+        - allowing the user to extract metadata values into new columns
+        - returning extraction instructions only after a confirmation button
+
+    Returns
+    -------
+    dict or None
+        {
+            "identifiers": list[str],
+            "metadata_extract": {
+                new_col_name: {
+                    "row": int,
+                    "col_index": int,
+                    "edit": str or None
+                },
+                ...
+            }
+        }
+        or None if the user has not completed the widget.
     """
 
+    # ---------------------------------------------------------
+    # Step 1 - Identify the true header row
+    # ---------------------------------------------------------
     st.write("##### Step 1 - Identify the true header row")
     st.write("Enter three column names that appear in the real header row.")
 
     col1, col2, col3 = st.columns(3)
-    with col1:
-        id1 = st.text_input("Header name 1", "")
-    with col2:
-        id2 = st.text_input("Header name 2", "")
-    with col3:
-        id3 = st.text_input("Header name 3", "")
+    id1 = col1.text_input("Header name 1", "")
+    id2 = col2.text_input("Header name 2", "")
+    id3 = col3.text_input("Header name 3", "")
 
     identifiers = [id1.strip(), id2.strip(), id3.strip()]
 
@@ -46,17 +63,17 @@ def remove_metadata_rows_widget(df):
     metadata_df = df.iloc[:header_index].copy()
 
     # ---------------------------------------------------------
-    # Step 2 — Show metadata preview BEFORE extraction
+    # Step 2 - Preview metadata rows
     # ---------------------------------------------------------
-    st.write("##### Step 2 — Metadata rows detected above the header")
+    st.write("##### Step 2 - Metadata rows detected above the header")
     st.dataframe(metadata_df)
 
     st.write("You can extract values from these metadata rows into new columns.")
 
     # ---------------------------------------------------------
-    # Step 3 — Let the user define metadata extractions
+    # Step 3 - Define metadata extractions
     # ---------------------------------------------------------
-    st.write("##### Step 3 — Extract metadata into new columns")
+    st.write("##### Step 3 - Extract metadata into new columns")
 
     metadata_extract = {}
 
@@ -65,7 +82,7 @@ def remove_metadata_rows_widget(df):
         non_empty = [cell for cell in row.tolist() if str(cell).strip() != ""]
 
         if not non_empty:
-            continue  # skip empty rows
+            continue
 
         with st.expander(f"Metadata row {row_idx}", expanded=False):
             st.write("Row contents:")
@@ -86,7 +103,6 @@ def remove_metadata_rows_widget(df):
                 if selected_value == "(none)":
                     continue
 
-                # Editable version of the selected value
                 edited_value = st.text_input(
                     "Edit extracted value (optional)",
                     value=selected_value,
@@ -109,7 +125,7 @@ def remove_metadata_rows_widget(df):
                     st.success(f"Will extract: **{edited_value}** → column **{new_col}**")
 
     # ---------------------------------------------------------
-    # Step 4 — Require a Next button before returning
+    # Step 4 - Confirmation button
     # ---------------------------------------------------------
     proceed = st.button("Next", type="primary")
 

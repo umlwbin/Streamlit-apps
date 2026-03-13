@@ -1,116 +1,136 @@
-import streamlit as st
+import pandas as pd
+
 
 def dedupe_columns(cols):
-    # This helper function ensures all column names are unique.
-    # If a name appears more than once, we append _1, _2, etc.
+    """
+    Ensure column names are unique by appending suffixes (_1, _2, ...).
+    """
     seen = {}
     new_cols = []
 
     for col in cols:
         if col not in seen:
-            # First time we've seen this name
             seen[col] = 0
             new_cols.append(col)
         else:
-            # We've seen this name before → create a unique version
             seen[col] += 1
             new_cols.append(f"{col}_{seen[col]}")
-
     return new_cols
 
-def rename_cols(df, standardized_names):
+
+def rename_columns(
+    df: pd.DataFrame,
+    *,
+    standardized_names
+):
     """
     Rename the columns of a DataFrame in a safe and predictable way.
 
-    This function:
-        • works on a copy of the DataFrame (the original is never changed)
-        • checks that the number of new names matches the number of existing columns
-        • trims whitespace and converts all new names to strings
-        • automatically fixes duplicate names by appending _1, _2, etc.
-        • applies the new names to the DataFrame
-        • returns a summary describing what changed
+    This task:
+    - works on a copy of the DataFrame
+    - validates that the number of new names matches the number of existing columns
+    - trims whitespace and converts new names to strings
+    - ensures uniqueness by appending suffixes (_1, _2, ...)
+    - returns a summary describing what changed
 
     Parameters
     ----------
     df : pandas.DataFrame
-        The DataFrame whose columns you want to rename.
+        Input dataset whose columns will be renamed.
 
     standardized_names : list[str]
-        A list of new column names, in the same order as the existing columns.
-        The list must have the same length as df.columns.
-        Duplicate names are allowed — they will be made unique automatically.
-
-        Example:
-            ["site", "date", "date", "value"]
-            becomes:
-            ["site", "date", "date_1", "value"]
+        New column names, in the same order as df.columns.
+        Duplicate names are allowed; they will be made unique automatically.
 
     Returns
     -------
     cleaned_df : pandas.DataFrame
-        A copy of the original DataFrame with updated column names.
+        A copy of the input DataFrame with updated column names.
 
     summary : dict
-        Information about the renaming process.
-        Structure:
-            {
-                "renamed": True/False,
-                "old_names": [...],
-                "new_names": [...],
-                "changed_count": number of columns whose names actually changed
-            }
+        {
+            "renamed": bool,
+            "old_names": list[str],
+            "new_names": list[str],
+            "changed_count": int,
+            "warnings": list[str]
+        }
+
+    summary_df : None
+        Always None for this task (included for template consistency).
 
     Notes
     -----
-    • If the number of new names does not match the number of columns,
-      the function does not rename anything and returns a warning.
-    • The helper function `dedupe_columns()` ensures all new names are unique.
-
-    Example
-    -------
-    >>> df.columns
-    ["A", "B", "C"]
-
-    >>> rename_cols(df, ["site", "date", "date"])
-    new names → ["site", "date", "date_1"]
-
-    >>> summary["changed_count"]
-    3
+    - Hard validation errors (e.g., wrong input types) raise exceptions.
+    - Soft validation issues (e.g., column count mismatch) appear in
+      summary["warnings"] and renaming is skipped.
     """
 
+    # -----------------------------------------------------
+    # 1. VALIDATION — Hard Errors (A, B, C…)
+    # -----------------------------------------------------
 
-    # Work on a copy so the original DataFrame is never modified.
+    # A. df must be a DataFrame
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame.")
+
+    # B. standardized_names must be a list
+    if not isinstance(standardized_names, list):
+        raise ValueError("standardized_names must be a list of column names.")
+
+    # C. All names must be convertible to strings
+    try:
+        standardized_names = [str(n).strip() for n in standardized_names]
+    except Exception:
+        raise ValueError("All standardized_names must be convertible to strings.")
+
     cleaned_df = df.copy()
 
-    # Safety check:
-    # The number of new names must match the number of existing columns.
-    # If not, renaming would misalign the data.
+    # -----------------------------------------------------
+    # 2. VALIDATION — Soft Checks (A, B, C…)
+    # -----------------------------------------------------
+    warnings = []
+
+    # A. Column count mismatch → skip renaming
     if len(cleaned_df.columns) != len(standardized_names):
-        st.warning(
-            "Column count mismatch — this file was not renamed. "
-            "Ensure all uploaded files have the same structure.",
-            icon="⚠️"
+        warnings.append(
+            "Column count mismatch — renaming skipped. "
+            "Ensure all uploaded files have the same structure."
         )
-        return cleaned_df, {"renamed": False}
 
-    # Clean the new names:
-    #   • convert everything to strings
-    #   • strip whitespace
-    safe_names = dedupe_columns([str(n).strip() for n in standardized_names])
+        summary = {
+            "renamed": False,
+            "warnings": warnings,
+        }
+        return cleaned_df, summary, None
 
-    # Store the old names for the summary.
+    # -----------------------------------------------------
+    # 3. CORE PROCESSING
+    # -----------------------------------------------------
+
+    # Ensure uniqueness
+    safe_names = dedupe_columns(standardized_names)
+
     old_names = list(cleaned_df.columns)
-
-    # Apply the new names.
     cleaned_df.columns = safe_names
 
-    # Build a summary describing what changed.
+    # -----------------------------------------------------
+    # 4. SUMMARY
+    # -----------------------------------------------------
     summary = {
-        "task_name":"rename",
         "renamed": True,
         "old_names": old_names,
         "new_names": safe_names,
-        "changed_count": sum(o != n for o, n in zip(old_names, safe_names))
+        "changed_count": sum(o != n for o, n in zip(old_names, safe_names)),
+        "warnings": warnings,
     }
 
-    return cleaned_df, summary
+    # -----------------------------------------------------
+    # 5. SUMMARY DATAFRAME
+    # -----------------------------------------------------
+    summary_df = None
+
+    # -----------------------------------------------------
+    # 6. RETURN
+    # -----------------------------------------------------
+    return cleaned_df, summary, summary_df

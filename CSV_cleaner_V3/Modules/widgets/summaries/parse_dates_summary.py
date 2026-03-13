@@ -3,27 +3,23 @@ import pandas as pd
 
 def render_parse_dates_summary(summary, filename=None):
     """
-    Summary renderer for the 'parse_dates' task.
-
-    Expected summary keys:
-        - task_name: "parse_dates"
-        - parsed_rows: int
-        - unparsed_rows: list of (row_index, original_value)
-        - new_columns: list of column names created
+    Summary renderer for the parse_dates task.
     """
 
     st.success("Parsed Datetime Column")
 
-    # Successfully parsed rows
-    parsed = summary.get("parsed_rows", 0)
-    st.write(f"**Successfully parsed rows:** {parsed}")
+    st.write(f"**Successfully parsed rows:** {summary.get('parsed_rows', 0)}")
 
-    # New columns created
     new_cols = summary.get("new_columns", [])
     if new_cols:
         st.write("**New columns created:** " + ", ".join(new_cols))
 
-    # Unparsed rows
+    warnings = summary.get("warnings", [])
+    if warnings:
+        st.write("### Warnings")
+        for msg in warnings:
+            st.warning(msg)
+
     unparsed = summary.get("unparsed_rows", [])
     if unparsed:
         st.error(f"Unparsed rows: {len(unparsed)}")

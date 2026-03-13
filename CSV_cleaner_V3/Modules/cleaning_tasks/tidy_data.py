@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import re
 from Modules.cleaning_tasks.headers import clean_headers as advanced_clean_headers
 
@@ -191,161 +192,156 @@ def detect_header_rows(df):
 #     cleaned_df, combined_summary
 # =========================================================
 def basic_cleaning(
-    df,
+    df: pd.DataFrame,
+    *,
     nans=None,
     naming_style="snake_case",
     preserve_units=True,
     extract_additional=True,
     no_units_in_header=False
-    ):    
+):
     """
     Run a lightweight, safe, automatic cleaning pipeline that prepares a dataset
-    for downstream processing. This pipeline focuses on structural issues that
-    commonly appear in real-world CSV files: empty rows, placeholder NaNs,
-    duplicate column names, inconsistent casing, and header-like rows inside
-    the data.
+    for downstream processing.
 
-    The pipeline performs the following steps in order:
-        1. Remove columns that contain only missing values.
-        2. Remove rows that contain only missing values.
-        3. Standardize NaN-like tokens (e.g., "NA", "?", "", "N/A") into a single representation.
-        4. Trim whitespace from column names and string cells.
-        5. Fix duplicate column names by appending suffixes (_1, _2, ...).
-        6. Normalize column name casing (lower, upper, title, or none).
-        7. Detect columns that contain mixed data types.
-        8. Detect header-like rows inside the data.
-        9. Clean column headers using the advanced scientific header cleaner.
+    This pipeline performs the following steps in order:
+        1. Remove empty columns.
+        2. Remove empty rows.
+        3. Standardize NaN-like tokens.
+        4. Trim whitespace.
+        5. Fix duplicate column names.
+        6. Detect mixed data types.
+        7. Detect header-like rows.
+        8. Clean column headers using the unified scientific cleaner.
 
-    --------------------------------------------------------------------------
     Parameters
-    --------------------------------------------------------------------------
+    ----------
     df : pandas.DataFrame
-        The input dataset to clean.
+        Input dataset to clean.
 
-    nans : list[str], optional
-        Additional tokens that should be treated as missing values.
-        These are added to the default list of NaN‑like strings:
-            "NA", "N/A", "?", "", "Nan", "NaN"
-        All matching values are standardized to a single representation
-        (empty string).
+    nans : list[str] or None, optional
+        Additional tokens to treat as missing values.
 
     naming_style : {"snake_case", "camelCase", "Title Case"}, optional
-        Naming convention applied to cleaned column headers during the final
-        header‑cleaning step. Default is "snake_case".
+        Naming convention for cleaned headers.
 
     preserve_units : bool, optional
-        If True (default), detected units are included in the cleaned header.
-        Ignored when `no_units_in_header=True`.
+        Whether to include detected units in cleaned headers.
 
     extract_additional : bool, optional
-        If True (default), extract additional metadata from headers,
-        e.g,: Temperature (deg C, ITS‑90) (ITS-90 would be removed)
-        Extracted metadata is stored in the header‑cleaning summary.
+        Whether to extract additional metadata from headers.
 
     no_units_in_header : bool, optional
-        If True, assume the dataset does *not* include units in the header.
-        Bracket content is treated as descriptive text rather than units, and
-        units are never included in the cleaned header. Useful for datasets
-        where brackets contain notes or sensor information rather than
-        measurement units.
+        If True, bracket content is treated as descriptive text, not units.
 
-    --------------------------------------------------------------------------
     Returns
-    --------------------------------------------------------------------------
+    -------
     cleaned_df : pandas.DataFrame
-        The cleaned dataset after all steps have been applied.
+        The cleaned dataset after all steps.
 
     summary : dict
-        A combined dictionary containing the summaries from all steps.
-        Each key corresponds to a cleaning step and records what was changed,
-        detected, or standardized. The header‑cleaning summary is stored under
-        the key "header_cleaning".
+        Combined summary of all steps, including:
+            - empty_columns_removed
+            - empty_rows_removed
+            - nans_replaced
+            - whitespace_trimmed
+            - duplicate_columns_found
+            - mixed_type_columns
+            - header_rows_detected
+            - header_cleaning (from advanced cleaner)
+            - warnings (soft validation issues)
 
-    --------------------------------------------------------------------------
-    Example (default behavior)
-    --------------------------------------------------------------------------
+    summary_df : None
+        Always None for this pipeline.
 
-    >>> from tidy_data import basic_cleaning
-    >>> cleaned, summary = basic_cleaning(raw_df)
-
-    This applies:
-        - empty row/column removal
-        - NaN standardization
-        - whitespace trimming
-        - duplicate column fixing
-        - mixed‑type detection
-        - header‑row detection
-        - scientific header cleaning (snake_case, units preserved)
-
-    --------------------------------------------------------------------------
-    Example: Custom NaN tokens + Title Case headers
-    --------------------------------------------------------------------------
-
-    >>> cleaned, summary = basic_cleaning(
-    ...     raw_df,
-    ...     nans=["--", "missing"],
-    ...     naming_style="Title Case"
-    ... )
-
-    --------------------------------------------------------------------------
-    Example: No units in header + camelCase
-    --------------------------------------------------------------------------
-
-    >>> cleaned, summary = basic_cleaning(
-    ...     raw_df,
-    ...     naming_style="camelCase",
-    ...     preserve_units=False,
-    ...     no_units_in_header=True
-    ... )
-
-    In this mode, bracket content is treated as descriptive text and units
-    are never included in the cleaned header.
-
-
+    Notes
+    -----
+    - Hard validation errors (e.g., invalid naming_style) raise exceptions.
+    - Soft validation issues (e.g., empty DataFrame) appear in summary["warnings"].
     """
 
+    # -----------------------------------------------------
+    # 1. VALIDATION - Hard Errors
+    # -----------------------------------------------------
 
-    summary = {"task_name":"tidy_data"}
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame.")
 
-    # Step 1 — Remove empty columns
-    df, s1 = remove_empty_columns(df)
+    if nans is not None and not isinstance(nans, list):
+        raise ValueError("nans must be a list of strings or None.")
+
+    valid_styles = {"snake_case", "camelCase", "Title Case"}
+    if naming_style not in valid_styles:
+        raise ValueError(f"Invalid naming_style '{naming_style}'.")
+
+    for flag in [preserve_units, extract_additional, no_units_in_header]:
+        if not isinstance(flag, bool):
+            raise ValueError("preserve_units, extract_additional, and no_units_in_header must be boolean.")
+
+    cleaned_df = df.copy()
+
+    # -----------------------------------------------------
+    # 2. VALIDATION - Soft Checks
+    # -----------------------------------------------------
+    warnings = []
+
+    if cleaned_df.empty:
+        warnings.append("Input DataFrame is empty. Cleaning steps will have no effect.")
+
+    # -----------------------------------------------------
+    # 3. CORE PROCESSING
+    # -----------------------------------------------------
+    summary = {"task_name": "tidy_data", "warnings": warnings}
+
+    # Step 1 - Remove empty columns
+    cleaned_df, s1 = remove_empty_columns(cleaned_df)
     summary.update(s1)
 
-    # Step 2 — Remove empty rows
-    df, s2 = remove_empty_rows(df)
+    # Step 2 - Remove empty rows
+    cleaned_df, s2 = remove_empty_rows(cleaned_df)
     summary.update(s2)
 
-    # Step 3 — Standardize NaN-like values
-    df, s3 = standardize_nans(df, nans)
+    # Step 3 - Standardize NaN-like values
+    cleaned_df, s3 = standardize_nans(cleaned_df, nans)
     summary.update(s3)
 
-    # Step 4 — Trim whitespace
-    df, s4 = trim_whitespace(df)
+    # Step 4 - Trim whitespace
+    cleaned_df, s4 = trim_whitespace(cleaned_df)
     summary.update(s4)
 
-    # Step 5 — Fix duplicate column names
-    df, s5 = fix_duplicate_columns(df)
+    # Step 5 - Fix duplicate column names
+    cleaned_df, s5 = fix_duplicate_columns(cleaned_df)
     summary.update(s5)
 
-    # Step 6 — Detect mixed data types
-    df, s6 = detect_mixed_types(df)
+    # Step 6 - Detect mixed data types
+    cleaned_df, s6 = detect_mixed_types(cleaned_df)
     summary.update(s6)
 
-    # Step 7 — Detect header-like rows
-    df, s7 = detect_header_rows(df)
+    # Step 7 - Detect header-like rows
+    cleaned_df, s7 = detect_header_rows(cleaned_df)
     summary.update(s7)
 
-    # ---------------------------------------------------------
-    # Step 8 — Clean column headers using the unified cleaner
-    # ---------------------------------------------------------
-    df, s8 = advanced_clean_headers(
-        df,
+    # Step 8 - Clean headers using advanced cleaner
+    cleaned_df, s8 = advanced_clean_headers(
+        cleaned_df,
         naming_style=naming_style,
         preserve_units=preserve_units,
         extract_additional=extract_additional,
         no_units_in_header=no_units_in_header
     )
-
     summary.update(s8)
 
-    return df, summary
+    # -----------------------------------------------------
+    # 4. SUMMARY
+    # -----------------------------------------------------
+    # (already built incrementally)
+
+    # -----------------------------------------------------
+    # 5. SUMMARY DATAFRAME
+    # -----------------------------------------------------
+    summary_df = None
+
+    # -----------------------------------------------------
+    # 6. RETURN
+    # -----------------------------------------------------
+    return cleaned_df, summary, summary_df

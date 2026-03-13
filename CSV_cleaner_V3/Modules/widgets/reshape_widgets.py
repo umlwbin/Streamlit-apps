@@ -3,11 +3,36 @@ import streamlit as st
 def reshape_widgets(df):
     """
     Unified widget for reshaping data:
-      • Transpose
-      • Pivot wide → long (melt)
-      • Pivot long → wide (pivot)
-    Returns a dictionary of kwargs for reshape().
+        - Transpose
+        - Pivot wide → long (melt)
+        - Pivot long → wide (pivot)
+
+    Returns kwargs for the reshape() task.
+
+    Returns
+    -------
+    dict or None
+        {
+            "operation": "transpose"
+        }
+        OR
+        {
+            "operation": "wide_to_long",
+            "id_cols": [...],
+            "value_cols": [...],
+            "var_name": str,
+            "value_name": str
+        }
+        OR
+        {
+            "operation": "long_to_wide",
+            "variable_col": str,
+            "value_col": str,
+            "id_cols": [...]
+        }
+        or None if the user has not completed the widget.
     """
+
     st.markdown("Choose how you want to transform your table.")
 
     # --- EXPLANATIONS -----------------------------------------------------
@@ -85,7 +110,11 @@ def reshape_widgets(df):
         """)
 
 
-    # --- OPERATION SELECTION ----------------------------------------------
+
+
+    # ---------------------------------------------------------
+    # Operation selection
+    # ---------------------------------------------------------
     operation = st.radio(
         "Choose a reshape operation:",
         options=[
@@ -96,7 +125,7 @@ def reshape_widgets(df):
         key="reshape_operation"
     )
 
-    cols = df.columns
+    cols = df.columns.tolist()
 
     # =========================================================
     # TRANSPOSE
@@ -119,16 +148,16 @@ def reshape_widgets(df):
 
         id_cols = st.multiselect(
             "ID columns (optional)",
-            options=list(cols),
+            options=cols,
             key="reshape_id_cols"
         )
 
         # Auto-detect value columns
-        default_value_cols = [c for c in cols if c not in id_cols] if id_cols else list(cols)
+        default_value_cols = [c for c in cols if c not in id_cols] if id_cols else cols
 
         value_cols = st.multiselect(
             "Value columns (to melt)",
-            options=list(cols),
+            options=cols,
             default=default_value_cols,
             key="reshape_value_cols"
         )
@@ -163,13 +192,13 @@ def reshape_widgets(df):
 
         variable_col = st.selectbox(
             "Column containing variable names",
-            options=list(cols),
+            options=cols,
             key="reshape_variable_col"
         )
 
         value_col = st.selectbox(
             "Column containing values",
-            options=list(cols),
+            options=cols,
             key="reshape_value_col"
         )
 

@@ -1,114 +1,132 @@
 import pandas as pd
 import re
 
-def split_column(df, column, delimiters):
+
+def split_column(
+    df: pd.DataFrame,
+    *,
+    column,
+    delimiters
+):
     """
-    Split one column of a table into several new columns.
+    Split a single column into multiple new columns using one or more delimiters.
 
-    This function looks at a single column in a pandas DataFrame and breaks
-    each cell into multiple parts using a chosen delimiter (for example a
-    space, tab, comma, or slash). It then creates new columns for each part.
-
-    How it works:
-    - The function first cleans the text by converting unusual whitespace
-      (including non‑breaking spaces from PDF exports) into normal spaces.
-    - It then collapses all repeated whitespace into a single space.
-    - It splits the cleaned text using the delimiter(s) you provide.
-    - It inserts the new columns next to the original column.
-    - It removes the original column only if the split produced more than
-      one new column.
+    This task:
+    - normalizes whitespace (including NBSP from PDF exports)
+    - collapses repeated whitespace
+    - splits the column using literal or regex delimiters
+    - inserts new columns next to the original
+    - removes the original column only if multiple new columns were created
+    - returns a summary describing the split operation
 
     Parameters
     ----------
     df : pandas.DataFrame
-        The input table.
+        Input dataset.
 
     column : str
-        The name of the column you want to split.
+        Name of the column to split.
 
-    delimiters : list of str
-        A list of delimiters to split on. Each delimiter can be a literal
-        character (",", "|", "/", etc.) or a regular expression such as
-        "\\s+" for "one or more whitespace characters".
+    delimiters : list[str]
+        List of delimiters to split on. Each may be:
+        - a literal character (",", "|", "/", etc.)
+        - a regex pattern (e.g., "\\s+")
 
     Returns
     -------
     cleaned_df : pandas.DataFrame
-        A new DataFrame with the split columns added.
+        A copy of the input DataFrame with new split columns added.
 
     summary : dict
-        A small dictionary describing what happened.
+        {
+            "column": str,
+            "delimiters": list[str],
+            "new_columns": list[str],
+            "rows_split": int,
+            "warnings": list[str]
+        }
 
-    Example (pure Python)
-    ---------------------
-    >>> import pandas as pd
-    >>> from split_cols import split_column
+    summary_df : None
+        Always None for this task.
 
-    >>> df = pd.DataFrame({
-    ...     "J": ["15.2 14.3", "9.4 9.6", "94 94"]
-    ... })
-
-    # Split on one or more spaces
-    >>> cleaned, summary = split_column(df, "J", ["\\s+"])
-
-    >>> print(cleaned)
-         J_1   J_2
-    0   15.2  14.3
-    1    9.4   9.6
-    2     94    94
-
-    >>> print(summary)
-    {
-        "task_name": "split_column",
-        "operation": "split_column",
-        "column": "J",
-        "delimiters": ["\\s+"],
-        "new_columns": ["J_1", "J_2"],
-        "rows_split": 3
-    }
+    Notes
+    -----
+    - Hard validation errors (e.g., missing column) raise exceptions.
+    - Soft validation issues (e.g., no splits detected) appear in
+      summary["warnings"] but do not stop execution.
     """
 
+    # -----------------------------------------------------
+    # 1. VALIDATION — Hard Errors
+    # -----------------------------------------------------
+
+    # A. df must be a DataFrame
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame.")
+
+    # B. column must be a string
+    if not isinstance(column, str):
+        raise ValueError("column must be a string.")
+
+    # C. delimiters must be a list of strings
+    if not isinstance(delimiters, list) or not all(isinstance(d, str) for d in delimiters):
+        raise ValueError("delimiters must be a list of strings.")
 
     cleaned_df = df.copy()
 
-    summary = {
-        "task_name": "split_column",
-        "operation": "split_column",
-        "column": column,
-        "delimiters": delimiters,
-        "new_columns": [],
-        "rows_split": 0
-    }
+    # -----------------------------------------------------
+    # 2. VALIDATION — Soft Checks
+    # -----------------------------------------------------
+    warnings = []
 
+    # A. Column must exist
     if column not in cleaned_df.columns:
-        summary["warning"] = f"Column '{column}' not found."
-        return cleaned_df, summary
+        warnings.append(f"Column '{column}' not found. No split performed.")
+        summary = {
+            "column": column,
+            "delimiters": delimiters,
+            "new_columns": [],
+            "rows_split": 0,
+            "warnings": warnings,
+        }
+        return cleaned_df, summary, None
 
-    # Normalize whitespace BEFORE splitting
+    # -----------------------------------------------------
+    # 3. CORE PROCESSING
+    # -----------------------------------------------------
+
+    # Normalize whitespace
     cleaned_series = (
-        df[column]
+        cleaned_df[column]
         .astype(str)
-        .str.replace("\u00A0", " ", regex=False)   # convert NBSP → space
-        .str.replace(r"\s+", " ", regex=True)      # collapse all whitespace
-        .str.strip()                               # remove leading/trailing
+        .str.replace("\u00A0", " ", regex=False)   # NBSP → space
+        .str.replace(r"\s+", " ", regex=True)      # collapse whitespace
+        .str.strip()
     )
 
-
-    # Build regex pattern (regex delimiters are NOT escaped)
+    # Build regex pattern
     escaped = [
         d if d.startswith("\\") else re.escape(d)
         for d in delimiters
     ]
     pattern = "|".join(escaped)
 
-    # Perform the split
+    # Perform split
     split_df = cleaned_series.str.split(pattern, expand=True)
 
+    # If no split occurred
     if split_df.shape[1] <= 1:
-        summary["warning"] = "No splits detected using the provided delimiter(s)."
-        return cleaned_df, summary
+        warnings.append("No splits detected using the provided delimiter(s).")
+        summary = {
+            "column": column,
+            "delimiters": delimiters,
+            "new_columns": [],
+            "rows_split": 0,
+            "warnings": warnings,
+        }
+        return cleaned_df, summary, None
 
-    # Insert new columns in place of the original
+    # Insert new columns
     original_idx = cleaned_df.columns.get_loc(column)
     cleaned_df = cleaned_df.drop(columns=[column])
 
@@ -118,7 +136,25 @@ def split_column(df, column, delimiters):
         cleaned_df.insert(original_idx + i, new_col, split_df[i])
         new_cols.append(new_col)
 
-    summary["new_columns"] = new_cols
-    summary["rows_split"] = (split_df.notna().sum(axis=1) > 1).sum()
+    rows_split = (split_df.notna().sum(axis=1) > 1).sum()
 
-    return cleaned_df, summary
+    # -----------------------------------------------------
+    # 4. SUMMARY
+    # -----------------------------------------------------
+    summary = {
+        "column": column,
+        "delimiters": delimiters,
+        "new_columns": new_cols,
+        "rows_split": rows_split,
+        "warnings": warnings,
+    }
+
+    # -----------------------------------------------------
+    # 5. SUMMARY DATAFRAME
+    # -----------------------------------------------------
+    summary_df = None
+
+    # -----------------------------------------------------
+    # 6. RETURN
+    # -----------------------------------------------------
+    return cleaned_df, summary, summary_df

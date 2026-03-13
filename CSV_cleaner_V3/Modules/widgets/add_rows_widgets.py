@@ -3,10 +3,21 @@ import streamlit as st
 def add_row_widget(df):
     """
     Widget for inserting a new row or generating alphabetical headers.
+
     Supports:
-      - manual entry
-      - pasting a delimited list
-      - auto-generating alphabetical headers
+        - manual entry
+        - pasting a delimited list
+        - auto-generating alphabetical headers
+
+    Returns
+    -------
+    dict or None
+        {
+            "row_values": list[str] or None,
+            "as_header": bool,
+            "auto_headers": bool
+        }
+        or None if the user has not completed the widget.
     """
 
     st.markdown("""
@@ -15,7 +26,7 @@ def add_row_widget(df):
     """)
 
     # ---------------------------------------------------------
-    # Show a small preview instead of listing column names
+    # Preview
     # ---------------------------------------------------------
     st.markdown("##### Preview of your data")
     st.dataframe(df.head(5))
@@ -82,7 +93,6 @@ def add_row_widget(df):
 
     # ---------------------------------------------------------
     # Header option
-    # Disable if alphabetical headers are selected
     # ---------------------------------------------------------
     as_header = st.checkbox(
         "Use this row as the new header",
@@ -98,3 +108,5 @@ def add_row_widget(df):
             "as_header": as_header,
             "auto_headers": auto_headers
         }
+
+    return None

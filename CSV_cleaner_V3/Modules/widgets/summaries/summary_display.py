@@ -1,57 +1,14 @@
 import streamlit as st
 import pandas as pd
 
-# Import all task-specific summary renderers
-from .split_column_summary import render_split_column_summary
-from .add_column_summary import render_add_column_summary
-from .add_row_summary import render_add_row_summary
-from .assign_datatype_summary import render_assign_datatype_summary
-from .headers_summary import render_clean_headers_summary
 
-from .iso_summary import render_iso_summary
-from .merge_date_time_summary import render_merge_date_time_summary
-from .merge_files_summary import render_merge_files_summary
-from .merge_header_rows_summary import render_merge_header_rows_summary
-from .parse_dates_summary import render_parse_dates_summary
-from .provincial_pivot_summary import render_provincial_pivot_summary
-from .remove_columns_summary import render_remove_columns_summary
-from .rename_summary import render_rename_summary
-from .reorder_columns_summary import render_reorder_columns_summary
-from .reshape_summary import render_reshape_summary
-from .tidy_data_summary import render_tidy_data_summary
-from .remove_metadata_rows_summary import render_remove_metadata_rows_summary
-
-
-
-# Registry mapping task_name → renderer function
-TASK_SUMMARY_RENDERERS = {
-    "split_column": render_split_column_summary,
-    "add_column": render_add_column_summary,
-    "add_row": render_add_row_summary,
-    "assign_datatype": render_assign_datatype_summary,
-    "clean_headers": render_clean_headers_summary,
-
-    "iso": render_iso_summary,
-    "merge_date_time": render_merge_date_time_summary,
-    "merge_files": render_merge_files_summary,
-    "merge_header_rows": render_merge_header_rows_summary,
-    "parse_dates": render_parse_dates_summary,
-    "provincial_pivot": render_provincial_pivot_summary,
-    "remove_columns": render_remove_columns_summary,
-    "rename": render_rename_summary,
-    "reorder_columns": render_reorder_columns_summary,
-    "reshape": render_reshape_summary,
-    "tidy_data": render_tidy_data_summary,
-    "remove_metadata_rows": render_remove_metadata_rows_summary,
-}
-
-def show_summary(summary, title="Task Summary", filename=None):
+def show_summary(summary, renderer=None, title="Task Summary", filename=None):
     """
-    Robust summary renderer that safely handles:
-    - dict-based errors
-    - string-based errors
-    - mixed formats
-    - missing fields
+    Display a task summary using the renderer provided by the Task object.
+
+    - renderer: a function that knows how to render this task's summary
+    - summary: the summary dictionary returned by the task
+    - filename: the file the task was applied to
     """
 
     if not summary:
@@ -81,10 +38,8 @@ def show_summary(summary, title="Task Summary", filename=None):
                     msg = str(err)
                     details = None
 
-                # Display the error
                 st.error(f"**{etype}**: {msg}")
 
-                # Optional details block
                 if details:
                     with st.expander("Details"):
                         st.write(details)
@@ -94,14 +49,15 @@ def show_summary(summary, title="Task Summary", filename=None):
         # ---------------------------------------------------------
         # TASK-SPECIFIC SUMMARY RENDERING
         # ---------------------------------------------------------
-        task_name = summary.get("task_name")
-
-        if task_name in TASK_SUMMARY_RENDERERS:
-            TASK_SUMMARY_RENDERERS[task_name](summary, filename)
-            return
+        if renderer:
+            try:
+                renderer(summary, filename)
+                return
+            except Exception as e:
+                st.error(f"Summary renderer failed: {e}")
 
         # ---------------------------------------------------------
         # FALLBACK: raw summary
         # ---------------------------------------------------------
-        st.warning("No summary renderer found for this task.")
+        st.warning("No summary renderer provided for this task.")
         st.json(summary)

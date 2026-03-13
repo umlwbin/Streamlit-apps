@@ -9,9 +9,12 @@ from Modules.widgets.summaries.summary_display import show_summary
 # ---------------------------------------------------------
 def _safe_execute(task_func, df, **kwargs):
     try:
-        return task_func(df, **kwargs), None
+        cleaned_df, summary, summary_df = task_func(df, **kwargs)
+        return (cleaned_df, summary, summary_df), None
+
     except Exception as e:
-        return None, {
+        # Convert exception into a summary-like structure
+        error_summary = {
             "errors": [
                 {
                     "error_type": type(e).__name__,
@@ -19,23 +22,7 @@ def _safe_execute(task_func, df, **kwargs):
                 }
             ]
         }
-
-
-# ---------------------------------------------------------
-# Normalize the return value from a task
-# Ensures we always get: cleaned_df, summary, summary_df
-# ---------------------------------------------------------
-def _normalize_result(result):
-    if not isinstance(result, tuple): #Is the result a tuple? If not treat the netire result as the cleaned df (no summary, no extra table)
-        return result, {}, None
-
-    if len(result) == 3:
-        return result #This is in the case of RVQs if you go to wheere it is called you'll see --> cleaned_df, summary, summary_df = _normalize_result(result)
-    if len(result) == 2:
-        cleaned_df, summary = result
-        return cleaned_df, summary, None
-
-    return result[0], {}, None
+        return None, error_summary
 
 
 # ---------------------------------------------------------
@@ -57,7 +44,7 @@ def _clean_summary(summary):
             continue
 
         # Skip empty DataFrames or Series
-        if hasattr(v, "empty") and v.empty: # Does the object have an emoty attribute? then skip.
+        if hasattr(v, "empty") and v.empty:
             continue
 
         cleaned[k] = v
@@ -85,7 +72,8 @@ def _handle_rvq_output(filename, summary_df):
 # ---------------------------------------------------------
 # Apply a task to a single file
 # ---------------------------------------------------------
-def _run_single_file(task_func, filename, df, kwargs):
+def _run_single_file(task_func, renderer, filename, df, kwargs):
+
     # Save undo history
     st.session_state.history_stack[filename].append(df.copy())
     st.session_state.redo_stack[filename] = []
@@ -94,12 +82,11 @@ def _run_single_file(task_func, filename, df, kwargs):
     result, error_summary = _safe_execute(task_func, df.copy(), **kwargs)
 
     if error_summary:
-        show_summary(error_summary, title="Error", filename=filename)
+        show_summary(error_summary, renderer=renderer, title="Error", filename=filename)
         st.session_state.task_applied = False
         return
 
-    # Normalize the result
-    cleaned_df, summary, summary_df = _normalize_result(result)
+    cleaned_df, summary, summary_df = result
 
     # Update stored data
     st.session_state.current_data[filename] = cleaned_df
@@ -114,7 +101,7 @@ def _run_single_file(task_func, filename, df, kwargs):
     # Store summary
     if summary:
         st.session_state.all_summaries[filename] = summary
-        show_summary(summary, title="Task Summary", filename=filename)
+        show_summary(summary, renderer=renderer, title="Task Summary", filename=filename)
     else:
         st.success(f"Task applied successfully to {filename}")
 
@@ -124,17 +111,18 @@ def _run_single_file(task_func, filename, df, kwargs):
 # ---------------------------------------------------------
 # Apply a multi-file task
 # ---------------------------------------------------------
-def _run_multi_file(task_func, kwargs):
+def _run_multi_file(task_func, renderer, kwargs):
+
     result, error_summary = _safe_execute(
         task_func, st.session_state.current_data, **kwargs
     )
 
     if error_summary:
-        show_summary(error_summary, title="Error", filename="merged_output.csv")
+        show_summary(error_summary, renderer=renderer, title="Error", filename="merged_output.csv")
         st.session_state.task_applied = False
         return
 
-    merged_df, summary, _ = _normalize_result(result)
+    merged_df, summary, summary_df = result
     merged_filename = "merged_output.csv"
 
     # Store merged output
@@ -142,9 +130,10 @@ def _run_multi_file(task_func, kwargs):
     st.session_state.current_data[merged_filename] = merged_df.copy()
 
     # Store summary
+    summary = _clean_summary(summary)
     if summary:
         st.session_state.all_summaries[merged_filename] = summary
-        show_summary(summary, title="Task Summary", filename=merged_filename)
+        show_summary(summary, renderer=renderer, title="Task Summary", filename=merged_filename)
     else:
         st.success("Task applied successfully.")
 
@@ -174,13 +163,24 @@ def run_task(task_name, **kwargs):
         st.warning("No data available to run tasks on.")
         return
 
-    task_info = tasks.define_task_functions()[task_name]
-    task_type = task_info["type"]
-    task_func = task_info["func"]
+    # -----------------------------------------
+    # Lookup using TASK_DICT (Task objects)
+    # -----------------------------------------
+    task = tasks.TASK_DICT.get(task_name)
+    if not task:
+        st.error(f"Task '{task_name}' not found.")
+        return
 
+    task_type = task.type
+    task_func = task.func
+    renderer = task.summary_renderer
+
+    # -----------------------------------------
+    # Run task depending on type
+    # -----------------------------------------
     if task_type == "single":
         for filename, df in st.session_state.current_data.items():
-            _run_single_file(task_func, filename, df, kwargs)
+            _run_single_file(task_func, renderer, filename, df, kwargs)
 
     elif task_type == "multi":
-        _run_multi_file(task_func, kwargs)
+        _run_multi_file(task_func, renderer, kwargs)

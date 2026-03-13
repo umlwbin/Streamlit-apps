@@ -2,7 +2,22 @@ import streamlit as st
 
 def merge_header_rows_widget(df):
     """
-    Widget for selecting metadata rows to merge into the header.
+    Widget for selecting metadata rows (from the original file) to merge into the header.
+
+    Supports:
+        - previewing original row numbers
+        - selecting up to two rows to merge
+        - one-shot trigger pattern for consistent UX
+
+    Returns
+    -------
+    dict or None
+        {
+            "filename": str,
+            "row1": int or None,
+            "row2": int or None
+        }
+        or None if the user has not completed the widget.
     """
 
     st.markdown("""
@@ -11,22 +26,16 @@ def merge_header_rows_widget(df):
     """)
 
     # ---------------------------------------------------------
-    # Get filename and row_map
+    # Retrieve filename + row_map
     # ---------------------------------------------------------
     filenames = list(st.session_state.current_data.keys())
-    filename = filenames[0]
+    filename = filenames[0]  # Only one file active at a time
     row_map = st.session_state.row_map[filename]
 
     # ---------------------------------------------------------
-    # Show preview with ORIGINAL row numbers
+    # Preview with ORIGINAL row numbers
     # ---------------------------------------------------------
-    filenames = list(st.session_state.current_data.keys())
-    filename = filenames[0]
-    row_map = st.session_state.row_map[filename]
-
     preview = df.copy()
-
-    # Insert original row numbers as the first column
     preview.insert(0, "original_row", row_map)
 
     st.markdown("#### Preview (showing original row numbers)")
@@ -48,6 +57,9 @@ def merge_header_rows_widget(df):
 
     st.markdown("---")
 
+    # ---------------------------------------------------------
+    # Trigger
+    # ---------------------------------------------------------
     if st.button("Merge Header Rows", type="primary"):
         return {
             "filename": filename,

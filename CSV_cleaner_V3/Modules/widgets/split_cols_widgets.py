@@ -3,7 +3,22 @@ import re
 
 def split_column_widget(df):
     """
-    Widget for splitting a column based on a predefined set of delimiters.
+    Widget for splitting a column into multiple new columns based on one or more delimiters.
+
+    Supports:
+        - selecting a column
+        - choosing a predefined or custom delimiter
+        - previewing the split on the first 5 rows
+        - one-shot trigger pattern for consistent UX
+
+    Returns
+    -------
+    dict or None
+        {
+            "column": str,
+            "delimiters": list[str]
+        }
+        or None if the user has not completed the widget.
     """
 
     st.markdown("""
@@ -11,13 +26,13 @@ def split_column_widget(df):
     """)
 
     # ---------------------------------------------------------
-    # Step 1 — Choose the column
+    # Step 1 - Choose the column
     # ---------------------------------------------------------
     st.markdown("##### Select the column to scan")
     col = st.selectbox("Column", options=list(df.columns))
 
     # ---------------------------------------------------------
-    # Step 2 — Choose delimiter
+    # Step 2 - Choose delimiter
     # ---------------------------------------------------------
     st.markdown("##### Choose a delimiter")
 
@@ -52,10 +67,10 @@ def split_column_widget(df):
         delimiters = ["\n"]
     else:
         raw = st.text_input("Enter custom delimiter(s), separated by commas")
-        delimiters = [d for d in raw.split(",") if d != ""]
+        delimiters = [d for d in raw.split(",") if d.strip() != ""]
 
     # ---------------------------------------------------------
-    # Step 3 — Preview (first 10 rows)
+    # Step 3 - Preview (first 5 rows)
     # ---------------------------------------------------------
     st.markdown("##### Preview of detected splits (first 5 rows)")
 
@@ -64,8 +79,8 @@ def split_column_widget(df):
         preview_series = (
             df[col]
             .astype(str)
-            .str.replace("\u00A0", " ", regex=False)   # convert NBSP → space
-            .str.replace(r"\s+", " ", regex=True)      # collapse all whitespace
+            .str.replace("\u00A0", " ", regex=False)   # NBSP → space
+            .str.replace(r"\s+", " ", regex=True)      # collapse whitespace
             .str.strip()
         )
 
@@ -76,20 +91,16 @@ def split_column_widget(df):
         ]
         pattern = "|".join(escaped)
 
-        # Perform preview split
         preview_split = preview_series.head(5).str.split(pattern, expand=True)
 
-        # Show preview table
         st.dataframe(preview_split, use_container_width=True)
-
-        # Show how many columns will be created
         st.info(f"Splitting will create **{preview_split.shape[1]}** new column(s).")
 
     else:
         st.info("Select or enter at least one delimiter to preview splits.")
 
     # ---------------------------------------------------------
-    # Step 4 — Run
+    # Step 4 - Run
     # ---------------------------------------------------------
     st.markdown("---")
     apply_now = st.button("Split Column", type="primary")

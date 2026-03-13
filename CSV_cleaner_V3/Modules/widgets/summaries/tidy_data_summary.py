@@ -13,9 +13,19 @@ def render_tidy_data_summary(summary, filename=None):
         - mixed-type detection
         - header-row detection
         - scientific header cleaning summary
+        - warnings (soft validation)
     """
 
     st.success("Tidy Data Cleaning Pipeline")
+
+    # ---------------------------------------------------------
+    # Warnings
+    # ---------------------------------------------------------
+    warnings = summary.get("warnings", [])
+    if warnings:
+        st.write("### Warnings")
+        for msg in warnings:
+            st.warning(msg)
 
     # ---------------------------------------------------------
     # Empty columns removed
@@ -53,8 +63,9 @@ def render_tidy_data_summary(summary, filename=None):
 
     if summary.get("duplicate_columns_fixed"):
         new_cols = summary.get("new_column_names", [])
-        st.write("**Duplicate columns fixed. New column names:**")
-        st.dataframe(pd.DataFrame({"Column Names": new_cols}), use_container_width=True)
+        st.write("### Duplicate Columns Fixed")
+        df_new = pd.DataFrame({"Column Names": new_cols})
+        st.dataframe(df_new, use_container_width=True)
 
     # ---------------------------------------------------------
     # Mixed-type detection
@@ -81,7 +92,7 @@ def render_tidy_data_summary(summary, filename=None):
         st.write("**Header-like rows detected:** None")
 
     # ---------------------------------------------------------
-    # Scientific header cleaning summary (merged directly)
+    # Scientific header cleaning summary
     # ---------------------------------------------------------
     if "header_metadata" in summary:
         st.write("### Cleaned Headers")
@@ -89,6 +100,7 @@ def render_tidy_data_summary(summary, filename=None):
         changed = summary.get("changed", {})
         unchanged = summary.get("unchanged", [])
 
+        # Renamed columns
         if changed:
             st.write("**Renamed columns:**")
             df_changed = pd.DataFrame(
@@ -97,6 +109,7 @@ def render_tidy_data_summary(summary, filename=None):
             )
             st.dataframe(df_changed, use_container_width=True)
 
+        # Unchanged columns
         if unchanged:
             st.write("**Unchanged columns:** " + ", ".join(unchanged))
 

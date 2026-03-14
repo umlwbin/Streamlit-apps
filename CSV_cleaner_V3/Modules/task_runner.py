@@ -64,9 +64,7 @@ def _handle_rvq_output(filename, summary_df):
         if "supplementary_outputs" not in st.session_state:
             st.session_state.supplementary_outputs = {}
 
-        st.session_state.supplementary_outputs[
-            f"{filename}_RVQ_summary.csv"
-        ] = summary_df
+        st.session_state.supplementary_outputs[f"{filename}_RVQ_summary.csv"] = summary_df
 
 
 # ---------------------------------------------------------

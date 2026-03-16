@@ -32,9 +32,7 @@ def add_cols(df: pd.DataFrame, *, variable_names, values, columns):
         raise ValueError("Input must be a pandas DataFrame.")
 
     if not (len(variable_names) == len(values) == len(columns)):
-        raise ValueError(
-            "The number of variable names, values, and positions must match."
-        )
+        raise ValueError("The number of variable names, values, and positions must match.")
 
     # Validate each name
     for name in variable_names:

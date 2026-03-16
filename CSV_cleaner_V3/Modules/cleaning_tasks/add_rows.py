@@ -38,13 +38,11 @@ def add_row(
         raise ValueError("Input must be a pandas DataFrame.")
 
     if auto_headers and (row_values is not None or as_header):
-        raise ValueError(
-            "auto_headers=True cannot be combined with row_values or as_header."
-        )
+        raise ValueError("Auto generated headers cannot be combined with adding row values or as_header=True.")
 
     if not auto_headers:
         if row_values is None:
-            raise ValueError("row_values must be provided unless auto_headers=True.")
+            raise ValueError("row values must be provided unless auto_headers=True.")
 
         if len(row_values) != len(df.columns):
             raise ValueError(

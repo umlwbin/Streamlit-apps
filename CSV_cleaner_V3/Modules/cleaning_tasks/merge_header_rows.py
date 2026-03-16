@@ -6,7 +6,8 @@ def merge_header_rows(
     *,
     row_map,
     row1=None,
-    row2=None
+    row2=None,
+    filename=None   # <-- harmless and ignored. The UI aneeds it, not task
 ):
     """
     Merge one or two user-selected rows (based on ORIGINAL row numbers)
@@ -54,6 +55,8 @@ def merge_header_rows(
     - Soft validation issues (e.g., row not found) appear in summary["warnings"]
       but do not stop execution.
     """
+
+    _ = filename # just stating this is intentionally unused. 
 
     # -----------------------------------------------------
     # 1. VALIDATION - Hard Errors (A, B, C…)
@@ -152,7 +155,9 @@ def merge_header_rows(
         "first_merged_row": row1,
         "second_merged_row": row2,
         "warnings": warnings,
+        "row_map": new_row_map
     }
+
 
     # -----------------------------------------------------
     # 5. SUMMARY DATAFRAME

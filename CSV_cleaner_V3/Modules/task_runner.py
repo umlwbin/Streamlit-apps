@@ -35,6 +35,11 @@ def _clean_summary(summary):
     cleaned = {}
     for k, v in summary.items():
 
+        # Ensure row_map is not removed
+        if k == "row_map":
+            cleaned[k] = v
+            continue
+
         # Skip None or empty strings
         if v is None or v == "":
             continue
@@ -89,6 +94,11 @@ def _run_single_file(task_func, renderer, filename, df, kwargs):
     # Update stored data
     st.session_state.current_data[filename] = cleaned_df
     st.session_state.task_history[filename].append(task_func.__name__)
+
+    # Update row_map if provided
+    if "row_map" in summary:
+        st.session_state.row_map[filename] = summary["row_map"]
+
 
     # Handle RVQ tasks
     _handle_rvq_output(filename, summary_df)

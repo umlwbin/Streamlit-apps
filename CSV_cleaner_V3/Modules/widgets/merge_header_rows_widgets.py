@@ -4,16 +4,12 @@ def merge_header_rows_widget(df):
     """
     Widget for selecting metadata rows (from the original file) to merge into the header.
 
-    Supports:
-        - previewing original row numbers
-        - selecting up to two rows to merge
-        - one-shot trigger pattern for consistent UX
-
     Returns
     -------
     dict or None
         {
             "filename": str,
+            "row_map": list[int],
             "row1": int or None,
             "row2": int or None
         }
@@ -38,7 +34,7 @@ def merge_header_rows_widget(df):
     preview = df.copy()
     preview.insert(0, "original_row", row_map)
 
-    st.markdown("#### Preview (showing original row numbers)")
+    st.markdown("##### Preview (showing original row numbers in the first column)")
     st.dataframe(preview.head(5), use_container_width=True)
 
     # ---------------------------------------------------------
@@ -46,7 +42,7 @@ def merge_header_rows_widget(df):
     # ---------------------------------------------------------
     row_options = [str(orig) for orig in row_map]
 
-    st.markdown("#### Select metadata rows to merge (original row numbers)")
+    st.markdown("##### Select metadata rows to merge (use original row numbers)")
     c1, c2 = st.columns(2)
 
     row1 = c1.selectbox("First row to merge", ["None"] + row_options)
@@ -63,6 +59,7 @@ def merge_header_rows_widget(df):
     if st.button("Merge Header Rows", type="primary"):
         return {
             "filename": filename,
+            "row_map": row_map,   # <-- REQUIRED for the task
             "row1": row1,
             "row2": row2
         }

@@ -2,7 +2,54 @@ import re
 import unicodedata
 import pandas as pd
 
+from Modules.utils.units import UNIT_MAP
 
+
+# =========================================================
+# UNIT NORMALIZATION HELPERS
+# =========================================================
+def normalize_unit_string(unit_raw):
+    """
+    Normalize a raw unit string into ASCII-safe, CF-style format:
+        - remove unicode
+        - replace slashes with spaces
+        - convert superscripts to ASCII
+        - ensure negative exponents use '-'
+        - collapse whitespace
+    """
+    if not unit_raw:
+        return None
+
+    # ASCII normalize
+    u = unicodedata.normalize("NFKD", unit_raw)
+    u = u.encode("ascii", "ignore").decode("ascii")
+
+    # Replace slashes with spaces
+    u = u.replace("/", " ")
+
+    # Replace caret exponents like m^2 or m^-2
+    u = re.sub(r"\^(-?\d+)", r"\1", u)
+
+    # Replace unicode superscripts
+    superscript_map = {
+        "⁻": "-",
+        "⁺": "+",
+        "¹": "1",
+        "²": "2",
+        "³": "3",
+    }
+    for k, v in superscript_map.items():
+        u = u.replace(k, v)
+
+    # Collapse whitespace
+    u = re.sub(r"\s+", " ", u).strip()
+
+    return u
+
+
+# =========================================================
+# MAIN CLEANING FUNCTION
+# =========================================================
 def clean_headers(
     df: pd.DataFrame,
     *,
@@ -10,179 +57,72 @@ def clean_headers(
     preserve_units=True,
     no_units_in_header=False
 ):
-
     """
     Clean and standardize messy scientific column headers while extracting metadata.
 
-    This task normalizes header text, detects units, removes bracketed content,
-    resolves ambiguous unit suffixes, enforces naming conventions, and ensures
-    uniqueness. It also produces a metadata table describing how each header
-    was interpreted and transformed.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        Input dataset whose column headers will be cleaned.
-
-    naming_style : {"snake_case", "camelCase", "Title Case"}, optional
-        Naming convention to apply to cleaned headers.
-
-    preserve_units : bool, optional
-        If True, detected units are appended to the cleaned variable name.
-
-    extract_additional : bool, optional
-        Reserved for future use. Included for API stability.
-
-    no_units_in_header : bool, optional
-        If True, unit detection is skipped entirely.
-
-    Returns
-    -------
-    cleaned_df : pandas.DataFrame
-        A copy of the input DataFrame with cleaned and standardized column names.
-
-    summary : dict
-        {
-            "changed": {old_name: new_name},
-            "unchanged": [list of unchanged headers],
-            "warnings": [list of soft validation messages],
-            "header_metadata": {original_header: metadata_dict}
-        }
-
-    summary_df : pandas.DataFrame
-        A table describing variable names, detected units, and final headers.
-
-    Notes
-    -----
-    - Hard validation errors (e.g., invalid naming_style) raise exceptions.
-    - Soft validation issues (e.g., empty headers, failed parsing) appear in
-      summary["warnings"] but do not stop execution.
+    This version:
+        - protects units from snake_case
+        - normalizes units to CF-style ASCII format
+        - extracts units before casing
+        - reattaches units as: variable_name (units)
+        - ensures reversibility and artifact safety
     """
 
-
     # -----------------------------------------------------
-    # 1. VALIDATION - Hard Errors (A, B, C…)
+    # 1. VALIDATION - Hard Errors
     # -----------------------------------------------------
-    # A. df must be a DataFrame
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Input must be a pandas DataFrame.")
 
-    # B. naming_style must be valid
     if naming_style not in {"snake_case", "camelCase", "Title Case"}:
         raise ValueError(
             "naming_style must be one of: 'snake_case', 'camelCase', 'Title Case'."
         )
 
     # -----------------------------------------------------
-    # 2. VALIDATION - Soft Checks (A, B, C…)
+    # 2. SOFT WARNINGS
     # -----------------------------------------------------
-    warnings = []  # user‑friendly issues that do not stop execution
+    warnings = []
 
-    # (No soft checks needed before processing - all soft issues occur per‑column)
+    AMBIGUOUS_UNITS = {"m", "g", "s", "%", "h", "l"}
 
     # -----------------------------------------------------
-    # 3. CORE PROCESSING
+    # 4. UNIT DETECTION
     # -----------------------------------------------------
-    UNIT_MAP = {
-        # -----------------------------
-        # CTD dataset units
-        # -----------------------------
-        "deg c": "degc",                 # Temperature, Potential Temperature
-        "degc": "degc",                  # Temperature, Potential Temperature
-        "psu": "psu",                    # Practical Salinity
-        "db": "db",                      # Pressure (strain gauge)
-        "ms/cm": "ms_cm",                # Conductivity
-        "kg/m^3": "kg_m_3",              # Density, Sigma-theta Density
-        "10^-8 m^3/kg": "1e-8_m3_kg",    # Specific Volume Anomaly
-        "ml/l": "ml_l",                  # Dissolved Oxygen (ml/l)
-        "umol/kg": "umol_kg",            # Dissolved Oxygen (umol/kg)
-        "% saturation": "percent_sat",   # Oxygen Saturation
-        "%sat": "percent_sat",           # Oxygen Saturation
-        "mg/m^3": "mg_m_3",              # CDOM Fluorescence, Chlorophyll Fluorescence
-        "1/m": "1_m",                    # Beam Attenuation
-        "umol photons/m^2/sec": "umol_photons_m2_s",  # PAR / Irradiance
-        "%": "percent",                  # Beam Transmission, Oxygen Saturation
-
-        # -----------------------------
-        # CEOS common water chemistry
-        # -----------------------------
-        "mg/l": "mg_l",                  # nutrients, ions, TSS
-        "ug/l": "ug_l",                  # chlorophyll, trace metals
-        "umol/l": "umol_l",              # nutrients (NO3, PO4, SiO2)
-        "um": "um",                      # nutrients (NO3, PO4, SiO2)
-        "mg/m2": "mg_m2",                # sedimentation, benthic flux, chlorophyll-a
-        
-        
-
-        # -----------------------------
-        # Atmospheric / meteorological
-        # -----------------------------
-        "m/s": "m_s",                    # wind speed
-        "km/h": "km_h",                  # wind speed (alternate)
-        "kpa": "kpa",                    # air pressure
-        "hpa": "hpa",                    # atmospheric pressure
-        "w/m^2": "w_m2",                 # radiation
-        "mm": "mm",                      # precipitation
-        "%rh": "percent_rh",             # relative humidity
-        "ppm": "ppm",                    # CO2, CH4
-
-        # -----------------------------
-        # Hydrology / cryosphere
-        # -----------------------------
-        "cm": "cm",                      # snow depth, ice thickness
-        "ppt": "ppt",                    # legacy salinity
-        "mwe": "mwe",                    # water equivalent
-
-        # -----------------------------
-        # Optics
-        # -----------------------------
-        "m^-1": "m_neg1",                # attenuation coefficients
-        "sr^-1": "sr_neg1",              # radiance
-        "nm": "nm",                      # wavelengths
-
-        # -----------------------------
-        # Biology
-        # -----------------------------
-        "cells/ml": "cells_ml",          # phytoplankton
-        "mg c/m^3": "mg_c_m3",           # biomass
-        "#/l": "count_l",                # zooplankton counts
-    }
-
-
-    AMBIGUOUS_UNITS = {
-        "m",   # meter (Depth, Height)
-        "g",   # gram (Weight_g)
-        "s",   # seconds (Time_s)
-        "%",   # percent (Saturation, Transmission)
-        "h",   # hours (Time_h)
-        "l",   # liter (Volume_l)
-    }
-
-
     def detect_units(text):
-        lower = text.lower()
+        # Prefer bracketed units
         bracket_match = re.findall(r"\[(.*?)\]|\((.*?)\)", text)
         if bracket_match:
             content = next(filter(None, bracket_match[0]))
             return content.strip()
+
+        # Fallback: UNIT_MAP search
+        lower = text.lower()
         for raw_unit in UNIT_MAP:
             if raw_unit in lower:
                 return raw_unit
+
         return None
 
+    # -----------------------------------------------------
+    # 5. VARIABLE NAME CLEANING
+    # -----------------------------------------------------
     def clean_variable_name(name):
         name = name.lower()
         name = re.sub(r"[^a-z0-9]+", "_", name)
         name = re.sub(r"_+", "_", name).strip("_")
         return name
 
+    # -----------------------------------------------------
+    # 6. PROCESS EACH HEADER
+    # -----------------------------------------------------
     original = list(df.columns)
     cleaned = []
     metadata = {}
 
     for raw in original:
 
-        # Handle empty or invalid headers
+        # Handle empty headers
         if not isinstance(raw, str) or raw.strip() == "":
             fallback = "unnamed_column"
             cleaned.append(fallback)
@@ -198,43 +138,40 @@ def clean_headers(
             continue
 
         try:
+            # ASCII normalize
             new = unicodedata.normalize("NFKD", raw)
             new = new.encode("ascii", "ignore").decode("ascii")
 
-            # Detect units
+            # -----------------------------
+            # UNIT EXTRACTION
+            # -----------------------------
             raw_units = None if no_units_in_header else detect_units(new)
             cleaned_units = None
             units_raw_original = None
 
             if raw_units:
-                cleaned_units = UNIT_MAP.get(raw_units.lower(), raw_units.lower())
+                # Normalize raw unit string
+                normalized = normalize_unit_string(raw_units)
+                cleaned_units = UNIT_MAP.get(raw_units.lower(), normalized)
+
+                # Capture exact raw match
                 match = re.search(re.escape(raw_units), new, flags=re.IGNORECASE)
                 if match:
                     units_raw_original = match.group(0)
 
+            # Remove units from variable name
             variable = new
             if raw_units:
                 variable = re.sub(re.escape(raw_units), "", variable, flags=re.IGNORECASE)
 
+            # Remove bracketed content
             variable = re.sub(r"\[[^\]]*\]|\([^\)]*\)", "", variable)
             variable = variable.strip().rstrip(",")
 
+            # Clean variable name
             variable_clean = clean_variable_name(variable)
 
-            # Detect if cleaned variable already ends with a known cleaned unit (multi-token aware)
-            if cleaned_units is None:
-                tokens = variable_clean.split("_")
-                # Try suffixes of length 1, 2, 3, ... up to full length
-                for i in range(1, len(tokens) + 1):
-                    suffix = "_".join(tokens[-i:])
-                    if suffix in UNIT_MAP.values():
-                        cleaned_units = suffix
-                        variable_clean = "_".join(tokens[:-i])
-                        break
-
-
-
-            # Ambiguous units
+            # Ambiguous unit suffixes
             if cleaned_units is None:
                 tokens = variable_clean.split("_")
                 last = tokens[-1]
@@ -242,16 +179,25 @@ def clean_headers(
                     cleaned_units = last
                     variable_clean = "_".join(tokens[:-1])
 
-            # Build final header
-            header = variable_clean
+            # -----------------------------
+            # FINAL HEADER ASSEMBLY
+            # -----------------------------
             if preserve_units and cleaned_units:
-                header = f"{header}_{cleaned_units}"
+                header = f"{variable_clean} ({cleaned_units})"
+            else:
+                header = variable_clean
 
+            # Naming style
             if naming_style == "camelCase":
-                parts = header.split("_")
+                parts = variable_clean.split("_")
                 header = parts[0] + "".join(p.capitalize() for p in parts[1:])
+                if preserve_units and cleaned_units:
+                    header = f"{header} ({cleaned_units})"
+
             elif naming_style == "Title Case":
-                header = " ".join(p.capitalize() for p in header.split("_"))
+                header = " ".join(p.capitalize() for p in variable_clean.split("_"))
+                if preserve_units and cleaned_units:
+                    header = f"{header} ({cleaned_units})"
 
             if header == "":
                 header = "unnamed_column"
@@ -278,7 +224,9 @@ def clean_headers(
             }
             warnings.append(f"Failed to clean header '{raw}': {str(e)}")
 
-    # Ensure uniqueness
+    # -----------------------------------------------------
+    # 7. ENSURE UNIQUENESS
+    # -----------------------------------------------------
     final = []
     seen = {}
     for name in cleaned:
@@ -290,7 +238,7 @@ def clean_headers(
             final.append(f"{name}_{seen[name]}")
 
     # -----------------------------------------------------
-    # 4. SUMMARY
+    # 8. SUMMARY
     # -----------------------------------------------------
     changed = {}
     unchanged = []
@@ -309,14 +257,17 @@ def clean_headers(
     }
 
     # -----------------------------------------------------
-    # 5. SUMMARY DATAFRAME
+    # 9. SUMMARY DATAFRAME
     # -----------------------------------------------------
-    summary_df = pd.DataFrame(metadata).transpose().reset_index().rename(
-        columns={"index": "original_header"}
+    summary_df = (
+        pd.DataFrame(metadata)
+        .transpose()
+        .reset_index()
+        .rename(columns={"index": "original_header"})
     )
 
     # -----------------------------------------------------
-    # 6. RETURN
+    # 10. RETURN
     # -----------------------------------------------------
     cleaned_df = df.copy()
     cleaned_df.columns = final

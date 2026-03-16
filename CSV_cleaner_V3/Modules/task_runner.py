@@ -78,7 +78,13 @@ def _handle_rvq_output(filename, summary_df):
 def _run_single_file(task_func, renderer, filename, df, kwargs):
 
     # Save undo history
-    st.session_state.history_stack[filename].append(df.copy())
+    st.session_state.history_stack[filename].append(
+    {
+        "df": df.copy(),
+        "row_map": st.session_state.row_map[filename].copy()
+    }
+)
+
     st.session_state.redo_stack[filename] = []
 
     # Run the task safely

@@ -1,6 +1,6 @@
 import streamlit as st
 from Modules.tasks import TASK_DICT
-from Modules.ui_utils import big_caption
+from Modules.utils.ui_utils import big_caption
 
 
 def what_to_do_widgets(allowed_tasks=None):

@@ -194,6 +194,7 @@ def detect_header_rows(df):
 def basic_cleaning(
     df: pd.DataFrame,
     *,
+    filename=None,
     nans=None,
     naming_style="snake_case",
     preserve_units=True,

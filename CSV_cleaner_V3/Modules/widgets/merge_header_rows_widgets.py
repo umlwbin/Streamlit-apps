@@ -1,67 +1,75 @@
 import streamlit as st
 
-def merge_header_rows_widget(df):
+def merge_header_rows_widget():
     """
-    Widget for selecting metadata rows (from the original file) to merge into the header.
+    Widget for selecting a single metadata row to merge into the header.
 
-    Returns
-    -------
-    dict or None
-        {
-            "filename": str,
-            "row_map": list[int],
-            "row1": int or None,
-            "row2": int or None
-        }
-        or None if the user has not completed the widget.
+    Notes
+    -----
+    - The preview uses *0-based* row numbers for simplicity.
+    - The task function expects *1-based* original row numbers (to match row_map).
+    - We convert 0-based → 1-based before returning.
+    - Only the first file is previewed, but the selected row will be applied
+      to *all* files when the task runner loops over them.
+
+    Offline / non-Streamlit usage
+    ------------------------------
+    If running this task outside Streamlit, simply pass:
+
+        {"row": <1-based row number>}
+
+    directly to the task function.
     """
-
-    st.markdown("""
-        This tool merges up to two rows into the header row.  
-        Row numbers refer to the **original file**, not the preview index.
-    """)
 
     # ---------------------------------------------------------
-    # Retrieve filename + row_map
+    # 1. Select the first file for preview only
     # ---------------------------------------------------------
     filenames = list(st.session_state.current_data.keys())
-    filename = filenames[0]  # Only one file active at a time
-    row_map = st.session_state.row_map[filename]
+    if not filenames:
+        st.warning("No files loaded.")
+        return None
+
+    preview_filename = filenames[0]
+    df = st.session_state.current_data[preview_filename]
 
     # ---------------------------------------------------------
-    # Preview with ORIGINAL row numbers
+    # 2. Build a simple 0-based preview
     # ---------------------------------------------------------
     preview = df.copy()
-    preview.insert(0, "original_row", row_map)
+    preview.insert(0, "row_index", range(len(df)))
 
-    st.markdown("##### Preview (showing original row numbers in the first column)")
+    st.markdown("#### Table Preview")
     st.dataframe(preview.head(5), use_container_width=True)
 
     # ---------------------------------------------------------
-    # Build dropdown options from ORIGINAL row numbers
+    # 3. Row selection (0-based)
     # ---------------------------------------------------------
-    row_options = [str(orig) for orig in row_map]
+    st.markdown("#### Select the row to merge into the header")
 
-    st.markdown("##### Select metadata rows to merge (use original row numbers)")
-    c1, c2 = st.columns(2)
+    row_options = list(range(len(df)))  # 0-based
+    selected_row_0_based = st.selectbox(
+        "Row to merge (0-based index)",
+        ["None"] + row_options
+    )
 
-    row1 = c1.selectbox("First row to merge", ["None"] + row_options)
-    row2 = c2.selectbox("Second row to merge (optional)", ["None"] + row_options)
-
-    row1 = int(row1) if row1 != "None" else None
-    row2 = int(row2) if row2 != "None" else None
-
-    st.markdown("---")
+    # Convert to int or None
+    if selected_row_0_based == "None":
+        selected_row_0_based = None
 
     # ---------------------------------------------------------
-    # Trigger
+    # 4. Convert 0-based → 1-based for the task
     # ---------------------------------------------------------
-    if st.button("Merge Header Rows", type="primary"):
+    if selected_row_0_based is not None:
+        selected_row_1_based = selected_row_0_based + 1
+    else:
+        selected_row_1_based = None
+
+    # ---------------------------------------------------------
+    # 5. Trigger
+    # ---------------------------------------------------------
+    if st.button("Merge Header Row", type="primary"):
         return {
-            "filename": filename,
-            "row_map": row_map,   # <-- REQUIRED for the task
-            "row1": row1,
-            "row2": row2
+            "row": selected_row_1_based
         }
 
     return None

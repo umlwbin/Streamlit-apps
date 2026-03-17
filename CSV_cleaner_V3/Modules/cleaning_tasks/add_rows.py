@@ -3,6 +3,7 @@ import pandas as pd
 def add_row(
     df: pd.DataFrame,
     *,
+    filename=None,
     row_values=None,
     as_header=False,
     auto_headers=False

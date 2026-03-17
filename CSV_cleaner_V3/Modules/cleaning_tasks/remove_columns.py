@@ -4,6 +4,7 @@ import pandas as pd
 def remove_columns(
     df: pd.DataFrame,
     *,
+    filename=None,
     variables_to_remove
 ):
     """

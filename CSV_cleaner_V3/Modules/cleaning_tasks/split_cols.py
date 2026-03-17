@@ -5,6 +5,7 @@ import re
 def split_column(
     df: pd.DataFrame,
     *,
+    filename=None,
     column,
     delimiters
 ):

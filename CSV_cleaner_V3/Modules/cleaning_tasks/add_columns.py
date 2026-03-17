@@ -1,6 +1,7 @@
 import pandas as pd
 
-def add_cols(df: pd.DataFrame, *, variable_names, values, columns):
+def add_cols(df: pd.DataFrame, *, filename=None, variable_names, values, columns):
+
     """
     Add one or more new columns to a DataFrame at user-selected positions.
 

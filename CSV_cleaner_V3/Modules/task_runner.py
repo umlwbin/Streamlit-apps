@@ -78,17 +78,17 @@ def _handle_rvq_output(filename, summary_df):
 def _run_single_file(task_func, renderer, filename, df, kwargs):
 
     # Save undo history
-    st.session_state.history_stack[filename].append(
-    {
-        "df": df.copy(),
+    st.session_state.history_stack[filename].append({
+        "df": st.session_state.current_data[filename].copy(),
         "row_map": st.session_state.row_map[filename].copy()
-    }
-)
-
+    })
     st.session_state.redo_stack[filename] = []
 
+    # Always use the authoritative DataFrame
+    current_df = st.session_state.current_data[filename].copy()
+
     # Run the task safely
-    result, error_summary = _safe_execute(task_func, df.copy(), **kwargs)
+    result, error_summary = _safe_execute(task_func, current_df, filename=filename, **kwargs)
 
     if error_summary:
         show_summary(error_summary, renderer=renderer, title="Error", filename=filename)
@@ -120,6 +120,8 @@ def _run_single_file(task_func, renderer, filename, df, kwargs):
         st.success(f"Task applied successfully to {filename}")
 
     st.session_state.task_applied = True
+    st.session_state.merge_header_rows_submitted = False
+
 
 
 # ---------------------------------------------------------
@@ -127,9 +129,7 @@ def _run_single_file(task_func, renderer, filename, df, kwargs):
 # ---------------------------------------------------------
 def _run_multi_file(task_func, renderer, kwargs):
 
-    result, error_summary = _safe_execute(
-        task_func, st.session_state.current_data, **kwargs
-    )
+    result, error_summary = _safe_execute(task_func, st.session_state.current_data, **kwargs)
 
     if error_summary:
         show_summary(error_summary, renderer=renderer, title="Error", filename="merged_output.csv")

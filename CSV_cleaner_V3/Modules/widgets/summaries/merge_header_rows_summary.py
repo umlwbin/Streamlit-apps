@@ -1,23 +1,30 @@
 import streamlit as st
-import pandas as pd
 
 def render_merge_header_rows_summary(summary, filename=None):
     """
     Summary renderer for the merge_header_rows task.
+
+    Displays:
+        - The original row number that was merged (1-based)
+        - Any warnings generated during the task
+
+    Internal details such as row_map are intentionally not shown.
     """
 
-    st.success("Header Row Merge Completed")
+    st.markdown("### Merge Header Rows — Summary")
 
-    st.write("### Rows Merged")
+    # 1. Merged row
+    merged_row = summary.get("merged_row")
+    if merged_row is not None:
+        st.write(f"**Merged original row:** {merged_row}")
+    else:
+        st.write("**Merged original row:** None")
 
-    row1 = summary.get("first_merged_row")
-    row2 = summary.get("second_merged_row")
-
-    st.write(f"- **First merged row:** {row1 if row1 is not None else 'None'}")
-    st.write(f"- **Second merged row:** {row2 if row2 is not None else 'None'}")
-
+    # 2. Warnings
     warnings = summary.get("warnings", [])
     if warnings:
-        st.write("### Warnings")
-        for msg in warnings:
-            st.warning(msg)
+        st.warning("Warnings were generated during this task:")
+        for w in warnings:
+            st.write(f"- {w}")
+    else:
+        st.success("No warnings.")

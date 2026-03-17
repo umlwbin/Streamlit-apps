@@ -4,6 +4,7 @@ import pandas as pd
 def assign_datatype(
     df: pd.DataFrame,
     *,
+    filename=None,
     type_mapping
 ):
     """

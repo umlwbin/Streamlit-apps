@@ -5,6 +5,7 @@ import re
 def apply_rvq_rules(
     df: pd.DataFrame,
     *,
+    filename=None,
     columns,
     rules,
     keep_original=True,

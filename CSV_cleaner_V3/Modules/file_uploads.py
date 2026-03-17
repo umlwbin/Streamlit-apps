@@ -225,6 +225,8 @@ def fileuploadfunc():
             # -------------------------------------------------
             st.session_state.row_map[filename] = list(range(len(df)))
 
+
+
             # -------------------------------------------------
             # STEP 4: Fix completely empty columns
             # -------------------------------------------------

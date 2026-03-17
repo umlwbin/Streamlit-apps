@@ -315,7 +315,7 @@ DISPATCH = {
 }
 
 
-def reshape(df: pd.DataFrame, *, operation, **kwargs):
+def reshape(df: pd.DataFrame, *, filename=None, operation, **kwargs):
     """
     Dispatch reshape operations: transpose, wide_to_long, long_to_wide.
 

@@ -268,11 +268,12 @@ def get_task_inputs(task_name):
         st.error("No files loaded.")
         return None
 
-    df = st.session_state.current_data[filenames[0]]
-
-    if task_name == "Tidy Data Checker":
+    # Tasks that should NOT receive df
+    if task_name in ["Tidy Data Checker", "🧪 Merge Header Rows"]:
         return widget()
 
+    # All other tasks receive df
+    df = st.session_state.current_data[filenames[0]]
     return widget(df)
 
 

@@ -53,6 +53,7 @@ def normalize_unit_string(unit_raw):
 def clean_headers(
     df: pd.DataFrame,
     *,
+    filename=None,
     naming_style="snake_case",
     preserve_units=True,
     no_units_in_header=False

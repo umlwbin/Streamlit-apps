@@ -4,34 +4,35 @@ import pandas as pd
 def remove_metadata_rows(
     df: pd.DataFrame,
     *,
-    identifiers,
     filename=None,
-    metadata_extract=None
+    identifiers,
+    metadata_extract=None,
+    **kwargs
 ):
     """
-    Remove metadata rows that appear above the true header row.
+    Detect and remove metadata rows that appear above the true header row.
 
     This task:
-    - detects the header row using user-provided identifiers
-    - removes all rows above the header (metadata rows)
-    - promotes the detected header row to column names
-    - ensures column names are unique
-    - optionally extracts metadata values into new columns
-    - returns a preview of the metadata rows for UI display
+        - Detects the header row using user-provided identifiers.
+        - Removes all rows above the detected header (metadata rows).
+        - Promotes the detected header row to column names.
+        - Ensures column names are unique.
+        - Optionally extracts metadata values into new columns.
+        - Returns a preview of metadata rows for UI display.
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df : pd.DataFrame
         Input dataset that may contain metadata rows above the header.
 
     identifiers : list[str]
         Strings that must appear in the true header row.
         Matching is case-insensitive and whitespace-trimmed.
 
-    filename : str, optional
-        Name of the file being processed (for provenance).
+    filename : str or None
+        Name of the file being processed (for provenance only).
 
-    metadata_extract : dict or None, optional
+    metadata_extract : dict or None
         Mapping of new column name → extraction instructions:
             {
                 "new_col": {
@@ -43,7 +44,7 @@ def remove_metadata_rows(
 
     Returns
     -------
-    cleaned_df : pandas.DataFrame
+    cleaned_df : pd.DataFrame
         DataFrame with metadata rows removed and a clean header applied.
 
     summary : dict
@@ -54,35 +55,34 @@ def remove_metadata_rows(
         }
 
     summary_df : None
-        Always None for this task (included for template consistency).
+        Always None for this task.
 
     Notes
     -----
-    - Hard validation errors (e.g., invalid identifiers) raise exceptions.
-    - Soft validation issues (e.g., missing metadata rows) appear in
-      summary["warnings"] but do not stop execution.
+    - Hard validation errors raise exceptions.
+    - Soft validation issues appear in summary["warnings"].
+    - This task does NOT use row_map.
     """
 
     # -----------------------------------------------------
-    # 1. VALIDATION - Hard Errors (A, B, C…)
+    # 1. HARD VALIDATION
     # -----------------------------------------------------
-
-    # A. df must be a DataFrame
     if not isinstance(df, pd.DataFrame):
         raise ValueError("df must be a pandas DataFrame.")
 
-    # B. identifiers must be a list of strings
     if not isinstance(identifiers, list) or not all(isinstance(x, str) for x in identifiers):
         raise ValueError("identifiers must be a list of strings.")
 
-    # C. metadata_extract must be dict or None
+    if len(identifiers) == 0:
+        raise ValueError("At least one identifier must be provided.")
+
     if metadata_extract is not None and not isinstance(metadata_extract, dict):
         raise ValueError("metadata_extract must be a dictionary or None.")
 
     cleaned_df = df.copy()
 
     # -----------------------------------------------------
-    # 2. VALIDATION - Soft Checks (A, B, C…)
+    # 2. SOFT VALIDATION
     # -----------------------------------------------------
     warnings = []
 
@@ -131,6 +131,9 @@ def remove_metadata_rows(
 
     # Extract metadata rows
     metadata_df = cleaned_df.iloc[:header_index].copy()
+
+    if metadata_df.empty:
+        warnings.append("No metadata rows found above the detected header.")
 
     # Promote header row
     new_header = cleaned_df.iloc[header_index].astype(str).tolist()

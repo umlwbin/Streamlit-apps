@@ -5,6 +5,7 @@ import numpy as np
 def parse_dates(
     df: pd.DataFrame,
     *,
+    filename=None,
     date_time_col,
     extract_time=True
 ):

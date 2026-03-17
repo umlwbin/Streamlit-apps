@@ -6,7 +6,7 @@ def render_merge_header_rows_summary(summary, filename=None):
     merged_row = summary.get("merged_row")
 
     if merged_row is not None:
-        st.write(f"**Merged original row:** {merged_row}")
+        #st.write(f"**Merged original row:** {merged_row}")
 
         # Preview index = original row - 1
         preview_index = merged_row - 1

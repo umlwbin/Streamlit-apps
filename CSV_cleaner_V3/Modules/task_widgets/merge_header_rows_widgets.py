@@ -76,7 +76,9 @@ def merge_header_rows_widget():
     if st.button("Merge Header Row", type="primary"):
         st.session_state._merge_trigger = True
         return {
-            "row": selected_row_1_based
+            "row": selected_row_1_based,
+            "preview_index": selected_row_0_based
+            
         }
 
     return None

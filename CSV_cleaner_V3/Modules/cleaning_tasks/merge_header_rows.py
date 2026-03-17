@@ -126,6 +126,7 @@ def merge_header_rows(
         "merged_row": row,
         "row_map": new_row_map,
     }
+    summary["preview_index"] = kwargs.get("preview_index")
 
     if warnings:
         summary["warnings"] = warnings

@@ -4,14 +4,13 @@ def render_merge_header_rows_summary(summary, filename=None):
     st.markdown("##### Merge Header Rows - Summary")
 
     merged_row = summary.get("merged_row")
+    preview_index = summary.get("preview_index")
 
     if merged_row is not None:
-        #st.write(f"**Merged original row:** {merged_row}")
-
-        # Compute preview index directly
-        preview_index = merged_row - 1
-        st.write(f"**Preview row index:** {preview_index}")
-
+        if preview_index is not None:
+            st.write(f"**Preview row index:** {preview_index}")
+        else:
+            st.write("**Preview row index:** Not available")
     else:
         st.write("**Merged original row:** None")
 

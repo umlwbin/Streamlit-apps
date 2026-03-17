@@ -151,15 +151,6 @@ def run_csv_curation_studio():
 
 
 
-        # ---------------------------------------------------------
-        # RESTART BUTTON
-        # ---------------------------------------------------------
-        st.markdown("---")
-        if st.button("🔄 Restart Application", type="secondary"):
-            restart_app()
-            st.rerun()
-
-
         # -------------------------------------------------
         # DOWNLOAD SECTION
         # -------------------------------------------------
@@ -174,6 +165,17 @@ def run_csv_curation_studio():
                 st.caption("These files update automatically after each task.")
                 download.download_output()
                 download.excel_download()
+
+
+        # ---------------------------------------------------------
+        # RESTART BUTTON
+        # ---------------------------------------------------------
+        st.markdown("---")
+        if st.button("🔄 Restart Application", type="secondary"):
+            restart_app()
+            st.rerun()
+
+
 
     # -----------------------------------------------------
     # TAB 2: LIVE PREVIEW

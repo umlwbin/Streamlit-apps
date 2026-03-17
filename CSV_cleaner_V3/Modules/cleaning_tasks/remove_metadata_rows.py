@@ -1,6 +1,5 @@
 import pandas as pd
 
-
 def remove_metadata_rows(
     df: pd.DataFrame,
     *,
@@ -17,51 +16,8 @@ def remove_metadata_rows(
         - Removes all rows above the detected header (metadata rows).
         - Promotes the detected header row to column names.
         - Ensures column names are unique.
-        - Optionally extracts metadata values into new columns.
+        - Optionally extracts metadata values into new columns using rule-based cleaning.
         - Returns a preview of metadata rows for UI display.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Input dataset that may contain metadata rows above the header.
-
-    identifiers : list[str]
-        Strings that must appear in the true header row.
-        Matching is case-insensitive and whitespace-trimmed.
-
-    filename : str or None
-        Name of the file being processed (for provenance only).
-
-    metadata_extract : dict or None
-        Mapping of new column name → extraction instructions:
-            {
-                "new_col": {
-                    "row": int,          # row index within metadata_df
-                    "col_index": int,    # index of non-empty cell to extract
-                    "edit": str or None  # optional user override
-                }
-            }
-
-    Returns
-    -------
-    cleaned_df : pd.DataFrame
-        DataFrame with metadata rows removed and a clean header applied.
-
-    summary : dict
-        {
-            "metadata_preview": list[dict],
-            "filename": str or None,
-            "warnings": list[str]
-        }
-
-    summary_df : None
-        Always None for this task.
-
-    Notes
-    -----
-    - Hard validation errors raise exceptions.
-    - Soft validation issues appear in summary["warnings"].
-    - This task does NOT use row_map.
     """
 
     # -----------------------------------------------------
@@ -86,17 +42,14 @@ def remove_metadata_rows(
     # -----------------------------------------------------
     warnings = []
 
-    # Normalize identifiers
     identifiers_norm = [x.strip().lower() for x in identifiers]
 
-    # Convert all cells to lowercase strings for matching
     df_str = cleaned_df.astype(str).applymap(lambda x: x.strip().lower())
 
     # -----------------------------------------------------
     # 3. CORE PROCESSING
     # -----------------------------------------------------
 
-    # Helper: ensure unique column names
     def make_unique(names):
         seen = {}
         unique = []
@@ -117,7 +70,6 @@ def remove_metadata_rows(
             header_index = idx
             break
 
-    # If no header row found → soft warning, return unchanged
     if header_index is None:
         warnings.append(
             "No header row matched the provided identifiers. Dataset returned unchanged."
@@ -129,7 +81,6 @@ def remove_metadata_rows(
         }
         return cleaned_df.copy(), summary, None
 
-    # Extract metadata rows
     metadata_df = cleaned_df.iloc[:header_index].copy()
 
     if metadata_df.empty:
@@ -146,19 +97,20 @@ def remove_metadata_rows(
     # Build metadata preview
     preview = metadata_df.head(10).to_dict(orient="records")
 
-    # Extract metadata into new columns
+    # -----------------------------------------------------
+    # 3B. APPLY RULE-BASED METADATA EXTRACTION
+    # -----------------------------------------------------
     if metadata_extract:
         for new_col, info in metadata_extract.items():
 
-            # Validate extraction instructions
             if "row" not in info or "col_index" not in info:
                 warnings.append(f"Metadata extraction for '{new_col}' is missing required keys.")
                 continue
 
             row_idx = info["row"]
             col_index = info["col_index"]
+            rules = info.get("rules", {})
 
-            # Ensure row exists
             if row_idx >= len(metadata_df):
                 warnings.append(
                     f"Metadata extraction row {row_idx} out of range for '{new_col}'."
@@ -168,17 +120,29 @@ def remove_metadata_rows(
             row = metadata_df.iloc[row_idx]
             non_empty = [cell for cell in row.tolist() if str(cell).strip() != ""]
 
-            # Ensure col_index exists
             if col_index >= len(non_empty):
                 warnings.append(
                     f"Metadata extraction col_index {col_index} out of range for '{new_col}'."
                 )
                 continue
 
-            raw_value = non_empty[col_index]
-            final_value = info.get("edit") or raw_value
+            raw_value = str(non_empty[col_index])
+            value = raw_value
 
-            cleaned_df[new_col] = final_value
+            # -----------------------------
+            # Apply cleaning rules
+            # -----------------------------
+            if rules.get("strip_whitespace"):
+                value = value.strip()
+
+            if rules.get("remove_direction"):
+                for d in ["N", "S", "E", "W"]:
+                    value = value.replace(d, "").replace(d.lower(), "")
+
+            if rules.get("remove_degree_symbol"):
+                value = value.replace("°", "")
+
+            cleaned_df[new_col] = value
 
     # -----------------------------------------------------
     # 4. SUMMARY

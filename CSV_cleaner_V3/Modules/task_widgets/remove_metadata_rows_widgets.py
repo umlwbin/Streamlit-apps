@@ -19,7 +19,11 @@ def remove_metadata_rows_widget(df):
                 new_col_name: {
                     "row": int,
                     "col_index": int,
-                    "edit": str or None
+                    "rules": {
+                        "strip_whitespace": bool,
+                        "remove_direction": bool,
+                        "remove_degree_symbol": bool
+                    }
                 },
                 ...
             }
@@ -103,14 +107,32 @@ def remove_metadata_rows_widget(df):
                 if selected_value == "(none)":
                     continue
 
-                edited_value = st.text_input(
-                    "Edit extracted value (optional)",
-                    value=selected_value,
-                    key=f"edited_value_{row_idx}_{extract_i}"
+                # ---------------------------------------------------------
+                # NEW: Rule-based cleaning instead of manual editing
+                # ---------------------------------------------------------
+                st.markdown("**Cleaning rules**")
+
+                strip_ws = st.checkbox(
+                    "Strip leading/trailing whitespace",
+                    value=True,
+                    key=f"strip_ws_{row_idx}_{extract_i}"
                 )
 
-                st.info(f"Final value to extract: **{edited_value}**")
+                remove_dir = st.checkbox(
+                    "Remove direction letters (N, S, E, W)",
+                    value=False,
+                    key=f"remove_dir_{row_idx}_{extract_i}"
+                )
 
+                remove_deg = st.checkbox(
+                    "Remove degree symbol (°)",
+                    value=False,
+                    key=f"remove_deg_{row_idx}_{extract_i}"
+                )
+
+                # ---------------------------------------------------------
+                # Column name for extracted value
+                # ---------------------------------------------------------
                 new_col = st.text_input(
                     f"New column name for this value",
                     key=f"newcol_{row_idx}_{extract_i}"
@@ -120,9 +142,17 @@ def remove_metadata_rows_widget(df):
                     metadata_extract[new_col] = {
                         "row": row_idx,
                         "col_index": non_empty.index(selected_value),
-                        "edit": edited_value if edited_value != selected_value else None
+                        "rules": {
+                            "strip_whitespace": strip_ws,
+                            "remove_direction": remove_dir,
+                            "remove_degree_symbol": remove_deg,
+                        }
                     }
-                    st.success(f"Will extract: **{edited_value}** → column **{new_col}**")
+
+                    st.success(
+                        f"Will extract: **{selected_value}** → column **{new_col}** "
+                        f"(rules applied)"
+                    )
 
     # ---------------------------------------------------------
     # Step 4 - Confirmation button

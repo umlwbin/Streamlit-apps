@@ -77,3 +77,43 @@ def redo_last_task():
             # Restore redo state
             next_state = st.session_state.redo_stack[filename].pop()
             _restore_state(filename, next_state)
+
+
+
+# =========================================================
+# Restart app
+# =========================================================
+
+def restart_app():
+    """
+    Completely reset the application state:
+    - Remove all loaded files
+    - Clear all DataFrames and row_maps
+    - Clear all history stacks and summaries
+    - Reset task flags
+    """
+
+    # Remove all file-related state
+    st.session_state.original_data = {}
+    st.session_state.current_data = {}
+    st.session_state.row_map = {}
+
+    # Clear history and redo stacks
+    st.session_state.history_stack = {}
+    st.session_state.redo_stack = {}
+    st.session_state.task_history = {}
+
+    # Clear summaries and supplementary outputs
+    st.session_state.all_summaries = {}
+    st.session_state.supplementary_outputs = {}
+
+    # Reset flags
+    st.session_state.task_applied = False
+    st.session_state.merge_header_rows_submitted = False
+
+    # Optionally: clear any UI selections
+    st.session_state.selected_task = None
+    st.session_state.selected_file = None
+
+    # Force uploader widget to reset
+    st.session_state.uploader_key += 1

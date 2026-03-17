@@ -1,6 +1,6 @@
 import streamlit as st
 from Modules.utils.ui_utils import big_caption
-from Modules.widgets.headers_widgets import headers_widgets
+from Modules.task_widgets.headers_widgets import headers_widgets
 
 def tidy_data_widgets():
     """

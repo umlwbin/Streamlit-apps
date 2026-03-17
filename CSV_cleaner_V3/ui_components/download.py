@@ -10,7 +10,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 
 sys.path.append(f'{os.path.abspath(os.curdir)}/Modules')
-import session_initializer
+import state.session_initializer as session_initializer
 
 
 def download_output():

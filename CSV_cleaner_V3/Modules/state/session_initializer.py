@@ -2,29 +2,30 @@ import streamlit as st
 
 def init_session_state():
     default_values = {
-        # Data storage
+        # File data
         "original_data": {},      # filename → original df
         "current_data": {},       # filename → cleaned df
-        "task_history": {},       # filename → list of past tasks
-        "history_stack": {},      # filename → undo stack
-        "redo_stack": {},         # filename → redo stack
+        "row_map": {},            # filename → row_map list
 
-        # File upload state
-        "non_rectangular_files": set(),
+        # Undo/redo
+        "history_stack": {},      # filename → list of snapshots
+        "redo_stack": {},         # filename → list of snapshots
+        "task_history": {},       # filename → list of task names
+
+        # Upload state
+        "uploader_key": 0,
         "uploaded_files": [],
         "files_processed": False,
-
-        # Type selection (used in Assign Data Type)
-        "selected_types": {},
-
-        #when a task is applied
-        "task_applied": False,
-
-        # Widget flags (only keep the ones actually used)
-        "cleanupContinue": False,
+        "non_rectangular_files": set(),
 
         # Summaries
         "all_summaries": {},
+        "supplementary_outputs": {},
+
+        # Task flags
+        "task_applied": False,
+        "merge_header_rows_submitted": False,
+
     }
 
     for key, value in default_values.items():

@@ -118,13 +118,13 @@ remain in control and that every change is transparent and reversible.
 """
 
 
-
 # Output Path
 path = os.path.abspath(os.curdir)
 
 # Add Modules
 sys.path.append(f"{path}/Modules")
-import session_initializer
+import state.session_initializer as session_initializer
+
 
 
 # ---------------------------------------------------------
@@ -171,7 +171,7 @@ def fileuploadfunc():
         accept_multiple_files=True,
         type="csv",
         on_change=newUpload,
-        key="new_upload"
+        key=f"uploader_{st.session_state.uploader_key}"
     )
 
     # -----------------------------------------------------
@@ -223,8 +223,7 @@ def fileuploadfunc():
             # -------------------------------------------------
             # STEP 3: Initialize row_map BEFORE modifications
             # -------------------------------------------------
-            st.session_state.row_map[filename] = list(range(len(df)))
-
+            st.session_state.row_map[filename] = list(range(1, len(df) + 1))
 
 
             # -------------------------------------------------
@@ -242,27 +241,31 @@ def fileuploadfunc():
             # STEP 5: Promote header for rectangular files only
             # -------------------------------------------------
             if not file_has_metadata:
-
+                # Extract header row
                 header = df.iloc[0].astype(str).tolist()
 
+                # Replace empty header cells
                 header = [
                     h if str(h).strip() != "" else f"unnamed_{i}"
                     for i, h in enumerate(header)
                 ]
 
+                # Ensure uniqueness
                 header = make_unique_columns(header)
 
-                # Drop header row
-                df = df.iloc[1:].reset_index(drop=True)
-
-                # Update row_map
-                st.session_state.row_map[filename] = st.session_state.row_map[filename][1:]
-
+                # Apply header
                 df.columns = header
+
+                # Drop the header row from the data
+                df = df[1:].reset_index(drop=True)
+
+                # Update row_map: remove the first row because it became the header
+                st.session_state.row_map[filename] = st.session_state.row_map[filename][1:]
 
             else:
                 # Metadata-heavy file → generic column names
                 df.columns = [f"col_{i}" for i in range(df.shape[1])]
+
 
             # -------------------------------------------------
             # STEP 6: Store file in session state

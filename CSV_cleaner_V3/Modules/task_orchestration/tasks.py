@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Import task class
-from Modules.task_class import Task
+from Modules.task_orchestration.task_class import Task
 
 # ---------------------------------------------------------
 # Import processing functions
@@ -30,7 +30,7 @@ from Modules.cleaning_tasks import (
 # ---------------------------------------------------------
 # Import widgets
 # ---------------------------------------------------------
-from Modules.widgets import (
+from Modules.task_widgets import (
     add_columns_widgets,
     add_rows_widgets,
     remove_columns_widgets,
@@ -54,24 +54,24 @@ from Modules.widgets import (
 # ---------------------------------------------------------
 # Import summary renderers
 # ---------------------------------------------------------
-from Modules.widgets.summaries.split_column_summary import render_split_column_summary
-from Modules.widgets.summaries.add_column_summary import render_add_column_summary
-from Modules.widgets.summaries.add_row_summary import render_add_row_summary
-from Modules.widgets.summaries.assign_datatype_summary import render_assign_datatype_summary
-from Modules.widgets.summaries.headers_summary import render_clean_headers_summary
-from Modules.widgets.summaries.add_rvqs_summary import render_add_rvqs_summary
-from Modules.widgets.summaries.iso_summary import render_iso_summary
-from Modules.widgets.summaries.merge_date_time_summary import render_merge_date_time_summary
-from Modules.widgets.summaries.merge_files_summary import render_merge_files_summary
-from Modules.widgets.summaries.merge_header_rows_summary import render_merge_header_rows_summary
-from Modules.widgets.summaries.parse_dates_summary import render_parse_dates_summary
-from Modules.widgets.summaries.provincial_pivot_summary import render_provincial_pivot_summary
-from Modules.widgets.summaries.remove_columns_summary import render_remove_columns_summary
-from Modules.widgets.summaries.rename_summary import render_rename_summary
-from Modules.widgets.summaries.reorder_columns_summary import render_reorder_columns_summary
-from Modules.widgets.summaries.reshape_summary import render_reshape_summary
-from Modules.widgets.summaries.tidy_data_summary import render_tidy_data_summary
-from Modules.widgets.summaries.remove_metadata_rows_summary import render_remove_metadata_rows_summary
+from Modules.summaries.split_column_summary import render_split_column_summary
+from Modules.summaries.add_column_summary import render_add_column_summary
+from Modules.summaries.add_row_summary import render_add_row_summary
+from Modules.summaries.assign_datatype_summary import render_assign_datatype_summary
+from Modules.summaries.headers_summary import render_clean_headers_summary
+from Modules.summaries.add_rvqs_summary import render_add_rvqs_summary
+from Modules.summaries.iso_summary import render_iso_summary
+from Modules.summaries.merge_date_time_summary import render_merge_date_time_summary
+from Modules.summaries.merge_files_summary import render_merge_files_summary
+from Modules.summaries.merge_header_rows_summary import render_merge_header_rows_summary
+from Modules.summaries.parse_dates_summary import render_parse_dates_summary
+from Modules.summaries.provincial_pivot_summary import render_provincial_pivot_summary
+from Modules.summaries.remove_columns_summary import render_remove_columns_summary
+from Modules.summaries.rename_summary import render_rename_summary
+from Modules.summaries.reorder_columns_summary import render_reorder_columns_summary
+from Modules.summaries.reshape_summary import render_reshape_summary
+from Modules.summaries.tidy_data_summary import render_tidy_data_summary
+from Modules.summaries.remove_metadata_rows_summary import render_remove_metadata_rows_summary
 
 
 # ---------------------------------------------------------

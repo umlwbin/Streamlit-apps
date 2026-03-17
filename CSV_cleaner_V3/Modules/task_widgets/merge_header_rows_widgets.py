@@ -1,5 +1,7 @@
 import streamlit as st
 
+from Modules.utils.ui_utils import big_caption
+
 def merge_header_rows_widget():
     """
     Widget for selecting a single metadata row to merge into the header.
@@ -41,6 +43,11 @@ def merge_header_rows_widget():
     st.markdown("#### Table Preview")
     st.dataframe(preview.head(5), use_container_width=True)
 
+    if st.button("Reload Preview"):
+        st.rerun()
+
+    big_caption("If you plan to merge another row, click Reload Preview first to update the table.")
+
     # ---------------------------------------------------------
     # 3. Row selection (0-based)
     # ---------------------------------------------------------
@@ -56,18 +63,18 @@ def merge_header_rows_widget():
     if selected_row_0_based == "None":
         selected_row_0_based = None
 
-    # ---------------------------------------------------------
-    # 4. Convert 0-based → 1-based for the task
-    # ---------------------------------------------------------
+    # Convert preview index → original row number using row_map
     if selected_row_0_based is not None:
-        selected_row_1_based = selected_row_0_based + 1
+        selected_row_1_based = st.session_state.row_map[preview_filename][selected_row_0_based]
     else:
         selected_row_1_based = None
+
 
     # ---------------------------------------------------------
     # 5. Trigger
     # ---------------------------------------------------------
     if st.button("Merge Header Row", type="primary"):
+        st.session_state._merge_trigger = True
         return {
             "row": selected_row_1_based
         }

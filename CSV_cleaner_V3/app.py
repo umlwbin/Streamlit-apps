@@ -1,10 +1,15 @@
 import streamlit as st
 
-from Modules import session_initializer, file_uploads, download, tasks, task_runner
-from Modules.widgets import task_selector, preview, sidebar_intro
-from Modules.widgets.toolbar import toolbar
-import pandas as pd
+from Modules.state import session_initializer
+from Modules.state.undo_redo import restart_app
+from Modules.upload import file_uploads
+from ui_components import download, sidebar_intro, preview
+from Modules.task_orchestration import tasks, task_runner, task_selector
+from ui_components.toolbar import toolbar
 
+
+
+import pandas as pd
 
 # ---------------------------------------------------------
 # PAGE CONFIG
@@ -142,6 +147,18 @@ def run_csv_curation_studio():
                 # Show combined metadata after tasks run
                 if st.session_state.task_applied:
                     show_combined_metadata()
+
+
+
+
+        # ---------------------------------------------------------
+        # RESTART BUTTON
+        # ---------------------------------------------------------
+        st.markdown("---")
+        if st.button("🔄 Restart Application", type="secondary"):
+            restart_app()
+            st.rerun()
+
 
         # -------------------------------------------------
         # DOWNLOAD SECTION

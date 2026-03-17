@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-from Modules import tasks
-from Modules.widgets.summaries.summary_display import show_summary
+from Modules.task_orchestration import tasks
+from Modules.summaries.summary_display import show_summary
 
 
 # ---------------------------------------------------------

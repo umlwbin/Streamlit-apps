@@ -1,5 +1,5 @@
 import streamlit as st
-from Modules.tasks import TASK_DICT
+from Modules.task_orchestration.tasks import TASK_DICT
 from Modules.utils.ui_utils import big_caption
 
 

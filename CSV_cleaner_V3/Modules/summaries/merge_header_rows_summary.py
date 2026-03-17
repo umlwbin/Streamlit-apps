@@ -8,7 +8,7 @@ def render_merge_header_rows_summary(summary, filename=None):
     if merged_row is not None:
         #st.write(f"**Merged original row:** {merged_row}")
 
-        # Preview index = original row - 1
+        # Compute preview index directly
         preview_index = merged_row - 1
         st.write(f"**Preview row index:** {preview_index}")
 
@@ -22,3 +22,4 @@ def render_merge_header_rows_summary(summary, filename=None):
             st.write(f"- {w}")
     else:
         st.success("No warnings.")
+

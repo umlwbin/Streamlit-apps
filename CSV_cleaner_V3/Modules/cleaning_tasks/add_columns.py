@@ -53,8 +53,7 @@ def add_cols(df: pd.DataFrame, *, filename=None, variable_names, values, columns
         if isinstance(value, list) and len(value) != len(df):
             raise ValueError(
                 f"Column '{name}' has a list of {len(value)} values, "
-                f"but the dataframe has {len(df)} rows."
-            )
+                f"but the dataframe has {len(df)} rows.")
 
     # -----------------------------------------------------
     # 2. CORE PROCESSING LOGIC
@@ -67,8 +66,7 @@ def add_cols(df: pd.DataFrame, *, filename=None, variable_names, values, columns
         if name in cleaned_df.columns:
             raise ValueError(
                 f"Column '{name}' already exists. "
-                "Column names must be unique."
-            )
+                "Column names must be unique.")
 
         # Insert the column (convert 1-based to 0-based)
         cleaned_df.insert(pos - 1, name, value)

@@ -1,14 +1,66 @@
 # =========================================================
-# units.py — Centralized Unit Normalization Map
+# units.py - Unit Normalization Map
 # =========================================================
 
 """
-Canonical UNIT_MAP for scientific datasets.
+UNIT_MAP - Machine‑Safe Units
 
-- Keys: raw unit strings as they appear in messy headers
+- Keys: raw unit strings as they appear in messy headers 
 - Values: normalized CF-style ASCII-safe units
-- Grouped by domain for readability
-- Multiple raw variants placed on the same line
+
+*** IMPORTANT *** 
+When adding the keys, please only add them as lower case, even if there is upper case in the raw units. 
+
+The goal is to produce units that are:
+- ASCII‑only (no Unicode symbols such as µ or °)
+- CF‑style (space‑separated units, explicit exponents)
+- machine‑safe (no ambiguous slashes, percent signs, or symbols)
+
+Rules and Examples
+-------------------
+
+1. Lowercasing and Whitespace Normalization
+   - All raw unit strings are lowercased and stripped before matching.
+   - Examples:
+       " Deg C "      → "deg c"
+
+2. Replace Slashes with Space‑Separated Division
+   - Examples:
+       "mg/l"         → "mg l-1"
+       "cells/ml"     → "cells ml-1"
+       "ml/l"         → "ml l-1"
+
+3. Carets and superscripts are replaced with integer exponents.
+   - Examples:
+       "kg/m^3"       → "kg m-3"
+       "m^-1"         → "m-1"
+       "sr^-1"        → "sr-1"
+
+4. Normalize Micro/Milli Prefixes to ASCII
+   - Unicode µ is replaced with ASCII "u".
+   - Examples:
+       "µmol/kg"      → "umol kg-1"
+       "us cm^-1"     → "uS cm-1"
+
+5. Normalize Degree Symbols
+   - Degree symbols are removed
+   - Examples:
+       "deg c"        → "degC"
+       "degc"         → "degC"
+       "°C"           → "degC" 
+
+6. Normalize Percent Expressions
+   - Percent symbols are replaced with explicit, machine‑safe names.
+   - Examples:
+       "%"            → "percent"
+       "%sat"         → "percent_sat"
+       "%rh"          → "percent_rh"
+
+Usage
+-----
+Use `get_unit_map()` to retrieve the UNIT_MAP for header
+cleaning tasks
+
 """
 
 UNIT_MAP = {

@@ -60,13 +60,9 @@ def clean_headers(
 ):
     """
     Clean and standardize messy scientific column headers while extracting metadata.
-
-    This version:
-        - protects units from snake_case
-        - normalizes units to CF-style ASCII format
-        - extracts units before casing
-        - reattaches units as: variable_name (units)
-        - ensures reversibility and artifact safety
+    - protects units from snake_case
+    - normalizes units to CF-style ASCII format
+    - reattaches units as: variable_name (units)
     """
 
     # -----------------------------------------------------
@@ -76,29 +72,36 @@ def clean_headers(
         raise ValueError("Input must be a pandas DataFrame.")
 
     if naming_style not in {"snake_case", "camelCase", "Title Case"}:
-        raise ValueError(
-            "naming_style must be one of: 'snake_case', 'camelCase', 'Title Case'."
-        )
+        raise ValueError("naming_style must be one of: 'snake_case', 'camelCase', 'Title Case'.")
 
     # -----------------------------------------------------
     # 2. SOFT WARNINGS
     # -----------------------------------------------------
     warnings = []
 
+
+    # -----------------------------------------------------
+    # 3. CORE PROCESSING LOGIC
+    # -----------------------------------------------------
+
+    # These units are ambiguous because they could possibly be apart of the variable name 
+    # (they are too short essentially; not unique enough to be clearly identified as units)
     AMBIGUOUS_UNITS = {"m", "g", "s", "%", "h", "l"}
 
+
     # -----------------------------------------------------
-    # 4. UNIT DETECTION
+    # UNIT DETECTION HELPER
     # -----------------------------------------------------
     def detect_units(text):
-        # Prefer bracketed units
-        bracket_match = re.findall(r"\[(.*?)\]|\((.*?)\)", text)
+        # Find bracketed units first
+        bracket_match = re.findall(r"\[(.*?)\]|\((.*?)\)", text) # checks for content in () or [] - this is assumed to be the units (returns a list of tuples). eg, [("m/s", "")]
+
         if bracket_match:
-            content = next(filter(None, bracket_match[0]))
-            return content.strip()
+            content = next(filter(None, bracket_match[0])) # filters out the non empty string or any falsey value out of the first tuple. next() takes the first item from the filtered results. 
+            return content.strip() # return units
 
         # Fallback: UNIT_MAP search
-        lower = text.lower()
+        lower = text.lower() #the UNIT_MAP units are added in lower case tobe safe.
         for raw_unit in UNIT_MAP:
             if raw_unit in lower:
                 return raw_unit
@@ -106,7 +109,7 @@ def clean_headers(
         return None
 
     # -----------------------------------------------------
-    # 5. VARIABLE NAME CLEANING
+    # VARIABLE NAME CLEANING HELPER
     # -----------------------------------------------------
     def clean_variable_name(name):
         name = name.lower()
@@ -115,7 +118,7 @@ def clean_headers(
         return name
 
     # -----------------------------------------------------
-    # 6. PROCESS EACH HEADER
+    # BEGIN PROCESSING EACH HEADER
     # -----------------------------------------------------
     original = list(df.columns)
     cleaned = []
@@ -133,15 +136,13 @@ def clean_headers(
                 "units_clean": None,
                 "cleaned_header": fallback,
             }
-            warnings.append(
-                f"Column '{raw}' was empty or invalid and replaced with '{fallback}'."
-            )
+            warnings.append(f"Column '{raw}' was empty or invalid and replaced with '{fallback}'.")
             continue
 
         try:
             # ASCII normalize
-            new = unicodedata.normalize("NFKD", raw)
-            new = new.encode("ascii", "ignore").decode("ascii")
+            new = unicodedata.normalize("NFKD", raw) # This breaks apart characters into their simplest ASCII‑friendly components.
+            new = new.encode("ascii", "ignore").decode("ascii") # Ignore any character that can't be represented in ASCII, thn decode back from byte sting to regular python string
 
             # -----------------------------
             # UNIT EXTRACTION
@@ -153,26 +154,26 @@ def clean_headers(
             if raw_units:
                 # Normalize raw unit string
                 normalized = normalize_unit_string(raw_units)
-                cleaned_units = UNIT_MAP.get(raw_units.lower(), normalized)
+                cleaned_units = UNIT_MAP.get(raw_units.lower(), normalized) # Look for the key (raw_units.lower()) and return its value, otherwise return the normalized units
 
-                # Capture exact raw match
+                # Capture the exact raw_units regardless of case (we want to store this in the metadata table as the original units)
                 match = re.search(re.escape(raw_units), new, flags=re.IGNORECASE)
                 if match:
-                    units_raw_original = match.group(0)
+                    units_raw_original = match.group(0) #group(0) returns teh the full matched substring
 
             # Remove units from variable name
             variable = new
             if raw_units:
-                variable = re.sub(re.escape(raw_units), "", variable, flags=re.IGNORECASE)
+                variable = re.sub(re.escape(raw_units), "", variable, flags=re.IGNORECASE) # Find all instances of the exact raw_units in variable (case insensitive)
 
-            # Remove bracketed content
+            # Remove any left over bracketed content or just the empty brackets themselves
             variable = re.sub(r"\[[^\]]*\]|\([^\)]*\)", "", variable)
             variable = variable.strip().rstrip(",")
 
             # Clean variable name
             variable_clean = clean_variable_name(variable)
 
-            # Ambiguous unit suffixes
+            # Ambiguous unit suffixes - check if the last token matches an ambiguous unit e.g., _g, 
             if cleaned_units is None:
                 tokens = variable_clean.split("_")
                 last = tokens[-1]
@@ -226,7 +227,7 @@ def clean_headers(
             warnings.append(f"Failed to clean header '{raw}': {str(e)}")
 
     # -----------------------------------------------------
-    # 7. ENSURE UNIQUENESS
+    # 3d. ENSURE UNIQUENESS
     # -----------------------------------------------------
     final = []
     seen = {}
@@ -239,7 +240,7 @@ def clean_headers(
             final.append(f"{name}_{seen[name]}")
 
     # -----------------------------------------------------
-    # 8. SUMMARY
+    # 4. SUMMARY
     # -----------------------------------------------------
     changed = {}
     unchanged = []
@@ -258,7 +259,7 @@ def clean_headers(
     }
 
     # -----------------------------------------------------
-    # 9. SUMMARY DATAFRAME
+    # 5. SUMMARY DATAFRAME
     # -----------------------------------------------------
     summary_df = (
         pd.DataFrame(metadata)
@@ -268,7 +269,7 @@ def clean_headers(
     )
 
     # -----------------------------------------------------
-    # 10. RETURN
+    # 6. RETURN
     # -----------------------------------------------------
     cleaned_df = df.copy()
     cleaned_df.columns = final

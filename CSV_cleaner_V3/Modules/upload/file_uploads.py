@@ -8,17 +8,7 @@ from io import StringIO
 File Upload and Initialization Module
 ====================================
 
-This module handles all logic for safely loading user‑uploaded CSV/TXT files
-into the Tidy Data workflow. It performs early metadata detection, preserves
-row provenance, normalizes structural inconsistencies, and initializes all
-session‑state structures required by downstream tasks.
-
-The goal is to make file ingestion:
-    • predictable
-    • artifact‑safe
-    • beginner‑friendly
-    • consistent across all workflow tools
-
+This module handles all logic for safely loading user‑uploaded CSV/TXT files.
 This module does **not** perform any cleaning or transformation. It only
 prepares files so that the task widgets and processing functions can operate
 safely and consistently.
@@ -42,9 +32,7 @@ Core Responsibilities
        • scans raw text line‑by‑line
        • identifies the first “wide enough” row (likely header)
        • flags files where metadata is present
-       • avoids premature header promotion for non‑rectangular files
-
-   This early detection is critical for artifact‑safe workflows.
+       • avoids header promotion for non‑rectangular files
 
 3. Load Files Safely
    ------------------
@@ -98,23 +86,6 @@ Core Responsibilities
 
    These structures are used by all downstream widgets and tasks.
 
----------------------------------------------------------------------------
-Design Philosophy
----------------------------------------------------------------------------
-
-This module is intentionally conservative. It avoids making assumptions about:
-    • where the header truly is
-    • whether metadata should be removed
-    • how columns should be interpreted
-
-Instead, it focuses on:
-    • preserving the file exactly as uploaded
-    • detecting structural issues early
-    • preparing safe, predictable inputs for the user‑driven workflow
-
-All transformations are deferred to explicit task widgets, ensuring that users
-remain in control and that every change is transparent and reversible.
-
 """
 
 
@@ -124,7 +95,7 @@ path = os.path.abspath(os.curdir)
 # Add Modules
 sys.path.append(f"{path}/Modules")
 import state.session_initializer as session_initializer
-
+from Modules.upload.metadata_detection import detect_metadata_rows
 
 
 # ---------------------------------------------------------
@@ -149,15 +120,11 @@ def make_unique_columns(cols):
 def fileuploadfunc():
     st.markdown("#### Upload a CSV/TXT File to begin")
 
-    # -----------------------------------------------------
-    # Reset state when new files are uploaded
-    # -----------------------------------------------------
     def newUpload():
         session_initializer.reset_widget_flags()
         st.session_state.files_processed = False
         st.session_state.task_applied = False
 
-        # Clear all per-file structures
         st.session_state.original_data = {}
         st.session_state.current_data = {}
         st.session_state.task_history = {}
@@ -174,9 +141,6 @@ def fileuploadfunc():
         key=f"uploader_{st.session_state.uploader_key}"
     )
 
-    # -----------------------------------------------------
-    # Process files once per upload event
-    # -----------------------------------------------------
     if uploaded_files and not st.session_state.files_processed:
 
         for file in uploaded_files:
@@ -184,25 +148,11 @@ def fileuploadfunc():
             raw_bytes = file.read().decode("utf-8", errors="replace")
 
             # -------------------------------------------------
-            # STEP 1: Detect metadata BEFORE DataFrame creation
+            # STEP 1: Metadata detection (delegated)
             # -------------------------------------------------
-            raw_lines = raw_bytes.splitlines()
-            split_lines = [line.split(",") for line in raw_lines]
+            has_metadata, header_index = detect_metadata_rows(raw_bytes, sep=",")
 
-            row_widths = [len(r) for r in split_lines]
-            max_width = max(row_widths)
-
-            HEADER_THRESHOLD = 0.9
-            candidate_header_index = None
-
-            for i, w in enumerate(row_widths):
-                if w >= HEADER_THRESHOLD * max_width:
-                    candidate_header_index = i
-                    break
-
-            file_has_metadata = candidate_header_index not in (0, None)
-
-            if file_has_metadata:
+            if has_metadata:
                 st.session_state.non_rectangular_files.add(filename)
 
             # -------------------------------------------------
@@ -225,50 +175,34 @@ def fileuploadfunc():
             # -------------------------------------------------
             st.session_state.row_map[filename] = list(range(1, len(df) + 1))
 
-
             # -------------------------------------------------
-            # STEP 4: Fix completely empty columns
+            # STEP 4: Fix empty columns
             # -------------------------------------------------
             empty_cols = df.columns[
                 df.isna().all() |
                 (df.apply(lambda col: col.astype(str).str.strip() == "").all())
             ]
-
             for idx in empty_cols:
                 df[idx] = df[idx].fillna("")
 
             # -------------------------------------------------
             # STEP 5: Promote header for rectangular files only
             # -------------------------------------------------
-            if not file_has_metadata:
-                # Extract header row
+            if not has_metadata:
                 header = df.iloc[0].astype(str).tolist()
-
-                # Replace empty header cells
-                header = [
-                    h if str(h).strip() != "" else f"unnamed_{i}"
-                    for i, h in enumerate(header)
-                ]
-
-                # Ensure uniqueness
+                header = [h if str(h).strip() != "" else f"unnamed_{i}" for i, h in enumerate(header)]
                 header = make_unique_columns(header)
 
-                # Apply header
                 df.columns = header
-
-                # Drop the header row from the data
                 df = df[1:].reset_index(drop=True)
 
-                # Update row_map: remove the first row because it became the header
                 st.session_state.row_map[filename] = st.session_state.row_map[filename][1:]
 
             else:
-                # Metadata-heavy file → generic column names
                 df.columns = [f"col_{i}" for i in range(df.shape[1])]
 
-
             # -------------------------------------------------
-            # STEP 6: Store file in session state
+            # STEP 6: Store file
             # -------------------------------------------------
             st.session_state.original_data[filename] = df.copy()
             st.session_state.current_data[filename] = df.copy()
@@ -276,11 +210,7 @@ def fileuploadfunc():
             st.session_state.history_stack[filename] = []
             st.session_state.redo_stack[filename] = []
 
-        # -----------------------------------------------------
-        # Mark upload complete
-        # -----------------------------------------------------
-        if st.session_state.original_data:
-            st.session_state.files_processed = True
-            st.success("Files uploaded and initialized.")
+        st.session_state.files_processed = True
+        st.success("Files uploaded and initialized.")
 
     return uploaded_files or []

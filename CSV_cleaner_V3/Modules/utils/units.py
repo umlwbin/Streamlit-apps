@@ -3,58 +3,59 @@
 # =========================================================
 
 """
-UNIT_MAP - Machine‑Safe Units
+UNIT_MAP for creating Machine‑Safe Units
 
 - Keys: raw unit strings as they appear in messy headers 
-- Values: normalized CF-style ASCII-safe units
+- Values: normalized ASCII-safe units
+
+The goal is to produce units that are machine‑safe (no ambiguous slashes, percent signs, or symbols)
 
 *** IMPORTANT *** 
 When adding the keys, please only add them as lower case, even if there is upper case in the raw units. 
 
-The goal is to produce units that are:
-- ASCII‑only (no Unicode symbols such as µ or °)
-- CF‑style (space‑separated units, explicit exponents)
-- machine‑safe (no ambiguous slashes, percent signs, or symbols)
 
 Rules and Examples
 -------------------
 
+This mapping follows CF Convention rules, which uses the UDUNITS library when manipulating units. 
+https://docs.unidata.ucar.edu/udunits/current/udunits2lib.html#Database
+
 1. Lowercasing and Whitespace Normalization
    - All raw unit strings are lowercased and stripped before matching.
    - Examples:
-       " Deg C "      → "deg c"
+       " Deg C "      --> "deg c"
 
 2. Replace Slashes with Space‑Separated Division
    - Examples:
-       "mg/l"         → "mg l-1"
-       "cells/ml"     → "cells ml-1"
-       "ml/l"         → "ml l-1"
+       "mg/l"         --> "mg l-1"
+       "cells/ml"     --> "cells ml-1"
+       "ml/l"         --> "ml l-1"
 
 3. Carets and superscripts are replaced with integer exponents.
    - Examples:
-       "kg/m^3"       → "kg m-3"
-       "m^-1"         → "m-1"
-       "sr^-1"        → "sr-1"
+       "kg/m^3"       --> "kg m-3"
+       "m^-1"         --> "m-1"
+       "sr^-1"        --> "sr-1"
 
 4. Normalize Micro/Milli Prefixes to ASCII
    - Unicode µ is replaced with ASCII "u".
    - Examples:
-       "µmol/kg"      → "umol kg-1"
-       "us cm^-1"     → "uS cm-1"
+       "µmol/kg"      --> "umol kg-1"
+       "us cm^-1"     --> "uS cm-1"
 
 5. Normalize Degree Symbols
    - Degree symbols are removed
    - Examples:
-       "deg c"        → "degC"
-       "degc"         → "degC"
-       "°C"           → "degC" 
+       "deg c"        --> "degC"
+       "degc"         --> "degC"
+       "°C"           --> "degC" 
 
 6. Normalize Percent Expressions
    - Percent symbols are replaced with explicit, machine‑safe names.
    - Examples:
-       "%"            → "percent"
-       "%sat"         → "percent_sat"
-       "%rh"          → "percent_rh"
+       "%"            --> "percent"
+       "%sat"         --> "percent_sat"
+       "%rh"          --> "percent_rh"
 
 Usage
 -----
@@ -88,8 +89,7 @@ UNIT_MAP = {
     "10^-8 m^3/kg": "1e-8 m3 kg-1",
 
     # Dissolved Oxygen
-    "ml/l": "ml l-1",
-    "mg l^-1": "mg l-1",
+    "ml/l": "ml l-1", "mg l^-1": "mg l-1",
     "umol/kg": "umol kg-1",
 
     # Specific Conductance

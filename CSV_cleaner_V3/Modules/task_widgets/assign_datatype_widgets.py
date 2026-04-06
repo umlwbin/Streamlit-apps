@@ -65,96 +65,48 @@ def assign_datatype_widgets(df):
             "type_mapping": {column_name: dtype, ...}
         }
         or None if the user has not completed the widget.
-
-
-    NOTE:
-    We wrap the entire widget inside a Streamlit form.
-    Forms prevent Streamlit from re-creating widgets on every rerun,
-    which avoids key errors and allow a multi-step UI to be stable.
     """
 
+    st.markdown("##### Column Preview")
 
-    # ---------------------------------------------------------
-    # Streamlit Form
-    # ---------------------------------------------------------
-    # A form groups widgets together and only triggers a rerun
-    # when the user presses the submit button.
-    with st.form("assign_datatype_form"):
+    preview = df.head(2).copy()
+    preview.columns = [f"{excel_index_to_label(i)} | {col}" for i, col in enumerate(df.columns)]
+    st.dataframe(preview)
 
-        # ---------------------------------------------------------
-        # Column Preview
-        # ---------------------------------------------------------
-        # Show the first two rows of the dataset.
-        # We add Excel-style labels (A, B, C...) to help users
-        # reference columns when typing ranges like "B-F".
-        st.markdown("##### Column Preview")
+    st.markdown("##### Assign Columns to Data Types")
 
-        preview = df.head(2).copy()
-        preview.columns = [
-            f"{excel_index_to_label(i)} | {col}"
-            for i, col in enumerate(df.columns)]
-        
-        st.dataframe(preview)
+    dtypes = ["date_only", "time_only", "date", "integer", "float", "string"]
 
-        # ---------------------------------------------------------
-        # Data Type Selection
-        # ---------------------------------------------------------
-        st.markdown("##### Assign Columns to Data Types")
+    dtype_labels = {
+        "date_only": "Date Only (YYYY-MM-DD)",
+        "time_only": "Time Only (HH:MM:SS)",
+        "date": "Full Datetime (date + time)",
+        "integer": "Integer (whole numbers)",
+        "float": "Float (decimal numbers)",
+        "string": "String (text)"
+    }
 
-        # Supported data types
-        dtypes = ["date_only", "time_only", "date", "integer", "float", "string"]
+    # Collect user selections
+    type_mapping = {}
 
-        # Friendly labels for the UI
-        dtype_labels = {
-            "date_only": "Date Only (YYYY-MM-DD)",
-            "time_only": "Time Only (HH:MM:SS)",
-            "date": "Full Datetime (date + time)",
-            "integer": "Integer (whole numbers)",
-            "float": "Float (decimal numbers)",
-            "string": "String (text)"
-        }
+    st.caption("Tip: You can select columns individually or enter Excel-style ranges like A-D.")
+    for dtype in dtypes:
+        with st.expander(f"Select {dtype_labels[dtype]} columns"):
+            selected = st.multiselect(f"Choose columns for {dtype_labels[dtype]}",
+                options=df.columns.tolist(),
+                key=f"{dtype}_select")
+            
+            ranged = parse_range(
+                st.text_input("Or enter column range (e.g., B-F)", key=f"{dtype}_range"),df)
 
-        # Each data type gets its own expander. Inside each expander:
-        # - a multiselect for choosing columns
-        # - a text input for Excel-style ranges (e.g., B-F)
-        for dtype in dtypes:
-            with st.expander(f"Select {dtype_labels[dtype]} columns"):
-                st.multiselect(
-                    f"Choose columns for {dtype_labels[dtype]}",
-                    options=df.columns.tolist(),
-                    key=f"{dtype}_select"
-                )
-                st.text_input("Or enter column range (e.g., B-F)",key=f"{dtype}_range" )
-
-        # ---------------------------------------------------------
-        # Build the type_mapping dictionary
-        # ---------------------------------------------------------
-        # We combine:
-        # - columns selected via multiselect
-        # - columns selected via Excel-style ranges
-        type_mapping = {}
-        for dtype in dtypes:
-            selected = st.session_state.get(f"{dtype}_select", [])
-            ranged = parse_range(st.session_state.get(f"{dtype}_range", ""), df)
-
-            # Assign each selected column to the chosen dtype
             for col in set(selected + ranged):
                 type_mapping[col] = dtype
 
-        # ---------------------------------------------------------
-        # Submit Button
-        # ---------------------------------------------------------
-        # This button belongs to the form, so when clicked, the form submits and the function reruns only once.
-        submitted = st.form_submit_button("Next", type="primary")
+    # Show info if nothing selected
+    if not type_mapping:
+        st.info("No columns selected yet.")
+        return None
 
-        # If the user clicked Next:
-        if submitted:
-            if type_mapping:
-                # Return the mapping to the task runner
-                return {"type_mapping": type_mapping}
-            else:
-                # Warn if nothing was selected
-                st.warning("No columns were selected!", icon="⚠️")
-
-    # If the form hasn't been submitted yet, return nothing
-    return None
+    # Return mapping to reflect original col order
+    ordered_mapping = {col: type_mapping[col] for col in df.columns if col in type_mapping}
+    return {"type_mapping": ordered_mapping}

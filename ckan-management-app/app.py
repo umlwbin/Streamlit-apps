@@ -1,8 +1,7 @@
 # app.py
 import streamlit as st
 import pandas as pd
-import os
-from ckan_utils import get_all_packages, filter_datasets, classify_resources, search_datasets, delete_dataset, filter_by_date, list_users, extract_metadata,analyze_tags
+from ckan_utils import get_all_packages, filter_datasets, classify_resources, search_datasets, delete_dataset, filter_by_date, list_users, extract_metadata,analyze_tags, delete_all_resources
 from erddap_metadata_profile import extract_erddap_attributes
 from data_dictionary import build_resource_table
 from group_metadata import get_group_metadata, list_groups
@@ -11,14 +10,16 @@ from data_dictionary_uploader import read_excel_dictionary, map_excel_to_ckan, u
 
 st.set_page_config(layout="wide")
 st.title("CKAN Management App")
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs(["Resource Checker", "Dataset Search", "Dataset Delete", "Date Filter", "User Management", "Metadata Extractor", "Keyword Analysis", "ERDDAP Metadata Attributes", "CSV variables", "Theme Metadata", "Data Dictionary Uploader"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.tabs(
+    ["Resource Checker", "Dataset Search", "Dataset Delete", "Date Filter", "User Management", "Metadata Extractor", 
+     "Keyword Analysis", "ERDDAP Metadata Attributes", "CSV variables", "Theme Metadata", "Data Dictionary Uploader", "Remove All Resources from Dataset"])
 
 # --- Password Gate ---
 st.sidebar.header("Authentication")
 password = st.sidebar.text_input("Enter app password", type="password")
 
 # Hardcoded password
-APP_PASSWORD = os.getenv("APP_PASSWORD")
+APP_PASSWORD = "C3osE&Gdm"
 
 if password != APP_PASSWORD:
     st.warning("Please enter the correct password in the sidebar to access the app.")
@@ -333,3 +334,22 @@ with tab11:
                     st.json(result)
                 except Exception as e:
                     st.error(f"Error uploading data dictionary: {e}")
+
+
+with tab12:
+    st.header("Remove All Resources from Dataset")
+    st.warning("⚠️ This will permanently delete ALL resources from the dataset.")
+
+    dataset_id = st.text_input("Dataset ID or name")
+    api_key = st.text_input("CKAN API Key", type="password", key="delete_resources_api_key")
+
+    if st.button("Delete All Resources"):
+        if dataset_id and api_key:
+            try:
+                deleted = delete_all_resources(dataset_id, api_key)
+                st.success(f"Deleted {len(deleted)} resources.")
+                st.write(deleted)
+            except Exception as e:
+                st.error(f"Error deleting resources: {e}")
+        else:
+            st.error("Please provide both dataset ID and API key.")

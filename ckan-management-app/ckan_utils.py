@@ -192,3 +192,35 @@ def analyze_tags(limit=1000, total=35464):
             dataset_tags.append((d.get("title", ""), tag_names))
 
     return tag_counter, dataset_tags
+
+
+
+def delete_all_resources(dataset_id, api_key):
+    """
+    Delete all resources from a CKAN dataset.
+    """
+    base_url = "https://canwin-datahub.ad.umanitoba.ca/data/api/3/action"
+
+    # 1. Fetch dataset details
+    dataset_url = f"{base_url}/package_show"
+    headers = {"Authorization": api_key}
+    payload = {"id": dataset_id}
+
+    response = requests.post(dataset_url, json=payload, headers=headers)
+    response.raise_for_status()
+    dataset = response.json()["result"]
+
+    deleted = []
+
+    # 2. Loop through resources
+    for resource in dataset.get("resources", []):
+        resource_id = resource["id"]
+        delete_url = f"{base_url}/resource_delete"
+        delete_payload = {"id": resource_id}
+
+        del_response = requests.post(delete_url, json=delete_payload, headers=headers)
+        del_response.raise_for_status()
+
+        deleted.append(resource_id)
+
+    return deleted

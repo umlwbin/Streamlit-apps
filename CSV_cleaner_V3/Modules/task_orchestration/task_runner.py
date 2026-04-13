@@ -86,9 +86,11 @@ def _run_single_file(task_func, renderer, filename, df, kwargs):
 
     # Always use the authoritative DataFrame
     current_df = st.session_state.current_data[filename].copy()
-
+    
     # Run the task safely
+    # ************************
     result, error_summary = _safe_execute(task_func, current_df, filename=filename, **kwargs)
+    # ************************
 
     if error_summary:
         show_summary(error_summary, renderer=renderer, title="Error", filename=filename)
@@ -112,10 +114,11 @@ def _run_single_file(task_func, renderer, filename, df, kwargs):
     # Clean summary
     summary = _clean_summary(summary)
 
-    # Store summary
+    # Store & show summary
     if summary:
         st.session_state.all_summaries[filename] = summary
-        show_summary(summary, renderer=renderer, title="Task Summary", filename=filename)
+        st.info("Expand for summary")
+        show_summary(summary, renderer=renderer, title="**Task Summary**", filename=filename)
     else:
         st.success(f"Task applied successfully to {filename}")
 
@@ -190,7 +193,7 @@ def run_task(task_name, **kwargs):
     renderer = task.summary_renderer
 
     # -----------------------------------------
-    # Run task depending on type
+    # Loop through ALL the files and run task depending on type 
     # -----------------------------------------
     if task_type == "single":
         for filename, df in st.session_state.current_data.items():

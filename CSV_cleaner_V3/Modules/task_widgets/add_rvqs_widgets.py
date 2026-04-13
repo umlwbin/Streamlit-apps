@@ -58,7 +58,7 @@ def add_rvqs_widget(df):
     # ---------------------------------------------------------
     # RVQ reference table
     # ---------------------------------------------------------
-    with st.expander("See list of RVQ codes and meanings"):
+    with st.expander("**ℹ️ See list of RVQ codes and meanings**"):
         try:
             rvq_df = pd.read_csv("rvq_dict.csv")
             st.table(rvq_df)
@@ -93,14 +93,24 @@ def add_rvqs_widget(df):
         else:
             candidate_cols.append(col)
 
-    # c)- multiselect
+
+    # c) - option to clear auto-detected numeric columns
+    clear_auto = st.checkbox(
+        "Clear all auto-detected numeric columns",
+        help="Useful if you only want to add a few columns manually."
+    )
+
+    # d) - multiselect
+    default_selection = [] if clear_auto else candidate_cols
+
     selected_cols = st.multiselect(
         "Select columns to apply RVQ rules:",
-        options=list(df.columns),      # show all columns
-        default=candidate_cols,        # auto-select only the good ones
+        options=list(df.columns),
+        default=default_selection,
         help="These columns appear to be mostly numeric. Adjust as needed.",
         key="rvq_select_columns"
     )
+
 
     if selected_cols:
         st.info(f"Selected **{len(selected_cols)}** variable(s).")
@@ -111,12 +121,12 @@ def add_rvqs_widget(df):
     # ---------------------------------------------------------
     st.markdown("#### 2. Define RVQ rules")
 
-    with st.expander("How to enter RVQ rules"):
+    with st.expander("**ℹ️ How to enter RVQ rules**"):
         st.markdown("""
         **Examples**
 
         • A data code **9999** may represent the RVQ **ND** (Not Detected).  
-        • To associate **empty data cells** with an RVQ, use `'nan'` as the Data Code.
+        • To associate **empty data cells or NaN cells** with an RVQ, use `'nan'` as the Data Code.
 
         **Detection Limits**
         - To capture detection limits, enter the starting letter (or number) before the actual limit.
@@ -153,29 +163,41 @@ def add_rvqs_widget(df):
         )
 
     # ---------------------------------------------------------
-    # 2B - Manual RVQ rules
+    # 2B - Manual RVQ Rules (simplified to full/contains)
     # ---------------------------------------------------------
     st.markdown("##### 2B. Manual RVQ Rules")
 
+    st.markdown("""
+    Enter a **Data Code**, an **RVQ Code**, and choose whether the match should be:
+
+    - **Full** - the entire cell must **equal** the data code  
+        - Example: data code `-1` matches only cells that are exactly `-1`  
+        - Detection limit is extracted from the numeric part of the code itself  
+
+    - **Contains** - the data code appears anywhere in the cell  
+        - Example: data code `<` matches `<2`, `ND<1`, `value<3stuff`  
+        - Detection limit is extracted from any number in the cell  
+    """)
+
     rules = []
-    for i in range(5):
+    for i in range(3):
         cols = st.columns([2, 2, 2])
 
         data_code = cols[0].text_input(
             f"Data code {i+1}",
             key=f"rvq_code_{i}",
-            placeholder="e.g., -999 or L",
+            placeholder="e.g., < or -1 or L",
         )
 
         rvq_code = cols[1].text_input(
             f"RVQ {i+1}",
             key=f"rvq_rvq_{i}",
-            placeholder="e.g., NC or BDL",
+            placeholder="e.g., BDL or ND",
         )
 
         match_type = cols[2].selectbox(
             f"Match type {i+1}",
-            ["full", "prefix", "suffix", "contains"],
+            ["contains", "full" ],
             key=f"rvq_match_{i}",
         )
 

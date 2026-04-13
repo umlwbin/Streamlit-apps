@@ -19,8 +19,7 @@ def render_add_rvqs_summary(summary, filename=None):
     # ---------------------------------------------------------
     # Variables processed
     # ---------------------------------------------------------
-    variables = [
-        var for var in summary.keys()
+    variables = [var for var in summary.keys()
         if var not in ("warnings",) and isinstance(summary[var], dict)
     ]
 

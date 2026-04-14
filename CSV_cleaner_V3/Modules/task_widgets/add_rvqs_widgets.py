@@ -43,8 +43,7 @@ def add_rvqs_widget(df):
             "keep_original": bool,
             "negative_rule_enabled": bool,
             "negative_rvq_code": str or None,
-            "negative_exceptions": [...],
-            "remove_empty_rvq_cols": bool
+            "negative_exceptions": [...]
         }
         or None if the user has not completed the widget.
     """
@@ -192,7 +191,7 @@ def add_rvqs_widget(df):
         rvq_code = cols[1].text_input(
             f"RVQ {i+1}",
             key=f"rvq_rvq_{i}",
-            placeholder="e.g., BDL or ND",
+            placeholder="e.g., BDL or NC",
         )
 
         match_type = cols[2].selectbox(
@@ -212,17 +211,14 @@ def add_rvqs_widget(df):
     # Step 3 - Output Options
     # ---------------------------------------------------------
     st.markdown("#### 3. Output Options")
+    st.markdown("Keep original data codes in the data column? \n\n"
+    "(Selecting `No` will remove the data code from your measured variable columns - recommended)")
 
     keep_original = st.radio(
-        "Keep original data codes in the data column?",
-        ["Yes", "No"],
+        " Select ",
+        ["No", "Yes"],
         horizontal=True,
         key="rvq_keep_original"
-    )
-
-    remove_empty_rvq_cols = st.checkbox(
-        "Remove RVQ columns that contain no RVQ values",
-        key="rvq_remove_empty_cols"
     )
 
     # ---------------------------------------------------------
@@ -264,14 +260,11 @@ def add_rvqs_widget(df):
 
             if match == "full":
                 mask = series == code
-            elif match == "prefix":
-                mask = series.str.startswith(code)
-            elif match == "suffix":
-                mask = series.str.endswith(code)
             elif match == "contains":
                 mask = series.str.contains(code, na=False)
             else:
                 mask = False
+
 
             if mask.any():
                 found_any = True
@@ -303,5 +296,4 @@ def add_rvqs_widget(df):
         "negative_rule_enabled": negative_rule_enabled,
         "negative_rvq_code": negative_rvq_code,
         "negative_exceptions": negative_exceptions,
-        "remove_empty_rvq_cols": remove_empty_rvq_cols,
     }

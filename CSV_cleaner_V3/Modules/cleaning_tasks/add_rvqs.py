@@ -11,8 +11,7 @@ def apply_rvq_rules(
     keep_original=True,
     negative_rule_enabled=False,
     negative_rvq_code=None,
-    negative_exceptions=None,
-    remove_empty_rvq_cols=False
+    negative_exceptions=None
 ):
     """
     Apply RVQ (Result Value Qualifier) rules to selected columns.
@@ -61,9 +60,6 @@ def apply_rvq_rules(
 
     keep_original : bool, optional
         If False, matched values are replaced with empty strings.
-
-    remove_empty_rvq_cols : bool, optional
-        If True, RVQ columns containing only empty values are removed.
 
     Returns
     -------
@@ -208,24 +204,39 @@ def apply_rvq_rules(
                 nums = re.findall(r"([0-9]*\.?[0-9]+)", code)
                 if nums:
                     limit = float(nums[0])
+
+                    # Store in summary
                     detection_limits[col].setdefault(rvq, {})
                     detection_limits[col][rvq][limit] = (
                         detection_limits[col][rvq].get(limit, 0) + mask.sum()
                     )
 
+                    # Add limit directly to RVQ cell
+                    cleaned_df.loc[mask, rvq_col] = cleaned_df.loc[mask, rvq_col].apply(
+                        lambda x: f"{rvq} [{limit}]" if x == rvq else x
+                    )
+
+
             # CONTAINS CASE:
             # Extract ANY number in the cell (except those inside the code itself)
             if match == "contains":
-                # Find all numbers in each matching cell
                 number_lists = series[mask].str.findall(r"([0-9]*\.?[0-9]+)")
 
-                for nums in number_lists:
+                # Iterate row-by-row so we can assign limits correctly
+                for idx, nums in zip(series[mask].index, number_lists):
                     if nums:
-                        limit = float(nums[0])  # Use the first number found
+                        limit = float(nums[0])
+
+                        # Store in summary
                         detection_limits[col].setdefault(rvq, {})
                         detection_limits[col][rvq][limit] = (
                             detection_limits[col][rvq].get(limit, 0) + 1
                         )
+
+                        # Add limit directly to RVQ cell
+                        if cleaned_df.at[idx, rvq_col] == rvq:
+                            cleaned_df.at[idx, rvq_col] = f"{rvq} [{limit}]"
+
 
             # -------------------------------------------------
             # Optionally remove original data code
@@ -245,7 +256,12 @@ def apply_rvq_rules(
             neg_mask = (numeric < 0) & (cleaned_df[rvq_col] == "")
 
             if neg_mask.any():
-                cleaned_df.loc[neg_mask, rvq_col] = negative_rvq_code
+                cleaned_df.loc[neg_mask, rvq_col] = cleaned_df.loc[neg_mask].apply(
+                    lambda row: f"{negative_rvq_code} [{abs(float(row[col]))}]",
+                    axis=1
+                )
+
+                                
                 summary_dict[col][negative_rvq_code] = (
                     summary_dict[col].get(negative_rvq_code, 0) + neg_mask.sum()
                 )
@@ -261,18 +277,6 @@ def apply_rvq_rules(
                 if not keep_original:
                     cleaned_df.loc[neg_mask, col] = ""
 
-
-
-    # -----------------------------------------------------
-    # Remove empty RVQ columns
-    # -----------------------------------------------------
-    if remove_empty_rvq_cols:
-        to_drop = []
-        for col in cleaned_df.columns:
-            if col.endswith("_RVQ") and cleaned_df[col].replace("", pd.NA).isna().all():
-                to_drop.append(col)
-        if to_drop:
-            cleaned_df = cleaned_df.drop(columns=to_drop)
 
     # -----------------------------------------------------
     # 4. SUMMARY
@@ -311,7 +315,7 @@ def apply_rvq_rules(
     summary_df = pd.DataFrame(summary_rows)
 
     # -----------------------------------------------------
-    # 6. RETURN (pure, Streamlit‑free)
+    # 6. RETURN
     # -----------------------------------------------------
     return cleaned_df, summary_dict, summary_df
 

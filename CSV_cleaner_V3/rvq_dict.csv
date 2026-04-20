@@ -24,6 +24,7 @@ NC , Not collected
 ND , Not detected
 NR , Sample taken/measured on site but information in this field not recorded
 NS , Sample collected but not submitted
+NA,Not analyzed
 P , Analysis requested and result pending
 prob_good , probably good value. Data value that is probably consistent with real phenomena but this is unconfirmed or data value forming part of a malfunction that is considered too small to affect the overall quality of the data object of which it is a part
 prob_bad , probably bad value. Data value recognised as unusual during quality control that forms part of a feature that is probably inconsistent with real phenomena

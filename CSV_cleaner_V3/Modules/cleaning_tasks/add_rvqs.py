@@ -76,11 +76,9 @@ def apply_rvq_rules(
 
     Notes
     -----
-    • Detection‑limit tables are no longer returned; they are stored in
-    st.session_state.supplementary_outputs for the summary renderer.
+    • Detection‑limit tables are stored in st.session_state.supplementary_outputs for the summary renderer.
     • Hard validation errors raise exceptions.
-    • Soft validation issues (e.g., missing columns) are recorded in
-    summary_dict["warnings"].
+    • Soft validation issues (e.g., missing columns) are recorded in summary_dict["warnings"].
     """
 
     # -----------------------------------------------------
@@ -258,13 +256,10 @@ def apply_rvq_rules(
             if neg_mask.any():
                 cleaned_df.loc[neg_mask, rvq_col] = cleaned_df.loc[neg_mask].apply(
                     lambda row: f"{negative_rvq_code} [{abs(float(row[col]))}]",
-                    axis=1
-                )
+                    axis=1)
 
                                 
-                summary_dict[col][negative_rvq_code] = (
-                    summary_dict[col].get(negative_rvq_code, 0) + neg_mask.sum()
-                )
+                summary_dict[col][negative_rvq_code] = (summary_dict[col].get(negative_rvq_code, 0) + neg_mask.sum())
 
                 # Detection limit = absolute value of the negative number
                 for val in numeric[neg_mask].dropna():

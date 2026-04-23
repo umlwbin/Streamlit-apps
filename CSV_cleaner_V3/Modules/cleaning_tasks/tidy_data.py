@@ -323,7 +323,7 @@ def basic_cleaning(
     summary.update(s7)
 
     # Step 8 - Clean headers using advanced cleaner
-    cleaned_df, s8 = advanced_clean_headers(
+    cleaned_df, s8, _ = advanced_clean_headers(
         cleaned_df,
         naming_style=naming_style,
         preserve_units=preserve_units,

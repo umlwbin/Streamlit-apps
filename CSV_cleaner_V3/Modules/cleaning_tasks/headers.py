@@ -174,12 +174,13 @@ def clean_headers(
             variable_clean = clean_variable_name(variable)
 
             # Ambiguous unit suffixes - check if the last token matches an ambiguous unit e.g., _g, 
-            if cleaned_units is None:
+            if not no_units_in_header and cleaned_units is None:
                 tokens = variable_clean.split("_")
                 last = tokens[-1]
                 if last in AMBIGUOUS_UNITS:
                     cleaned_units = last
                     variable_clean = "_".join(tokens[:-1])
+
 
             # -----------------------------
             # FINAL HEADER ASSEMBLY

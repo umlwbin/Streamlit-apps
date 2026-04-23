@@ -327,7 +327,6 @@ def basic_cleaning(
         cleaned_df,
         naming_style=naming_style,
         preserve_units=preserve_units,
-        extract_additional=extract_additional,
         no_units_in_header=no_units_in_header
     )
     summary.update(s8)

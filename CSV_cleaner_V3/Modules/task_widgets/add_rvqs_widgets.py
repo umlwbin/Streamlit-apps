@@ -179,7 +179,7 @@ def add_rvqs_widget(df):
     """)
 
     rules = []
-    for i in range(3):
+    for i in range(43):
         cols = st.columns([2, 2, 2])
 
         data_code = cols[0].text_input(

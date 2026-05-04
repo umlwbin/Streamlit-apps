@@ -1,7 +1,12 @@
 # app.py
+
+#import posit password
+import os
+APP_PASSWORD = os.getenv("APP_PASSWORD")
+
 import streamlit as st
 import pandas as pd
-from ckan_utils import get_all_packages, filter_datasets, classify_resources, search_datasets, delete_dataset, filter_by_date, list_users, extract_metadata,analyze_tags, delete_all_resources
+from ckan_utils import get_all_packages, filter_datasets, classify_resources, search_datasets, delete_dataset, filter_by_date, list_users, extract_metadata,analyze_tags, delete_all_resources, search_datasets_by_date
 from erddap_metadata_profile import extract_erddap_attributes
 from data_dictionary import build_resource_table
 from group_metadata import get_group_metadata, list_groups
@@ -10,16 +15,14 @@ from data_dictionary_uploader import read_excel_dictionary, map_excel_to_ckan, u
 
 st.set_page_config(layout="wide")
 st.title("CKAN Management App")
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.tabs(
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13 = st.tabs(
     ["Resource Checker", "Dataset Search", "Dataset Delete", "Date Filter", "User Management", "Metadata Extractor", 
-     "Keyword Analysis", "ERDDAP Metadata Attributes", "CSV variables", "Theme Metadata", "Data Dictionary Uploader", "Remove All Resources from Dataset"])
+     "Keyword Analysis", "ERDDAP Metadata Attributes", "CSV variables", "Theme Metadata", "Data Dictionary Uploader", 
+     "Remove All Resources from Dataset", "Dataset Search by Date"])
 
 # --- Password Gate ---
 st.sidebar.header("Authentication")
 password = st.sidebar.text_input("Enter app password", type="password")
-
-# Hardcoded password
-APP_PASSWORD = "C3osE&Gdm"
 
 if password != APP_PASSWORD:
     st.warning("Please enter the correct password in the sidebar to access the app.")
@@ -353,3 +356,60 @@ with tab12:
                 st.error(f"Error deleting resources: {e}")
         else:
             st.error("Please provide both dataset ID and API key.")
+
+
+# --- Dataset Search by Creation Date ---
+with tab13:
+    st.header("Dataset Search by Creation Date")
+    st.markdown("Find datasets, projects, and publications created within a specific date range.")
+    st.markdown("Great for end of year reporting! 😎")
+
+    # Dataset type filter
+    dataset_type = st.selectbox(
+        "Filter by dataset type",
+        ["All", "dataset", "project", "publication"]
+    )
+
+    start = st.date_input("Start date")
+    end = st.date_input("End date")
+
+    if st.button("Search by Date"):
+        if start and end:
+            with st.spinner("Searching CKAN..."):
+                results = search_datasets_by_date(
+                    start.strftime("%Y-%m-%d"),
+                    end.strftime("%Y-%m-%d")
+                )
+
+            # Apply dataset type filter
+            if dataset_type != "All":
+                results = [d for d in results if d.get("type") == dataset_type]
+
+            st.success(f"Found {len(results)} datasets created in this period")
+
+            # Convert to DataFrame
+            df = pd.json_normalize(results)
+
+            # Ensure expected columns exist
+            for col in ["id", "title", "metadata_created"]:
+                if col not in df.columns:
+                    df[col] = ""
+
+            # Add clickable URL column
+            df["dataset_url"] = df["id"].apply(
+                lambda x: f"https://canwin-datahub.ad.umanitoba.ca/data/dataset/{x}"
+            )
+
+            # Display selected columns
+            st.dataframe(df[["title", "metadata_created", "dataset_url"]])
+
+            # Download button
+            st.download_button(
+                label="Download results as CSV",
+                data=df.to_csv(index=False),
+                file_name="datasets_by_creation_date.csv",
+                mime="text/csv"
+            )
+
+        else:
+            st.error("Please select both start and end dates.")

@@ -224,3 +224,37 @@ def delete_all_resources(dataset_id, api_key):
         deleted.append(resource_id)
 
     return deleted
+
+
+def search_datasets_by_date(start_date, end_date, rows=5000):
+    """
+    Search CKAN datasets created within a specific date range. Great for end of yr reporting
+
+    Parameters:
+        start_date (str): "YYYY-MM-DD"
+        end_date   (str): "YYYY-MM-DD"
+        rows       (int): max number of results to return
+
+    Returns:
+        list of dataset dicts (non-federated (CanWIN) only)
+    """
+
+    # Range query on metadata_created
+    date_query = f"metadata_created:[{start_date}T00:00:00 TO {end_date}T23:59:59]"
+
+    url = f"{BASE_URL}/package_search"
+    payload = {
+        "q": date_query,
+        "rows": rows
+    }
+
+    response = requests.post(url, json=payload)
+    response.raise_for_status()
+    data = response.json()
+
+    if not data.get("success"):
+        return []
+
+    # Filter out federated datasets
+    results = data["result"]["results"]
+    return filter_non_federated(results)

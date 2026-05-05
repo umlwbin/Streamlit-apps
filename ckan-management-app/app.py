@@ -26,6 +26,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13
 st.sidebar.header("Authentication")
 password = st.sidebar.text_input("Enter app password", type="password")
 
+
 if password != APP_PASSWORD:
     st.warning("Please enter the correct password in the sidebar to access the app.")
     st.stop()  # Prevents the rest of the app from running
@@ -386,15 +387,7 @@ with tab13:
     if st.button("Search", key="t13_search"):
 
         with st.spinner("Searching CKAN…"):
-
-            # Convert UI dates → Solr padded strings
-            solr_start = f"{start_date}T00:00:00Z"
-            solr_end = f"{end_date}T23:59:59Z"
-
-            results = search_datasets_by_date(
-                solr_start,
-                solr_end
-            )
+            results = search_datasets_by_date(start_date, end_date)
 
         # --- No Results ---
         if not results:
@@ -408,14 +401,32 @@ with tab13:
         table_rows = []
         for d in results:
             name = d.get("name")
-            url = f"https://canwin-datahub.ad.umanitoba.ca/data/dataset/{name}"
+            d_type = d.get("type", "unknown")
+            
+            # 1. Handle the "Created" date based on type
+            if d_type == "dataset":
+                # Use the custom Date field for datasets
+                created_date = d.get("Date") or d.get("metadata_created")
+            else:
+                # Use the system date for publications/projects
+                created_date = d.get("metadata_created")
+
+            # 2. Clean up the date string (e.g., "2026-01-07T18:47:31" --> "2026-01-07")
+            if created_date and "T" in str(created_date):
+                created_date = str(created_date).split("T")[0]
+
+            # 3. Construct the correct URL based on type
+            # ex, publications often use /publication/ instead of /dataset/
+            base_path = "dataset" if d_type == "dataset" else d_type
+            url = f"https://canwin-datahub.ad.umanitoba.ca/data/{base_path}/{name}"
 
             table_rows.append({
                 "Title": d.get("title") or "(No title)",
-                "Type": d.get("type", "unknown"),
-                "Created": d.get("metadata_created", "unknown"),
+                "Type": d_type.capitalize(),
+                "Created": created_date or "Unknown",
                 "URL": url
             })
+
 
         st.dataframe(table_rows, use_container_width=True)
 

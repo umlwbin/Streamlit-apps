@@ -227,14 +227,6 @@ def delete_all_resources(dataset_id, api_key):
     return deleted
 
 
-import requests
-from datetime import datetime
-from dateutil.parser import parse
-
-BASE_URL = "https://canwin-datahub.ad.umanitoba.ca/data/api/3/action"
-
-
-
 
 
 #In the CKAN API world, package_search is essentially a wrapper for a search engine (Solr). 
@@ -259,28 +251,37 @@ def search_datasets_by_date(start_date, end_date, rows=100):
 
     api_url = f"{BASE_URL}/package_search"
 
-    # Solr requires the full timestamp: YYYY-MM-DDTHH:MM:SSZ
-    #Input is "2025-04-01", so need to pad it:
-    solr_start = f"{start_date}T00:00:00Z" if "T" not in start_date else start_date
-    solr_end = f"{end_date}T23:59:59Z" if "T" not in end_date else end_date
+    # Define our two different date ranges
+    # Note: the Custom 'Date' does not have timestamps, but metadata_created does.
+
+    # 1. Dataset "Date" field uses simple YYYY-MM-DD 
+    custom_date_range = f"Date:[{start_date} TO {end_date}]"
+
+    # 2. System field REQUIRES the full Solr timestamp for Publications/Projects
+    system_date_range = f"metadata_created:[{start_date}T00:00:00Z TO {end_date}T23:59:59Z]"
+
+    # Construct the conditional filter:
+    # (Dataset + custom date) OR (Everything else + system date)
+    combined_fq = (
+        f"((type:dataset AND {custom_date_range}) OR "
+        f"(-type:dataset AND {system_date_range}))"
+        )
 
     params = {
         "q": "(type:dataset OR type:publication OR type:project)",
-        "fq": f"metadata_created:[{solr_start} TO {solr_end}]",
+        "fq": combined_fq,
         "rows": rows
-    }
+        }
 
     response = requests.get(api_url, params=params)
     
     if response.status_code != 200:
-        # This will now show the detailed Solr error if it happens again
         st.error(f"Error {response.status_code}: {response.text}")
-        response.raise_for_status()
+        return []
 
-    result=response.json()["result"]["results"]
-    results = filter_non_federated(result)
+    result = response.json()["result"]["results"]
+    return filter_non_federated(result)
 
-    return results
 
 
     # from ckanapi import RemoteCKAN

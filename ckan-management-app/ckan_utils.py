@@ -2,6 +2,7 @@
 import requests
 import json
 import pandas as pd
+import streamlit as st
 
 BASE_URL = "https://canwin-datahub.ad.umanitoba.ca/data/api/3/action"
 
@@ -226,35 +227,84 @@ def delete_all_resources(dataset_id, api_key):
     return deleted
 
 
-def search_datasets_by_date(start_date, end_date, rows=5000):
+import requests
+from datetime import datetime
+from dateutil.parser import parse
+
+BASE_URL = "https://canwin-datahub.ad.umanitoba.ca/data/api/3/action"
+
+
+
+
+
+#In the CKAN API world, package_search is essentially a wrapper for a search engine (Solr). 
+# Solr is designed to handle GET requests for queries, and because your parameters (the date range and the three types) are relatively short, 
+# they fit easily within the URL character limit (which is usually around 2,000+ characters).
+# Why stick with GET?
+# Standard Practice: It’s the "native" way to use package_search. Most CKAN documentation and community examples use GET.
+
+@st.cache_data(ttl=3600)  # Caches for 1 hour
+def search_datasets_by_date(start_date, end_date, rows=100):
     """
-    Search CKAN datasets created within a specific date range. Great for end of yr reporting
+    Fetch ALL datasets, projects, and publications from CKAN,
+    then filter by metadata_created in Python.
 
-    Parameters:
-        start_date (str): "YYYY-MM-DD"
-        end_date   (str): "YYYY-MM-DD"
-        rows       (int): max number of results to return
+    IMPORTANT POINTS
+    - CKAN instances that use ckanext‑scheming (like CanWIN) silently force type:dataset into every package_search query unless you override it in the q parameter.
+    - q  --->  main query (strongest)
+    - fq --->  filter query (weaker)
 
-    Returns:
-        list of dataset dicts (non-federated (CanWIN) only)
+    You must put typr into q, not fq
     """
 
-    # Range query on metadata_created
-    date_query = f"metadata_created:[{start_date}T00:00:00 TO {end_date}T23:59:59]"
+    api_url = f"{BASE_URL}/package_search"
 
-    url = f"{BASE_URL}/package_search"
-    payload = {
-        "q": date_query,
+    # Solr requires the full timestamp: YYYY-MM-DDTHH:MM:SSZ
+    #Input is "2025-04-01", so need to pad it:
+    solr_start = f"{start_date}T00:00:00Z" if "T" not in start_date else start_date
+    solr_end = f"{end_date}T23:59:59Z" if "T" not in end_date else end_date
+
+    params = {
+        "q": "(type:dataset OR type:publication OR type:project)",
+        "fq": f"metadata_created:[{solr_start} TO {solr_end}]",
         "rows": rows
     }
 
-    response = requests.post(url, json=payload)
-    response.raise_for_status()
-    data = response.json()
+    response = requests.get(api_url, params=params)
+    
+    if response.status_code != 200:
+        # This will now show the detailed Solr error if it happens again
+        st.error(f"Error {response.status_code}: {response.text}")
+        response.raise_for_status()
 
-    if not data.get("success"):
-        return []
+    result=response.json()["result"]["results"]
+    results = filter_non_federated(result)
 
-    # Filter out federated datasets
-    results = data["result"]["results"]
-    return filter_non_federated(results)
+    return results
+
+
+    # from ckanapi import RemoteCKAN
+
+    # # Initialize connection
+    # ckan = RemoteCKAN('https://canwin-datahub.ad.umanitoba.ca/data')
+
+    # # Define your time range (ISO 8601 format)
+    # # Use 'NOW' for the current time
+    # start_date = "2025-04-01T00:00:00Z"
+    # end_date = "2026-03-31T00:00:00Z"
+
+    # # We use the 'q' parameter to force CKAN to look for all three types
+    # # Note: 'dataset' is the standard type name for datasets in CKAN
+    # types_query = "(type:dataset OR type:publication OR type:project)"
+
+    # results_dict = ckan.action.package_search(
+    #     q=types_query,
+    #     fq=f"metadata_created:[{start_date} TO {end_date}]",
+    #     rows=200
+    # )
+
+    # results = results_dict["results"]
+    # results = filter_non_federated(results)
+
+    # for d in results:
+    #     st.write(f"[{d['type'].upper()}]--- {d['title']} ---- Created: {d['metadata_created']}")

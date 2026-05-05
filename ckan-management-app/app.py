@@ -2,6 +2,8 @@
 
 #import posit password
 import os
+import datetime
+
 APP_PASSWORD = os.getenv("APP_PASSWORD")
 
 import streamlit as st
@@ -360,56 +362,60 @@ with tab12:
 
 # --- Dataset Search by Creation Date ---
 with tab13:
-    st.header("Dataset Search by Creation Date")
-    st.markdown("Find datasets, projects, and publications created within a specific date range.")
-    st.markdown("Great for end of year reporting! 😎")
 
-    # Dataset type filter
-    dataset_type = st.selectbox(
-        "Filter by dataset type",
-        ["All", "dataset", "project", "publication"]
-    )
+    st.header("Search by Date Created")
+    st.markdown("Great for end of year! 😎")
 
-    start = st.date_input("Start date")
-    end = st.date_input("End date")
+    # --- Default date values ---
+    default_start = datetime.date(2025, 4, 1)
+    default_end = datetime.date(2026, 3, 31)
 
-    if st.button("Search by Date"):
-        if start and end:
-            with st.spinner("Searching CKAN..."):
-                results = search_datasets_by_date(
-                    start.strftime("%Y-%m-%d"),
-                    end.strftime("%Y-%m-%d")
-                )
+    # --- UI Inputs ---
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input("Start date", value=default_start, key="t13_start")
+    with col2:
+        end_date = st.date_input("End date", value=default_end, key="t13_end")
 
-            # Apply dataset type filter
-            if dataset_type != "All":
-                results = [d for d in results if d.get("type") == dataset_type]
+    # --- Validate Inputs ---
+    if start_date > end_date:
+        st.error("Start date must be before end date.")
+        st.stop()
 
-            st.success(f"Found {len(results)} datasets created in this period")
+    # --- Search Button ---
+    if st.button("Search", key="t13_search"):
 
-            # Convert to DataFrame
-            df = pd.json_normalize(results)
+        with st.spinner("Searching CKAN…"):
 
-            # Ensure expected columns exist
-            for col in ["id", "title", "metadata_created"]:
-                if col not in df.columns:
-                    df[col] = ""
+            # Convert UI dates → Solr padded strings
+            solr_start = f"{start_date}T00:00:00Z"
+            solr_end = f"{end_date}T23:59:59Z"
 
-            # Add clickable URL column
-            df["dataset_url"] = df["id"].apply(
-                lambda x: f"https://canwin-datahub.ad.umanitoba.ca/data/dataset/{x}"
+            results = search_datasets_by_date(
+                solr_start,
+                solr_end
             )
 
-            # Display selected columns
-            st.dataframe(df[["title", "metadata_created", "dataset_url"]])
+        # --- No Results ---
+        if not results:
+            st.warning("No datasets, projects, or publications found in this date range.")
+            st.stop()
 
-            # Download button
-            st.download_button(
-                label="Download results as CSV",
-                data=df.to_csv(index=False),
-                file_name="datasets_by_creation_date.csv",
-                mime="text/csv"
-            )
+        # --- Results Header ---
+        st.success(f"Found {len(results)} result(s)")
 
-        else:
-            st.error("Please select both start and end dates.")
+        # --- Build table ---
+        table_rows = []
+        for d in results:
+            name = d.get("name")
+            url = f"https://canwin-datahub.ad.umanitoba.ca/data/dataset/{name}"
+
+            table_rows.append({
+                "Title": d.get("title") or "(No title)",
+                "Type": d.get("type", "unknown"),
+                "Created": d.get("metadata_created", "unknown"),
+                "URL": url
+            })
+
+        st.dataframe(table_rows, use_container_width=True)
+

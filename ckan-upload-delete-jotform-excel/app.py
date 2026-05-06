@@ -7,8 +7,8 @@ from core.dataset_builder import create_dataset_dict
 from core.ckan import upload_metadata, delete_dataset
 
 # Page Setup
-st.set_page_config(page_title="CKAN Dataset Upload & Delete", layout="centered")
-st.title("📦 CKAN Dataset Upload & Delete")
+st.set_page_config(page_title="Jotform to CKAN Dataset Upload & Delete", layout="centered")
+st.title("📦 Jotform to CKAN Dataset Upload & Delete")
 st.info(''' 
     This app uploads or deletes a dataset to/from CKAN, using an excel submissions file generated from Jotform.
     Please see the **submissions_new.xlsx** file as an example of what the fields look like. 
@@ -26,7 +26,7 @@ with st.sidebar:
         st.session_state.pwdSuccess = True
         st.success("Welcome you beautiful Data Legend!! 😎")
         st.markdown(" ")
-        st.markdown("# 🔐 CKAN API Authentication")
+        st.markdown("# 🔐 CKAN API Authentication")     
         ckan_api_key = st.text_input("Enter your CKAN API Key", type="password", key="apiKey")
         ckan_base_url = st.text_input("Enter CKAN Base URL (e.g., https://data.example.com)",key= "baseURL", value="https://canwin-datahub.ad.umanitoba.ca/data")
 

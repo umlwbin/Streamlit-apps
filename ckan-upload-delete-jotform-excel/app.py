@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import os
 
 # Import pure Python logic from core/
 from core.dataset_builder import create_dataset_dict
@@ -14,7 +15,7 @@ st.info('''
     ''')
 
 # Password Protection
-APP_PASSWORD = "C3osE&Gdm"
+APP_PASSWORD=os.getenv("APP_PASSWORD")
 if "pwdSuccess" not in st.session_state:
     st.session_state.pwdSuccess = False
 

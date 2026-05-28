@@ -22,14 +22,9 @@ def dedupe_columns(cols):
 
 def transpose(df: pd.DataFrame):
     """
-    Transpose a DataFrame and promote the first transposed row to the header.
-
-    This task:
-    - flips rows and columns
-    - promotes the first transposed row to column names
-    - ensures column names are unique
-    - resets the index
-    - returns a summary describing before/after dimensions
+    Safe transpose:
+    - preserves original headers as a column
+    - generates synthetic column names for transposed data
 
     Parameters
     ----------
@@ -39,7 +34,7 @@ def transpose(df: pd.DataFrame):
     Returns
     -------
     cleaned_df : pandas.DataFrame
-        Transposed DataFrame with a clean header.
+        Transposed DataFrame
 
     summary : dict
         {
@@ -72,14 +67,18 @@ def transpose(df: pd.DataFrame):
     # -----------------------------------------------------
     # 3. CORE PROCESSING
     # -----------------------------------------------------
-    t = df.transpose()
+    t=df.copy().T #Transpose
 
-    if not t.empty:
-        t.columns = t.iloc[0].astype(str)
-        t = t.drop(t.index[0])
-        t.columns = dedupe_columns(list(t.columns))
+    # Reset index so original headers become a column
+    t = t.reset_index()
 
-    t = t.reset_index(drop=True)
+    # Rename the index column (original headers)
+    t=t.rename(columns={"index":"Original Headers"})
+
+    # Generate synthetic column names for the transposed data: # col_0, col_1, col_2
+    new_cols=["Original Headers"] + [f"col_{i}" for i in range(t.shape[1]-1)]
+    t.columns=new_cols
+
 
     # -----------------------------------------------------
     # 4. SUMMARY

@@ -21,7 +21,7 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# TAB STYLING (moved into a helper for clarity)
+# TAB STYLING
 # ---------------------------------------------------------
 def apply_tab_styling():
     st.markdown("""

@@ -44,6 +44,7 @@ def sidebar():
     """, unsafe_allow_html=True)
 
     # --- Workflow Section ---
+    st.markdown(" ")
     with st.expander("Recommended Workflow"):
         st.markdown("""
             **1. Start with _Tidy Data_**  

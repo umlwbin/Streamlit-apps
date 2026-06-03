@@ -1,4 +1,5 @@
 import pandas as pd
+import streamlit as st
 
 def remove_metadata_rows(
     df: pd.DataFrame,
@@ -9,7 +10,7 @@ def remove_metadata_rows(
     **kwargs
 ):
     """
-    Detect and remove metadata rows that appear above the true header row.
+    Detect and remove metadata rows above the true header row.
 
     This task:
         - Detects the header row using user-provided identifiers.
@@ -17,12 +18,14 @@ def remove_metadata_rows(
         - Promotes the detected header row to column names.
         - Ensures column names are unique.
         - Optionally extracts metadata values into new columns using rule-based cleaning.
-        - Returns a preview of metadata rows for UI display.
+        - Updates row_map (Streamlit mode).
+        - Returns only cleaned_df.
     """
 
     # -----------------------------------------------------
-    # 1. HARD VALIDATION
+    # 1. VALIDATION - Hard Errors
     # -----------------------------------------------------
+
     if not isinstance(df, pd.DataFrame):
         raise ValueError("df must be a pandas DataFrame.")
 
@@ -38,29 +41,14 @@ def remove_metadata_rows(
     cleaned_df = df.copy()
 
     # -----------------------------------------------------
-    # 2. SOFT VALIDATION
+    # 2. CORE PROCESSING
     # -----------------------------------------------------
-    warnings = []
 
+    # Normalize identifiers
     identifiers_norm = [x.strip().lower() for x in identifiers]
 
+    # Normalize df for detection
     df_str = cleaned_df.astype(str).applymap(lambda x: x.strip().lower())
-
-    # -----------------------------------------------------
-    # 3. CORE PROCESSING
-    # -----------------------------------------------------
-
-    def make_unique(names):
-        seen = {}
-        unique = []
-        for name in names:
-            if name not in seen:
-                seen[name] = 0
-                unique.append(name)
-            else:
-                seen[name] += 1
-                unique.append(f"{name}_{seen[name]}")
-        return unique
 
     # Detect header row
     header_index = None
@@ -70,68 +58,59 @@ def remove_metadata_rows(
             header_index = idx
             break
 
+    # If no header found → return unchanged
     if header_index is None:
-        warnings.append(
-            "No header row matched the provided identifiers. Dataset returned unchanged."
-        )
-        summary = {
-            "metadata_preview": [],
-            "filename": filename,
-            "warnings": warnings,
-        }
-        return cleaned_df.copy(), summary, None
+        return cleaned_df
 
+    # Metadata rows (to extract from)
     metadata_df = cleaned_df.iloc[:header_index].copy()
-
-    if metadata_df.empty:
-        warnings.append("No metadata rows found above the detected header.")
 
     # Promote header row
     new_header = cleaned_df.iloc[header_index].astype(str).tolist()
-    new_header = make_unique(new_header)
 
+    # Ensure unique column names
+    seen = {}
+    unique_header = []
+    for name in new_header:
+        if name not in seen:
+            seen[name] = 0
+            unique_header.append(name)
+        else:
+            seen[name] += 1
+            unique_header.append(f"{name}_{seen[name]}")
+
+    # Slice to rectangular data
     cleaned_df = cleaned_df.iloc[header_index + 1:].copy()
-    cleaned_df.columns = new_header
+    cleaned_df.columns = unique_header
     cleaned_df = cleaned_df.reset_index(drop=True)
 
-    # Build metadata preview
-    preview = metadata_df.head(10).to_dict(orient="records")
+    # -----------------------------------------------------
+    # 3. APPLY RULE-BASED METADATA EXTRACTION
+    # -----------------------------------------------------
 
-    # -----------------------------------------------------
-    # 3B. APPLY RULE-BASED METADATA EXTRACTION
-    # -----------------------------------------------------
     if metadata_extract:
         for new_col, info in metadata_extract.items():
 
-            if "row" not in info or "col_index" not in info:
-                warnings.append(f"Metadata extraction for '{new_col}' is missing required keys.")
-                continue
-
-            row_idx = info["row"]
-            col_index = info["col_index"]
+            row_idx = info.get("row")
+            col_index = info.get("col_index")
             rules = info.get("rules", {})
 
+            # Skip invalid instructions
+            if row_idx is None or col_index is None:
+                continue
             if row_idx >= len(metadata_df):
-                warnings.append(
-                    f"Metadata extraction row {row_idx} out of range for '{new_col}'."
-                )
                 continue
 
+            # Extract non-empty values from the metadata row
             row = metadata_df.iloc[row_idx]
             non_empty = [cell for cell in row.tolist() if str(cell).strip() != ""]
-
             if col_index >= len(non_empty):
-                warnings.append(
-                    f"Metadata extraction col_index {col_index} out of range for '{new_col}'."
-                )
                 continue
 
             raw_value = str(non_empty[col_index])
             value = raw_value
 
-            # -----------------------------
-            # Apply cleaning rules
-            # -----------------------------
+            # Cleaning rules
             if rules.get("strip_whitespace"):
                 value = value.strip()
 
@@ -145,20 +124,31 @@ def remove_metadata_rows(
             cleaned_df[new_col] = value
 
     # -----------------------------------------------------
-    # 4. SUMMARY
+    # 4. UPDATE ROW MAP (Streamlit mode)
     # -----------------------------------------------------
-    summary = {
-        "metadata_preview": preview,
-        "filename": filename,
-        "warnings": warnings,
-    }
+    # This task removes metadata rows + the header row, so row_map must be
+    # updated to keep undo/redo and provenance correct.
+    #
+    # In Streamlit:
+    #     original_map = st.session_state.row_map[filename]
+    #     new_map = original_map[header_index + 1:]
+    #     st.session_state.row_map[filename] = new_map
+    #
+    # Outside Streamlit:
+    #     You must maintain your own row_map.
+    #     Example:
+    #         original_map = list(range(1, len(df) + 1))
+    #         # Remove rows 0..header_index (inclusive)
+    #         new_map = original_map[header_index + 1:]
+    #
+    # The task itself does NOT depend on Streamlit; only the row_map update does.
+
+    if filename is not None and "row_map" in st.session_state:
+        original_map = st.session_state.row_map.get(filename, [])
+        new_map = original_map[header_index + 1:]
+        st.session_state.row_map[filename] = new_map
 
     # -----------------------------------------------------
-    # 5. SUMMARY DATAFRAME
+    # 5. RETURN
     # -----------------------------------------------------
-    summary_df = None
-
-    # -----------------------------------------------------
-    # 6. RETURN
-    # -----------------------------------------------------
-    return cleaned_df, summary, summary_df
+    return cleaned_df

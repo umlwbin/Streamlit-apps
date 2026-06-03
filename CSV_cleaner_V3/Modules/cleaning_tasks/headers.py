@@ -20,7 +20,7 @@ def normalize_unit_string(unit_raw):
     if not unit_raw:
         return None
 
-    # ASCII normalize
+    # ASCII normalize (strip accents, unicode)
     u = unicodedata.normalize("NFKD", unit_raw)
     u = u.encode("ascii", "ignore").decode("ascii")
 
@@ -53,16 +53,21 @@ def normalize_unit_string(unit_raw):
 def clean_headers(
     df: pd.DataFrame,
     *,
-    filename=None,
     naming_style="snake_case",
     preserve_units=True,
-    no_units_in_header=False
+    no_units_in_header=False,
+    **kwargs
 ):
     """
     Clean and standardize messy scientific column headers while extracting metadata.
-    - protects units from snake_case
-    - normalizes units to CF-style ASCII format
-    - reattaches units as: variable_name (units)
+        - extracts units from headers
+        - normalizes units to CF-style ASCII
+        - cleans variable names into snake_case / camelCase / Title Case
+        - reattaches units as: variable_name (units)
+        - returns a metadata table describing the transformation
+
+    Returns:
+        cleaned_df, metadata_df
     """
 
     # -----------------------------------------------------
@@ -75,13 +80,7 @@ def clean_headers(
         raise ValueError("naming_style must be one of: 'snake_case', 'camelCase', 'Title Case'.")
 
     # -----------------------------------------------------
-    # 2. SOFT WARNINGS
-    # -----------------------------------------------------
-    warnings = []
-
-
-    # -----------------------------------------------------
-    # 3. CORE PROCESSING LOGIC
+    # 2. CORE PROCESSING LOGIC
     # -----------------------------------------------------
 
     # These units are ambiguous because they could possibly be apart of the variable name 
@@ -136,7 +135,6 @@ def clean_headers(
                 "units_clean": None,
                 "cleaned_header": fallback,
             }
-            warnings.append(f"Column '{raw}' was empty or invalid and replaced with '{fallback}'.")
             continue
 
         try:
@@ -202,11 +200,9 @@ def clean_headers(
                 if preserve_units and cleaned_units:
                     header = f"{header} ({cleaned_units})"
 
+            # Fallback for empty header
             if header == "":
                 header = "unnamed_column"
-                warnings.append(
-                    f"Header '{raw}' cleaned to an empty name and replaced with 'unnamed_column'."
-                )
 
             cleaned.append(header)
 
@@ -217,7 +213,8 @@ def clean_headers(
                 "cleaned_header": header,
             }
 
-        except Exception as e:
+        except Exception:
+            # If anything fails, preserve original header
             cleaned.append(raw)
             metadata[raw] = {
                 "variable": raw,
@@ -225,8 +222,6 @@ def clean_headers(
                 "units_clean": None,
                 "cleaned_header": raw,
             }
-            warnings.append(f"Failed to clean header '{raw}': {str(e)}")
-
     # -----------------------------------------------------
     # 3d. ENSURE UNIQUENESS
     # -----------------------------------------------------
@@ -239,30 +234,13 @@ def clean_headers(
         else:
             seen[name] += 1
             final.append(f"{name}_{seen[name]}")
-
+    
+    
+    
     # -----------------------------------------------------
-    # 4. SUMMARY
+    # 4. BUILD METADATA TABLE
     # -----------------------------------------------------
-    changed = {}
-    unchanged = []
-
-    for old, new in zip(original, final):
-        if old != new:
-            changed[old] = new
-        else:
-            unchanged.append(old)
-
-    summary = {
-        "changed": changed,
-        "unchanged": unchanged,
-        "warnings": warnings,
-        "header_metadata": metadata,
-    }
-
-    # -----------------------------------------------------
-    # 5. SUMMARY DATAFRAME
-    # -----------------------------------------------------
-    summary_df = (
+    metadata_df = (
         pd.DataFrame(metadata)
         .transpose()
         .reset_index()
@@ -270,9 +248,9 @@ def clean_headers(
     )
 
     # -----------------------------------------------------
-    # 6. RETURN
+    # 5. RETURN
     # -----------------------------------------------------
     cleaned_df = df.copy()
     cleaned_df.columns = final
 
-    return cleaned_df, summary, summary_df
+    return cleaned_df, metadata_df

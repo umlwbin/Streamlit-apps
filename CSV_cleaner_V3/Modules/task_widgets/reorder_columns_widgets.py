@@ -1,54 +1,49 @@
 import streamlit as st
 from streamlit_sortables import sort_items
+from Modules.utils.ui_utils import big_caption
+
 
 def reorder_columns_widget(df):
     """
     Widget for reordering columns using drag-and-drop.
-
-    Supports:
-        - interactive drag-and-drop ordering
-        - warning when no changes are made
-        - one-shot trigger pattern for consistent UX
-
-    Returns
-    -------
-    dict or None
-        {
-            "reordered_variables": list[str]
-        }
-        or None if the user has not completed the widget.
     """
-
-    st.markdown("##### Drag and drop the column names below to set the new order.")
+    big_caption("Drag and drop the column names below to set the new order.")
 
     cols = df.columns.tolist()
 
     # ---------------------------------------------------------
-    # Sortable widget
+    # Step 1 - Drag-and-drop ordering
     # ---------------------------------------------------------
     reordered = sort_items(cols)
 
     st.info(f"Total columns: **{len(cols)}**")
 
     # ---------------------------------------------------------
-    # One-shot trigger
+    # Step 2 - Execute-once trigger
     # ---------------------------------------------------------
-    st.button("Next", type="primary", key="reorderNext_WidgetKey")
+    if st.button("Next", type="primary"):
+        st.session_state.reorder_trigger = True
 
-    triggered = st.session_state.get("reorderNext_WidgetKey", False)
+    triggered = st.session_state.get("reorder_trigger", False)
+    st.session_state.reorder_trigger = False
 
-    if triggered:
+    if not triggered:
+        return None
 
-        # Validation
-        if not reordered:
-            st.error("You did not reorder any columns.", icon="🚨")
-            return None
+    # ---------------------------------------------------------
+    # Step 3 - Final validation
+    # ---------------------------------------------------------
 
-        # Detect unchanged order
-        if reordered == cols:
-            st.warning("Column order unchanged.", icon="⚠️")
+    # Should never happen, but safe to check
+    if not reordered:
+        st.error("No columns detected - cannot reorder.", icon="🚨")
+        return None
 
-        # SUCCESS --> Return kwargs
-        return {"reordered_variables": reordered}
+    # Soft validation: unchanged order
+    if reordered == cols:
+        st.warning("Column order unchanged.", icon="⚠️")
 
-    return None
+    # ---------------------------------------------------------
+    # Step 4 - Return standardized order
+    # ---------------------------------------------------------
+    return {"reordered_variables": reordered}

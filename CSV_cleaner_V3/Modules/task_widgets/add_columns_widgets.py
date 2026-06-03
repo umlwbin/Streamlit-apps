@@ -20,8 +20,6 @@ def how_many_vars_widget(df):
 
     cols = df.columns
 
-    st.markdown("##### How many fields would you like to add?")
-
     # Reset Step 2 if number changes
     def reset_step():
         st.session_state.addColsStep2_active = False
@@ -64,15 +62,12 @@ def fields_to_add_widgets(cols, var_num):
         or None if the user has not completed the widget.
     """
 
+    st.markdown("######")
     st.markdown("##### Steps")
-    st.markdown("1. Enter the name of the column to add")
-    st.markdown("2. Enter the value for that column")
-    st.markdown(f"3. Enter the column number (1 to {len(cols)+1})")
-    st.info(
-        "If you change your mind, leave fields empty and click Next, "
-        "or change the number above.",
-        icon="ℹ️"
-    )
+    st.markdown("• Enter the name of the column to add")
+    st.markdown("• Enter the value for that column")
+    st.markdown(f"• Enter the column number (1 to {len(cols)+1}). The default is at the end of the data table.")
+    st.markdown("")
 
     variable_names = []
     variable_values = []
@@ -82,17 +77,17 @@ def fields_to_add_widgets(cols, var_num):
 
     for i in range(var_num):
         name = col1.text_input(
-            "Column name",
+            "**Column name**",
             key=f"addcol_name_{i}",
             placeholder="e.g., project_name"
         )
         value = col2.text_input(
-            "Value",
+            "**Value**",
             key=f"addcol_value_{i}",
             placeholder="e.g., BaySys"
         )
         colnum = col3.number_input(
-            "Column number",
+            "**Column number**",
             min_value=1,
             max_value=len(cols) + 1,
             value=len(cols) + 1,

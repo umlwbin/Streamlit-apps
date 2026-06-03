@@ -3,20 +3,22 @@ import streamlit as st
 def init_session_state():
     default_values = {
         # File data
-        "original_data": {},      # filename → original df
-        "current_data": {},       # filename → cleaned df
-        "row_map": {},            # filename → row_map list
+        "original_data": {},      # filename ---> original df
+        "current_data": {},       # filename ---> cleaned df
+        "row_map": {},            # filename ---> row_map list
 
         # Undo/redo
-        "history_stack": {},      # filename → list of snapshots
-        "redo_stack": {},         # filename → list of snapshots
-        "task_history": {},       # filename → list of task names
+        "history_stack": {},      # filename ---> list of snapshots
+        "redo_stack": {},         # filename ---> list of snapshots
+        "task_history": {},       # filename ---> list of task names
 
         # Upload state
         "uploader_key": 0,
         "uploaded_files": [],
         "files_processed": False,
         "non_rectangular_files": set(),
+        "last_uploaded_files": None,
+
 
         # Summaries
         "all_summaries": {},
@@ -26,6 +28,9 @@ def init_session_state():
         "task_applied": False,
         "merge_header_rows_submitted": False,
 
+        #cache
+        "task_cache":{},
+        "preview_cache": {},
     }
 
     for key, value in default_values.items():

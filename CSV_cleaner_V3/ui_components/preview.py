@@ -1,36 +1,63 @@
 import streamlit as st
+import pandas as pd
 
+@st.fragment
 def show_live_preview():
-    st.markdown("#### 🔎 Live Preview of Processed Files")
-    st.markdown("")
+    """
+    Isolated preview renderer.
+    This fragment prevents the entire app from re-running when preview updates.
+    """
 
-    if st.session_state.current_data:
-        filenames = list(st.session_state.current_data.keys())
-        selected_file = st.selectbox(
-            "📂 Choose a file to preview",
-            filenames,
-            key="preview_file"
-        )
+    st.markdown("### Live Data Preview")
 
-        current_df = st.session_state.current_data[selected_file]
-        original_df = st.session_state.original_data[selected_file]
-        history = st.session_state.task_history.get(selected_file, [])
+    if not st.session_state.current_data:
+        st.info("Upload a file and run a task to see the preview.")
+        return
 
-        st.markdown("")
-        st.markdown(f" 📑 **File:** `{selected_file}`")
-        st.markdown(f" ✅ **Tasks Applied:** {', '.join(history) if history else 'None'}")
-        st.markdown("")
+    # Always use the first file for preview
+    fname, df = next(iter(st.session_state.current_data.items()))
 
-        compare = st.checkbox("Compare with Original", key="sidebar_compare")
+    # ---------------------------------------------------------
+    # PREVIEW CACHE KEY
+    # ---------------------------------------------------------
+    # Preview depends on:
+    #   - filename
+    #   - current dataframe id (changes after each task)
+    #   - whether compare mode is on
+    # ---------------------------------------------------------
+    compare_mode = st.checkbox("Compare with original", key="compare_mode")
 
-        if compare:
-            st.markdown("**Processed (Top 5 rows):**")
-            st.dataframe(current_df.head(5), use_container_width=True)
+    df_id = id(df)  # unique per task run
+    cache_key = (fname, df_id, compare_mode)
 
-            st.markdown("**Original (Top 5 rows):**")
-            st.dataframe(original_df.head(5), use_container_width=True)
-        else:
-            st.markdown("**Processed Data (Top 5 rows):**")
-            st.dataframe(current_df.head(5), use_container_width=True)
-    else:
-        st.info("Upload files to see a live preview.")
+    # ---------------------------------------------------------
+    # CACHE HIT --> instant preview
+    # ---------------------------------------------------------
+    if cache_key in st.session_state.preview_cache:
+        st.session_state.preview_cache[cache_key]()
+        return
+
+    # ---------------------------------------------------------
+    # CACHE MISS --> build preview once
+    # ---------------------------------------------------------
+    def render_preview():
+        st.markdown(f"##### File: `{fname}`")
+
+        # Processed preview
+        processed_preview = df.head(5)
+        st.markdown("##### Processed Data (Top 5 Rows)")
+        st.dataframe(processed_preview, use_container_width=True)
+
+        if compare_mode:
+            # Original preview
+            original_df = st.session_state.original_data[fname]
+            original_preview = original_df.head(5)
+
+            st.markdown("##### Original Data (Top 5 Rows)")
+            st.dataframe(original_preview, use_container_width=True)
+
+    # Store in cache
+    st.session_state.preview_cache[cache_key] = render_preview
+
+    # Render now
+    render_preview()

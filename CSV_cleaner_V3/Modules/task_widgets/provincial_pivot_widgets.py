@@ -1,25 +1,10 @@
 import streamlit as st
+from Modules.utils.ui_utils import big_caption
+
 
 def provincial_pivot_widget(df):
     """
-    Widget for collecting all user inputs required for the Provincial Chemistry Pivot.
-
-    Supports:
-        - selecting the variable column
-        - selecting the value column
-        - optionally merging metadata columns into the final header names
-        - auto-detection of likely variable/value columns
-        - one-shot trigger pattern for consistent UX
-
-    Returns
-    -------
-    dict or None
-        {
-            "var_col": str,
-            "value_col": str,
-            "additional_params": list[str] or None
-        }
-        or None if the user has not completed the widget.
+    Widget for collecting user inputs for the Provincial Chemistry Pivot.
     """
 
     st.markdown("""
@@ -27,37 +12,31 @@ def provincial_pivot_widget(df):
     - one column contains **variable/parameter names**
     - another contains **values**
 
-    Each variable becomes its own column, and optional metadata (e.g., Units, VMV codes)
-    can be merged into the header names.
+    Each variable becomes its own column. \n\n Optional metadata (e.g., Units, VMV codes)
+    can be merged into the header names first before pivoting.
     """)
 
     # ---------------------------------------------------------
-    # Remove unnamed or empty columns (common in CSV exports)
+    # 0. Clean column names (common CSV artifacts)
     # ---------------------------------------------------------
     df = df.loc[:, ~df.columns.str.contains("^Unnamed", case=False)]
-
-    # Normalize column names to strings
     cols = [str(c) for c in df.columns]
 
     # ---------------------------------------------------------
-    # Auto-detect likely variable and value columns
+    # 1. Auto-detect variable + value columns
     # ---------------------------------------------------------
     variable_keywords = ["variable", "parameter", "name"]
     value_keywords = ["value", "result"]
     exclude_keywords = ["code", "unit"]
 
     def find_variable_index():
-        # Prefer columns with variable keywords and no exclude keywords
         for i, col in enumerate(cols):
             col_lower = col.lower()
             if any(k in col_lower for k in variable_keywords) and not any(e in col_lower for e in exclude_keywords):
                 return i
-
-        # Fallback: first non-code/unit column
         for i, col in enumerate(cols):
             if not any(e in col.lower() for e in exclude_keywords):
                 return i
-
         return 0
 
     def find_value_index():
@@ -70,8 +49,9 @@ def provincial_pivot_widget(df):
     val_default = find_value_index()
 
     # ---------------------------------------------------------
-    # 1. Select variable + value columns
+    # 2. Select variable + value columns
     # ---------------------------------------------------------
+    st.markdown(" ")
     st.markdown("#### 1. Select the Variable and Value columns")
 
     c1, c2 = st.columns(2)
@@ -79,10 +59,23 @@ def provincial_pivot_widget(df):
     value_col = c2.selectbox("Value column", cols, index=val_default)
 
     # ---------------------------------------------------------
-    # 2. Optional metadata merging
+    # Soft validation (curator-facing)
     # ---------------------------------------------------------
+    if var_col == value_col:
+        c1.error("Variable and Value columns must be different.", icon="🚨")
+        return None
+
+    if df[var_col].isna().all():
+        c1.warning(f"Column **{var_col}** contains only missing values.", icon="⚠️")
+
+    if df[value_col].isna().all():
+        c2.warning(f"Column **{value_col}** contains only missing values.", icon="⚠️")
+
+    # ---------------------------------------------------------
+    # 3. Optional metadata merging
+    # ---------------------------------------------------------
+    st.markdown(" ")
     st.markdown("#### 2. Add metadata to the variable header names (optional)")
-    st.caption("For example: `Temperature_degC_567`")
 
     metadata_keywords = [
         "unit", "units",
@@ -99,7 +92,7 @@ def provincial_pivot_widget(df):
     ]
 
     add_meta = st.radio(
-        "Merge metadata columns into the variable header?",
+        "Merge metadata columns into the variable header? For example: `Temperature_degC_567`",
         ["No", "Yes"],
         horizontal=True
     )
@@ -112,21 +105,19 @@ def provincial_pivot_widget(df):
             default=default_meta
         )
 
-        # Prevent variable column from being metadata
+        # Soft validation
         if var_col in additional_params:
-            st.error("The variable column cannot also be used as metadata. Please remove it.")
+            st.error("The variable column cannot also be used as metadata.", icon="🚨")
             return None
 
-        # Validate metadata columns
-        additional_params = [p for p in additional_params if p in df.columns]
+        if any(df[p].isna().all() for p in additional_params):
+            st.warning("One or more metadata columns contain only missing values.", icon="⚠️")
 
     # ---------------------------------------------------------
-    # 3. Final confirmation button
+    # 4. One-shot trigger button
     # ---------------------------------------------------------
     st.markdown("---")
-    apply_now = st.button("Apply Pivot", type="primary")
-
-    if apply_now:
+    if st.button("Apply Pivot", type="primary"):
         return {
             "var_col": var_col,
             "value_col": value_col,

@@ -95,11 +95,10 @@ path = os.path.abspath(os.curdir)
 # Add Modules
 sys.path.append(f"{path}/Modules")
 import state.session_initializer as session_initializer
-from Modules.upload.metadata_detection import detect_metadata_rows
 
 
 # ---------------------------------------------------------
-# Helper: Make column names unique (safe for PyArrow)
+# STEP 0: Helper - Make column names unique (safe for PyArrow)
 # ---------------------------------------------------------
 def make_unique_columns(cols):
     seen = {}
@@ -115,10 +114,141 @@ def make_unique_columns(cols):
 
 
 # ---------------------------------------------------------
+# STEP 1: Metadata Detection
+# ---------------------------------------------------------
+import csv
+import re
+
+def detect_metadata_rows(text, sep=","):
+    """
+    Detect whether metadata rows exist above the true header row.
+
+    This version contains no helper functions - everything is written inline
+    with clear comments so beginners can follow the logic.
+    """
+
+    # ------------------------------------------------------------
+    # STEP 1 - Parse the CSV safely
+    # ------------------------------------------------------------
+    # Use csv.reader instead of split(',') so that quoted commas (e.g., "APHA, AWWA, WPCF") stay inside a single cell.
+    # using split(','), those would incorrectly become 3 cells.
+    raw_lines = text.splitlines()
+    reader = csv.reader(raw_lines, delimiter=sep)
+    split_lines = [row for row in reader]
+
+    # If the file is empty, we cannot detect anything
+    if not split_lines:
+        return False, None
+
+    # ------------------------------------------------------------
+    # STEP 2 - Determine the maximum row width
+    # ------------------------------------------------------------
+    # The real header row is usually one of the widest rows in the file.
+    row_widths = [len(r) for r in split_lines]
+    max_width = max(row_widths)
+
+    # ------------------------------------------------------------
+    # STEP 3 - Define thresholds for deciding what looks like a header
+    # ------------------------------------------------------------
+    HEADER_THRESHOLD = 0.9        # Row must be almost full width
+    NONEMPTY_THRESHOLD = 0.6      # Row must have many non-empty cells
+    HEADER_TOKEN_THRESHOLD = 0.5  # At least half must look like header labels
+
+    header_index = None
+
+    # ------------------------------------------------------------
+    # STEP 4 - Scan each row and evaluate whether it looks like a header
+    # ------------------------------------------------------------
+    for i, row in enumerate(split_lines):
+
+        # -----------------------------
+        # 4A - Check row width
+        # -----------------------------
+        # If the row is much narrower than the widest row,
+        # it's probably metadata or junk.
+        width = len(row)
+        if width < HEADER_THRESHOLD * max_width:
+            continue
+
+        # -----------------------------
+        # 4B - Check non-empty density
+        # -----------------------------
+        # Count how many cells are non-empty.
+        nonempty_count = sum(1 for c in row if c.strip() != "")
+        nonempty_fraction = nonempty_count / max_width
+
+        if nonempty_fraction < NONEMPTY_THRESHOLD:
+            continue
+
+        # -----------------------------
+        # 4C - Check how "header-like" the cells are
+        # -----------------------------
+        # A header cell usually:
+        #   - is not empty
+        #   - does not start with a number
+        #   - is not a date
+        #   - is not a sample number (SN...)
+        header_like_count = 0
+
+        for cell in row:
+            cell_stripped = cell.strip()
+
+            # Empty cells are not header-like
+            if cell_stripped == "":
+                continue
+
+            # If it starts with a digit, it's probably data
+            if re.match(r"^\d", cell_stripped):
+                continue
+
+            # If it looks like a date (YYYY-MM-DD), it's not a header
+            if re.match(r"^\d{4}-\d{2}-\d{2}", cell_stripped):
+                continue
+
+            # If it contains "SN", it's likely a sample number
+            if "SN" in cell_stripped.upper():
+                continue
+
+            # If none of the above disqualified it, count it as header-like
+            header_like_count += 1
+
+        header_token_fraction = header_like_count / max_width
+
+        if header_token_fraction < HEADER_TOKEN_THRESHOLD:
+            continue
+
+        # If we reach this point, this row satisfies all header criteria
+        header_index = i
+        break
+
+    # ------------------------------------------------------------
+    # STEP 5 - Determine whether metadata exists above the header
+    # ------------------------------------------------------------
+    # If the header is not the first row (index 0), then metadata exists.
+    has_metadata = header_index not in (0, None)
+
+    return has_metadata, header_index
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ---------------------------------------------------------
 # Main upload function
 # ---------------------------------------------------------
 def fileuploadfunc():
-    st.markdown("#### Upload a CSV/TXT File to begin")
+    st.markdown("#### ⏫ Upload CSV or TXT File(s)")
 
     def newUpload():
         session_initializer.reset_widget_flags()
@@ -132,9 +262,11 @@ def fileuploadfunc():
         st.session_state.redo_stack = {}
         st.session_state.non_rectangular_files = set()
         st.session_state.row_map = {}
+        st.session_state.task_cache = {}
+
 
     uploaded_files = st.file_uploader(
-        "Choose CSV file(s)",
+        "Add files",
         accept_multiple_files=True,
         type="csv",
         on_change=newUpload,
@@ -148,7 +280,7 @@ def fileuploadfunc():
             raw_bytes = file.read().decode("utf-8", errors="replace")
 
             # -------------------------------------------------
-            # STEP 1: Metadata detection (delegated)
+            # STEP 1: Metadata detection
             # -------------------------------------------------
             has_metadata, header_index = detect_metadata_rows(raw_bytes, sep=",")
 
@@ -209,6 +341,15 @@ def fileuploadfunc():
             st.session_state.task_history[filename] = []
             st.session_state.history_stack[filename] = []
             st.session_state.redo_stack[filename] = []
+
+        # -------------------------------------------------
+        # Ensure undo/redo structures exist for all files
+        # -------------------------------------------------
+        for fname in st.session_state.current_data:
+            st.session_state.row_map.setdefault(fname, [])
+            st.session_state.history_stack.setdefault(fname, [])
+            st.session_state.redo_stack.setdefault(fname, [])
+            st.session_state.task_history.setdefault(fname, [])
 
         st.session_state.files_processed = True
         st.success("Files uploaded and initialized.")

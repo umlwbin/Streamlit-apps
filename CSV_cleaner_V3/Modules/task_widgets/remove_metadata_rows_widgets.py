@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+from Modules.utils.ui_utils import big_caption
+
 
 def remove_metadata_rows_widget(df):
     """
@@ -8,42 +10,23 @@ def remove_metadata_rows_widget(df):
         - detecting metadata rows above the true header
         - previewing metadata rows
         - allowing the user to extract metadata values into new columns
-        - returning extraction instructions only after a confirmation button
-
-    Returns
-    -------
-    dict or None
-        {
-            "identifiers": list[str],
-            "metadata_extract": {
-                new_col_name: {
-                    "row": int,
-                    "col_index": int,
-                    "rules": {
-                        "strip_whitespace": bool,
-                        "remove_direction": bool,
-                        "remove_degree_symbol": bool
-                    }
-                },
-                ...
-            }
-        }
-        or None if the user has not completed the widget.
+        - returning extraction instructions only after an execute-once trigger
     """
 
     # ---------------------------------------------------------
     # Step 1 - Identify the true header row
     # ---------------------------------------------------------
-    st.write("##### Step 1 - Identify the true header row")
-    st.write("Enter three column names that appear in the real header row.")
+    st.write("#### Step 1 - Identify the true header row")
+    big_caption("Enter three column names that appear in the real header row.")
 
-    col1, col2, col3 = st.columns(3)
-    id1 = col1.text_input("Header name 1", "")
-    id2 = col2.text_input("Header name 2", "")
-    id3 = col3.text_input("Header name 3", "")
+    c1, c2, c3 = st.columns(3)
+    id1 = c1.text_input("Header name 1", "")
+    id2 = c2.text_input("Header name 2", "")
+    id3 = c3.text_input("Header name 3", "")
 
     identifiers = [id1.strip(), id2.strip(), id3.strip()]
 
+    # Soft validation
     if any(x == "" for x in identifiers):
         st.info("Enter all three header names to continue.")
         return None
@@ -61,25 +44,42 @@ def remove_metadata_rows_widget(df):
             break
 
     if header_index is None:
-        st.error("Could not detect header row with these identifiers.")
+        st.error("Could not detect a header row with these identifiers.")
         return None
 
     metadata_df = df.iloc[:header_index].copy()
 
+    # Soft validation: no metadata rows
+    if metadata_df.empty:
+        st.warning("No metadata rows found above the detected header.")
+        # Still allow user to continue - they may only want header promotion
+
     # ---------------------------------------------------------
-    # Step 2 - Preview metadata rows
+    #  Preview metadata rows
     # ---------------------------------------------------------
-    st.write("##### Step 2 - Metadata rows detected above the header")
+    st.write(" ")
+    st.write("##### Metadata rows detected above the header")
     st.dataframe(metadata_df)
-
-    st.write("You can extract values from these metadata rows into new columns.")
+    big_caption("You may extract values from these metadata rows into new columns.")
 
     # ---------------------------------------------------------
-    # Step 3 - Define metadata extractions
+    # Step 2 - Define metadata extractions
     # ---------------------------------------------------------
-    st.write("##### Step 3 - Extract metadata into new columns")
+    st.write(" ")
+    st.write("#### Step 2 - Extract metadata into new columns (optional)")
+    st.markdown("✎ From each metadata row, as shown in the preview above, you can extract a parameter "
+                "from one of the cells in that row.")
+    
+    st.markdown("✎ You can apply optional cleaning rules for the extracted parameter - we recommend stripping leading/trailing whitespace.")
+
+    st.markdown("✎ Next, **add the name of the new column** under which the extracted metadata parameter will live.")
+
+    st.markdown("For e.g., if the filename you want to extract from the metadata row is `weather_data_2024.csv`, then you could create a column called **Filename**. " \
+    "`weather_data_2024.csv` will be populated right throughout the column.")
+     
 
     metadata_extract = {}
+    used_new_cols = set()
 
     for row_idx in range(len(metadata_df)):
         row = metadata_df.iloc[row_idx]
@@ -92,7 +92,7 @@ def remove_metadata_rows_widget(df):
             st.write("Row contents:")
             st.code(non_empty)
 
-            st.write("You can extract multiple values from this row.")
+            st.write("You may extract multiple values from this row.")
 
             # Allow up to 3 extractions per row
             for extract_i in range(3):
@@ -107,9 +107,7 @@ def remove_metadata_rows_widget(df):
                 if selected_value == "(none)":
                     continue
 
-                # ---------------------------------------------------------
-                # NEW: Rule-based cleaning instead of manual editing
-                # ---------------------------------------------------------
+                # Cleaning rules
                 st.markdown("**Cleaning rules**")
 
                 strip_ws = st.checkbox(
@@ -130,15 +128,24 @@ def remove_metadata_rows_widget(df):
                     key=f"remove_deg_{row_idx}_{extract_i}"
                 )
 
-                # ---------------------------------------------------------
-                # Column name for extracted value
-                # ---------------------------------------------------------
+                # New column name
                 new_col = st.text_input(
-                    f"New column name for this value",
+                    "New column name",
                     key=f"newcol_{row_idx}_{extract_i}"
-                )
+                ).strip()
 
-                if new_col.strip() != "":
+                # Warn if user selected a value but did not enter a column name
+                if selected_value != "(none)" and new_col == "":
+                    st.warning("You selected a value to extract, but did not enter a new column name.", icon="⚠️")
+
+                # Soft validation when a column name is provided
+                if new_col:
+                    if new_col in used_new_cols:
+                        st.error(f"Column name '{new_col}' is already used.", icon="🚨")
+                        continue
+
+                    used_new_cols.add(new_col)
+
                     metadata_extract[new_col] = {
                         "row": row_idx,
                         "col_index": non_empty.index(selected_value),
@@ -149,17 +156,19 @@ def remove_metadata_rows_widget(df):
                         }
                     }
 
-                    st.success(
-                        f"Will extract: **{selected_value}** → column **{new_col}** "
-                        f"(rules applied)"
-                    )
+                    st.success(f"Will extract **{selected_value}** → **{new_col}** (rules applied)")
+
 
     # ---------------------------------------------------------
-    # Step 4 - Confirmation button
+    # Step 4 - Execute-once trigger button
     # ---------------------------------------------------------
-    proceed = st.button("Next", type="primary")
+    if st.button("Next", type="primary"):
+        st.session_state.remove_metadata_trigger = True
 
-    if not proceed:
+    triggered = st.session_state.get("remove_metadata_trigger", False)
+    st.session_state.remove_metadata_trigger = False
+
+    if not triggered:
         return None
 
     # ---------------------------------------------------------

@@ -1,38 +1,36 @@
 import streamlit as st
+from Modules.utils.ui_utils import big_caption
+
 
 def headers_widgets(df=None, show_button=True):
     """
     Widget for configuring header-cleaning settings.
 
-    Supports:
-        - choosing naming style
-        - controlling unit handling
-        - optional "Let's Go" confirmation button
-
     Parameters
     ----------
-    df : pandas.DataFrame or None
-        Unused, but included for consistency with other widgets.
-
     show_button : bool
-        If True, show a confirmation button and return settings only when pressed.
-        If False, return settings immediately.
+        If True, show the “Let’s Go” trigger button.
+        If False, return settings immediately (used inside tidy-data widget).
 
-    Returns
-    -------
-    dict or None
+    Returns:
         {
-            "naming_style": str,
-            "preserve_units": bool,
-            "no_units_in_header": bool
+            "naming_style": ...,
+            "preserve_units": ...,
+            "no_units_in_header": ...
         }
-        or None if show_button=True and the user has not pressed the button.
+        or None until the curator confirms.
     """
 
-    st.markdown("#### Header Cleaning Settings")
+    # ---------------------------------------------------------
+    # SECTION: Intro
+    # ---------------------------------------------------------
+    st.write("#### Header Cleaning Settings")
+    big_caption(
+        "Choose how your column names should be cleaned and whether units "
+        "should be preserved.")
 
     # ---------------------------------------------------------
-    # Naming style
+    # SECTION: Naming Style
     # ---------------------------------------------------------
     naming_style = st.radio(
         "Choose a naming style for cleaned headers",
@@ -41,31 +39,45 @@ def headers_widgets(df=None, show_button=True):
     )
 
     # ---------------------------------------------------------
-    # No units in header
+    # SECTION: Unit Handling
     # ---------------------------------------------------------
+    st.write("#### Unit Handling")
+
+    # Curator-friendly explanation
+
+    st.info("• If your dataset includes bracketed units inside the column names (e.g., "
+        "`Temperature (°C)` or `Flow [m³/s]`), the cleaner can extract and "
+        "normalize them. \n\n"
+        "• If your units aren’t written in brackets, " 
+        "the cleaner will attempt to recognize and standardize them using our internal unit map.\n\n"
+        "• If your dataset does **NOT** include units in headers, "
+        "enable the option below.")
+
     no_units_in_header = st.checkbox(
-        "No units in header (dataset does not include units in column names)",
+        "My dataset does NOT include units in the column names",
         value=False,
         key="no_units_in_header"
     )
 
-    # ---------------------------------------------------------
-    # Unit handling (disabled if no_units_in_header=True)
-    # ---------------------------------------------------------
+    # If curator says “no units in header”, disable unit preservation
     if no_units_in_header:
         preserve_units = False
-        st.info("Unit handling disabled because 'No units in header' is selected.")
+        st.info(
+            "Unit handling disabled because you indicated that your dataset "
+            "does not include units in the column names."
+        )
     else:
+        # Curator chooses whether to keep or strip units
         preserve_units = (
             st.radio(
-                "How should units be handled?",
+                "**How should units be handled?**",
                 ["Preserve units", "Strip units"],
                 key="header_units"
             ) == "Preserve units"
         )
 
     # ---------------------------------------------------------
-    # Build kwargs dict
+    # Build settings dict
     # ---------------------------------------------------------
     settings = {
         "naming_style": naming_style,
@@ -74,11 +86,22 @@ def headers_widgets(df=None, show_button=True):
     }
 
     # ---------------------------------------------------------
-    # Return settings
+    # EXECUTE-ONCE TRIGGER (only when show_button=True)
     # ---------------------------------------------------------
-    if show_button:
-        if st.button("Let's Go", type="primary", key="headers_go"):
-            return settings
+    if not show_button:
+        # Tidy-data widget will handle the trigger
+        return settings
+
+    if st.button("Let's Go", type="primary", key="headers_go"):
+        st.session_state.headers_trigger = True
+
+    triggered = st.session_state.get("headers_trigger", False)
+    st.session_state.headers_trigger = False
+
+    if not triggered:
         return None
 
+    # ---------------------------------------------------------
+    # SUCCESS ---> Return kwargs for clean_headers task
+    # ---------------------------------------------------------
     return settings

@@ -1,5 +1,7 @@
 import streamlit as st
 import re
+from Modules.utils.ui_utils import big_caption
+
 
 def split_column_widget(df):
     """
@@ -9,35 +11,23 @@ def split_column_widget(df):
         - selecting a column
         - choosing a predefined or custom delimiter
         - previewing the split on the first 5 rows
-        - one-shot trigger pattern for consistent UX
-
-    Returns
-    -------
-    dict or None
-        {
-            "column": str,
-            "delimiters": list[str]
-        }
-        or None if the user has not completed the widget.
     """
 
-    st.markdown("""
-    This tool splits a single column into multiple new columns based on a chosen delimiter.
-    """)
+    big_caption("Choose a column and delimiter(s) to split it into multiple new columns.")
+
+    st.info('The new columns will have the name of the original split column + `_1`, `_2`, etc. Example, `Temp_1`')
 
     # ---------------------------------------------------------
     # Step 1 - Choose the column
     # ---------------------------------------------------------
-    st.markdown("##### Select the column to scan")
-    col = st.selectbox("Column", options=list(df.columns))
+    col = st.selectbox("**Column to split**", options=list(df.columns))
 
     # ---------------------------------------------------------
-    # Step 2 - Choose delimiter
+    # Step 2 - Choose delimiter(s)
     # ---------------------------------------------------------
-    st.markdown("##### Choose a delimiter")
 
     delimiter_choice = st.selectbox(
-        "Delimiter",
+        "**Choose a Delimiter**",
         [
             "Space (one or more)",
             "Tab (\\t)",
@@ -52,7 +42,7 @@ def split_column_widget(df):
 
     # Map dropdown choice → actual delimiter(s)
     if delimiter_choice == "Space (one or more)":
-        delimiters = [r"\s+"]  # REGEX delimiter
+        delimiters = [r"\s+"]  # regex
     elif delimiter_choice == "Tab (\\t)":
         delimiters = ["\t"]
     elif delimiter_choice == "Comma (,)":
@@ -67,24 +57,24 @@ def split_column_widget(df):
         delimiters = ["\n"]
     else:
         raw = st.text_input("Enter custom delimiter(s), separated by commas")
-        delimiters = [d for d in raw.split(",") if d.strip() != ""]
+        delimiters = [d.strip() for d in raw.split(",") if d.strip() != ""]
 
     # ---------------------------------------------------------
     # Step 3 - Preview (first 5 rows)
     # ---------------------------------------------------------
-    st.markdown("##### Preview of detected splits (first 5 rows)")
+    st.write(" ")
+    st.write("#### Preview")
 
     if delimiters:
-        # Normalize whitespace and strip edges
         preview_series = (
             df[col]
             .astype(str)
-            .str.replace("\u00A0", " ", regex=False)   # NBSP → space
-            .str.replace(r"\s+", " ", regex=True)      # collapse whitespace
+            .str.replace("\u00A0", " ", regex=False)
+            .str.replace(r"\s+", " ", regex=True)
             .str.strip()
         )
 
-        # Build regex pattern (regex delimiters are NOT escaped)
+        # Build regex pattern
         escaped = [
             d if d.startswith("\\") else re.escape(d)
             for d in delimiters
@@ -95,24 +85,34 @@ def split_column_widget(df):
 
         st.dataframe(preview_split, use_container_width=True)
         st.info(f"Splitting will create **{preview_split.shape[1]}** new column(s).")
-
     else:
         st.info("Select or enter at least one delimiter to preview splits.")
 
     # ---------------------------------------------------------
-    # Step 4 - Run
+    # Step 4 - Execute-once trigger
     # ---------------------------------------------------------
     st.markdown("---")
-    apply_now = st.button("Split Column", type="primary")
 
-    if apply_now:
-        if not delimiters:
-            st.warning("Please select or enter at least one delimiter.")
-            return None
+    if st.button("Split Column", type="primary"):
+        st.session_state.split_trigger = True
 
-        return {
-            "column": col,
-            "delimiters": delimiters
-        }
+    triggered = st.session_state.get("split_trigger", False)
+    st.session_state.split_trigger = False
 
-    return None
+    if not triggered:
+        return None
+
+    # ---------------------------------------------------------
+    # Step 5 - Final validation
+    # ---------------------------------------------------------
+    if not delimiters:
+        st.error("Please select or enter at least one delimiter.", icon="🚨")
+        return None
+
+    # ---------------------------------------------------------
+    # Step 6 - Return kwargs
+    # ---------------------------------------------------------
+    return {
+        "column": col,
+        "delimiters": delimiters
+    }

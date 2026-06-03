@@ -1,26 +1,13 @@
 import streamlit as st
+from Modules.utils.ui_utils import big_caption
+
 
 def merge_date_time_widgets(df):
     """
     Widget for selecting a date column and a time column to merge into a single
     ISO datetime column.
-
-    Supports:
-        - auto-detection of likely date/time columns
-        - validation that both columns are selected and distinct
-        - one-shot trigger pattern for consistent UX
-
-    Returns
-    -------
-    dict or None
-        {
-            "date_column": str,
-            "time_column": str
-        }
-        or None if the user has not completed the widget.
     """
-
-    st.markdown("#### Merge a date column and a time column into one ISO datetime")
+    big_caption("Merge a date column and a time column into one ISO datetime column")
 
     # ---------------------------------------------------------
     # Handle empty DataFrame
@@ -30,6 +17,14 @@ def merge_date_time_widgets(df):
         return None
 
     cols = df.columns
+
+    # ---------------------------------------------------------
+    # Preview
+    # ---------------------------------------------------------
+    st.markdown('')
+    st.markdown('##### Data Table Snapshot')
+    st.dataframe(df.head(3))
+    st.markdown('')
 
     # ---------------------------------------------------------
     # Auto-detect defaults
@@ -52,6 +47,17 @@ def merge_date_time_widgets(df):
         index=def_time,
         key="merge_time_select"
     )
+
+    # ---------------------------------------------------------
+    # Soft validation
+    # ---------------------------------------------------------
+    if date_column:
+        if df[date_column].astype(str).str.strip().eq("").all():
+            st.warning(f"Date column **{date_column}** is empty. Resulting Date_Time will be all missing.")
+
+    if time_column:
+        if df[time_column].astype(str).str.strip().eq("").all():
+            st.info(f"Time column **{time_column}** is empty. Missing times will be replaced with **00:00:00**.")
 
     # ---------------------------------------------------------
     # One-shot trigger

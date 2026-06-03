@@ -4,36 +4,12 @@ def reshape_widgets(df):
     """
     Unified widget for reshaping data:
         - Transpose
-        - Pivot wide → long (melt)
-        - Pivot long → wide (pivot)
-
-    Returns kwargs for the reshape() task.
-
-    Returns
-    -------
-    dict or None
-        {
-            "operation": "transpose"
-        }
-        OR
-        {
-            "operation": "wide_to_long",
-            "id_cols": [...],
-            "value_cols": [...],
-            "var_name": str,
-            "value_name": str
-        }
-        OR
-        {
-            "operation": "long_to_wide",
-            "variable_col": str,
-            "value_col": str,
-            "id_cols": [...]
-        }
-        or None if the user has not completed the widget.
+        - Pivot wide --> long (melt)
+        - Pivot long --> wide (pivot)
     """
 
-    st.markdown("Choose how you want to transform your table.")
+    st.markdown(" ")
+    st.markdown("##### How do you want to transform your table?")
 
     # --- EXPLANATIONS -----------------------------------------------------
     with st.expander("What do these options mean?", expanded=False):
@@ -50,7 +26,7 @@ def reshape_widgets(df):
 
     **After (transposed):**
 
-    | index | 0  | 1  |
+    | Original Headers | col_0  | col_1  |
     |-------|----|----|
     | Col1  | A  | B  |
     | Col2  | 10 | 20 |
@@ -111,7 +87,7 @@ def reshape_widgets(df):
 
 
 
-
+    st.markdown(" ")
     # ---------------------------------------------------------
     # Operation selection
     # ---------------------------------------------------------
@@ -133,18 +109,23 @@ def reshape_widgets(df):
     if operation == "Transpose":
         st.info("This will flip your table so rows become columns and columns become rows.")
 
-        with st.form("transpose_form"):
-            submitted = st.form_submit_button("Transpose Data", type="primary")
-            if submitted:
-                return {"operation": "transpose"}
+        if st.button("Transpose Data", type="primary"):
+            st.session_state.reshape_trigger = True
+
+        triggered = st.session_state.get("reshape_trigger", False)
+        st.session_state.reshape_trigger = False
+
+        if triggered:
+            return {"operation": "transpose"}
 
         return None
 
     # =========================================================
-    # PIVOT WIDE → LONG
+    # PIVOT WIDE --> LONG
     # =========================================================
     if operation == "Pivot wide → long":
-        st.markdown("#### Select columns to keep fixed (ID columns)")
+        st.write(" ")
+        st.write("#### Select columns to keep fixed (ID columns)")
 
         id_cols = st.multiselect(
             "ID columns (optional)",
@@ -162,33 +143,38 @@ def reshape_widgets(df):
             key="reshape_value_cols"
         )
 
-        col1, col2 = st.columns(2)
-        var_name = col1.text_input("Name for variable column", value="Variable")
-        value_name = col2.text_input("Name for value column", value="Value")
+        c1, c2 = st.columns(2)
+        var_name = c1.text_input("Name for variable column", value="Variable")
+        value_name = c2.text_input("Name for value column", value="Value")
 
-        with st.form("wide_to_long_form"):
-            submitted = st.form_submit_button("Pivot Wide → Long", type="primary")
-            if submitted:
+        if st.button("Pivot Wide → Long", type="primary"):
+            st.session_state.reshape_trigger = True
 
-                if not value_cols:
-                    st.error("Please select at least one value column.", icon="🚨")
-                    return None
+        triggered = st.session_state.get("reshape_trigger", False)
+        st.session_state.reshape_trigger = False
 
-                return {
-                    "operation": "wide_to_long",
-                    "id_cols": id_cols,
-                    "value_cols": value_cols,
-                    "var_name": var_name,
-                    "value_name": value_name
-                }
+        if not triggered:
+            return None
 
-        return None
+        # Final validation
+        if not value_cols:
+            st.error("Please select at least one value column.", icon="🚨")
+            return None
+
+        return {
+            "operation": "wide_to_long",
+            "id_cols": id_cols,
+            "value_cols": value_cols,
+            "var_name": var_name,
+            "value_name": value_name
+        }
 
     # =========================================================
-    # PIVOT LONG → WIDE
+    # PIVOT LONG --> WIDE
     # =========================================================
     if operation == "Pivot long → wide":
-        st.markdown("#### Select columns for pivoting")
+        st.write(" ")
+        st.write("#### Select columns for pivoting")
 
         variable_col = st.selectbox(
             "Column containing variable names",
@@ -208,19 +194,25 @@ def reshape_widgets(df):
             key="reshape_id_cols_wide"
         )
 
-        with st.form("long_to_wide_form"):
-            submitted = st.form_submit_button("Pivot Long → Wide", type="primary")
-            if submitted:
+        if st.button("Pivot Long → Wide", type="primary"):
+            st.session_state.reshape_trigger = True
 
-                if not variable_col or not value_col:
-                    st.error("Please select both variable and value columns.", icon="🚨")
-                    return None
+        triggered = st.session_state.get("reshape_trigger", False)
+        st.session_state.reshape_trigger = False
 
-                return {
-                    "operation": "long_to_wide",
-                    "variable_col": variable_col,
-                    "value_col": value_col,
-                    "id_cols": id_cols
-                }
+        if not triggered:
+            return None
 
-        return None
+        # Final validation
+        if not variable_col or not value_col:
+            st.error("Please select both variable and value columns.", icon="🚨")
+            return None
+
+        return {
+            "operation": "long_to_wide",
+            "variable_col": variable_col,
+            "value_col": value_col,
+            "id_cols": id_cols
+        }
+
+    return None

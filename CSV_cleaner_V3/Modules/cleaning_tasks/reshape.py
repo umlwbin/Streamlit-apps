@@ -20,87 +20,28 @@ def dedupe_columns(cols):
     return new_cols
 
 
-def transpose(df: pd.DataFrame):
+def transpose(df: pd.DataFrame, *, filename=None, **kwargs):
     """
     Safe transpose:
-    - preserves original headers as a column
-    - generates synthetic column names for transposed data
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        Input dataset to transpose.
-
-    Returns
-    -------
-    cleaned_df : pandas.DataFrame
-        Transposed DataFrame
-
-    summary : dict
-        {
-            "operation": "transpose",
-            "rows_before": int,
-            "cols_before": int,
-            "rows_after": int,
-            "cols_after": int,
-            "warnings": list[str]
-        }
-
-    summary_df : None
-        Always None for this task.
+        - preserves original headers as a column
+        - generates synthetic column names for transposed data
     """
 
-    # -----------------------------------------------------
-    # 1. VALIDATION - Hard Errors
-    # -----------------------------------------------------
     if not isinstance(df, pd.DataFrame):
         raise ValueError("df must be a pandas DataFrame.")
 
-    # -----------------------------------------------------
-    # 2. VALIDATION - Soft Checks
-    # -----------------------------------------------------
-    warnings = []
-
-    if df.empty:
-        warnings.append("Input DataFrame is empty. Transpose will return an empty DataFrame.")
-
-    # -----------------------------------------------------
-    # 3. CORE PROCESSING
-    # -----------------------------------------------------
-    t=df.copy().T #Transpose
+    # Core transpose
+    t = df.copy().T
 
     # Reset index so original headers become a column
-    t = t.reset_index()
+    t = t.reset_index().rename(columns={"index": "Original Headers"})
 
-    # Rename the index column (original headers)
-    t=t.rename(columns={"index":"Original Headers"})
+    # Synthetic column names
+    new_cols = ["Original Headers"] + [f"col_{i}" for i in range(t.shape[1] - 1)]
+    t.columns = new_cols
 
-    # Generate synthetic column names for the transposed data: # col_0, col_1, col_2
-    new_cols=["Original Headers"] + [f"col_{i}" for i in range(t.shape[1]-1)]
-    t.columns=new_cols
+    return t
 
-
-    # -----------------------------------------------------
-    # 4. SUMMARY
-    # -----------------------------------------------------
-    summary = {
-        "operation": "transpose",
-        "rows_before": df.shape[0],
-        "cols_before": df.shape[1],
-        "rows_after": t.shape[0],
-        "cols_after": t.shape[1],
-        "warnings": warnings,
-    }
-
-    # -----------------------------------------------------
-    # 5. SUMMARY DATAFRAME
-    # -----------------------------------------------------
-    summary_df = None
-
-    # -----------------------------------------------------
-    # 6. RETURN
-    # -----------------------------------------------------
-    return t, summary, summary_df
 
 
 
@@ -110,50 +51,14 @@ def wide_to_long(
     id_cols,
     value_cols,
     var_name,
-    value_name
+    value_name,
+    filename=None,
+    **kwargs
 ):
     """
-    Convert a wide-format table into long format using pandas.melt().
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        Input dataset.
-
-    id_cols : list[str]
-        Columns that remain fixed (identifiers).
-
-    value_cols : list[str]
-        Columns to unpivot into long format.
-
-    var_name : str
-        Name of the new column that will store former column names.
-
-    value_name : str
-        Name of the new column that will store values.
-
-    Returns
-    -------
-    cleaned_df : pandas.DataFrame
-        Long-format DataFrame.
-
-    summary : dict
-        {
-            "operation": "wide_to_long",
-            "id_cols": list[str],
-            "value_cols": list[str],
-            "rows_before": int,
-            "rows_after": int,
-            "warnings": list[str]
-        }
-
-    summary_df : None
-        Always None for this task.
+    Convert wide-format table to long format using melt().
     """
 
-    # -----------------------------------------------------
-    # 1. VALIDATION - Hard Errors
-    # -----------------------------------------------------
     if not isinstance(df, pd.DataFrame):
         raise ValueError("df must be a pandas DataFrame.")
 
@@ -161,17 +66,6 @@ def wide_to_long(
         if col not in df.columns:
             raise ValueError(f"Column '{col}' does not exist in the dataset.")
 
-    # -----------------------------------------------------
-    # 2. VALIDATION - Soft Checks
-    # -----------------------------------------------------
-    warnings = []
-
-    if df.empty:
-        warnings.append("Input DataFrame is empty. Output will also be empty.")
-
-    # -----------------------------------------------------
-    # 3. CORE PROCESSING
-    # -----------------------------------------------------
     long_df = df.melt(
         id_vars=id_cols,
         value_vars=value_cols,
@@ -179,28 +73,7 @@ def wide_to_long(
         value_name=value_name
     )
 
-    # -----------------------------------------------------
-    # 4. SUMMARY
-    # -----------------------------------------------------
-    summary = {
-        "operation": "wide_to_long",
-        "id_cols": id_cols,
-        "value_cols": value_cols,
-        "rows_before": df.shape[0],
-        "rows_after": long_df.shape[0],
-        "warnings": warnings,
-    }
-
-    # -----------------------------------------------------
-    # 5. SUMMARY DATAFRAME
-    # -----------------------------------------------------
-    summary_df = None
-
-    # -----------------------------------------------------
-    # 6. RETURN
-    # -----------------------------------------------------
-    return long_df, summary, summary_df
-
+    return long_df
 
 
 
@@ -209,48 +82,14 @@ def long_to_wide(
     *,
     variable_col,
     value_col,
-    id_cols
+    id_cols,
+    filename=None,
+    **kwargs
 ):
     """
-    Convert a long-format table into wide format using pivot_table().
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        Input dataset.
-
-    variable_col : str
-        Column whose values become new column names.
-
-    value_col : str
-        Column whose values fill the new wide table.
-
-    id_cols : list[str]
-        Columns that uniquely identify each row.
-
-    Returns
-    -------
-    cleaned_df : pandas.DataFrame
-        Wide-format DataFrame.
-
-    summary : dict
-        {
-            "operation": "long_to_wide",
-            "variable_col": str,
-            "value_col": str,
-            "id_cols": list[str],
-            "rows_before": int,
-            "rows_after": int,
-            "warnings": list[str]
-        }
-
-    summary_df : None
-        Always None for this task.
+    Convert long-format table to wide format using pivot_table().
     """
 
-    # -----------------------------------------------------
-    # 1. VALIDATION — Hard Errors
-    # -----------------------------------------------------
     if not isinstance(df, pd.DataFrame):
         raise ValueError("df must be a pandas DataFrame.")
 
@@ -258,17 +97,6 @@ def long_to_wide(
         if col not in df.columns:
             raise ValueError(f"Column '{col}' does not exist in the dataset.")
 
-    # -----------------------------------------------------
-    # 2. VALIDATION — Soft Checks
-    # -----------------------------------------------------
-    warnings = []
-
-    if df.empty:
-        warnings.append("Input DataFrame is empty. Output will also be empty.")
-
-    # -----------------------------------------------------
-    # 3. CORE PROCESSING
-    # -----------------------------------------------------
     wide_df = df.pivot_table(
         index=id_cols,
         columns=variable_col,
@@ -278,30 +106,7 @@ def long_to_wide(
 
     wide_df.columns = dedupe_columns(list(wide_df.columns))
 
-    # -----------------------------------------------------
-    # 4. SUMMARY
-    # -----------------------------------------------------
-    summary = {
-        "operation": "long_to_wide",
-        "variable_col": variable_col,
-        "value_col": value_col,
-        "id_cols": id_cols,
-        "rows_before": df.shape[0],
-        "rows_after": wide_df.shape[0],
-        "warnings": warnings,
-    }
-
-    # -----------------------------------------------------
-    # 5. SUMMARY DATAFRAME
-    # -----------------------------------------------------
-    summary_df = None
-
-    # -----------------------------------------------------
-    # 6. RETURN
-    # -----------------------------------------------------
-    return wide_df, summary, summary_df
-
-
+    return wide_df
 
 
 # =========================================================
@@ -333,30 +138,15 @@ def reshape(df: pd.DataFrame, *, filename=None, operation, **kwargs):
     -------
     cleaned_df : pandas.DataFrame
         Reshaped DataFrame.
-
-    summary : dict
-        Summary of the reshape operation.
-
-    summary_df : pandas.DataFrame or None
-        Optional summary table depending on the operation.
     """
 
-    # -----------------------------------------------------
-    # 1. VALIDATION — Hard Errors
-    # -----------------------------------------------------
+
     if operation not in DISPATCH:
         raise ValueError(f"Unknown reshape operation: {operation}")
 
     if not isinstance(df, pd.DataFrame):
         raise ValueError("df must be a pandas DataFrame.")
 
-    # -----------------------------------------------------
-    # 2. VALIDATION — Soft Checks
-    # -----------------------------------------------------
-    # (none needed here)
-
-    # -----------------------------------------------------
-    # 3. CORE PROCESSING
-    # -----------------------------------------------------
     func = DISPATCH[operation]
-    return func(df, **kwargs)
+    return func(df, filename=filename, **kwargs)
+

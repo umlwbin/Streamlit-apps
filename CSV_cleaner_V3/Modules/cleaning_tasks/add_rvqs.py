@@ -11,13 +11,14 @@ def apply_rvq_rules(
     keep_original=True,
     negative_rule_enabled=False,
     negative_rvq_code=None,
-    negative_exceptions=None
+    negative_exceptions=None,
+    **kwargs
 ):
     """
     Apply RVQ (Result Value Qualifier) rules to selected columns.
 
-    RVQs flag values that may be unusual, below detection limits, or otherwise
-    require curator attention. Rules can match:
+    RVQs flag values that may be unusual, missing or above/below detection limits.
+      Rules can match:
         - exact values ("full")
         - prefixes (e.g., "<", "<0.5")
         - suffixes
@@ -66,19 +67,8 @@ def apply_rvq_rules(
     cleaned_df : pandas.DataFrame
         DataFrame with RVQ columns added and values optionally cleaned.
 
-    summary_dict : dict
-        A dictionary summarizing RVQ assignments:
-            {
-                column_name: {rvq_code: count},
-                "_rvq_task": True,
-                "warnings": str (optional)
-            }
-
-    Notes
-    -----
-    • Detection‑limit tables are stored in st.session_state.supplementary_outputs for the summary renderer.
-    • Hard validation errors raise exceptions.
-    • Soft validation issues (e.g., missing columns) are recorded in summary_dict["warnings"].
+    rvq_metadata_df : pandas.DataFrame
+        Long-form table describing RVQ assignments and detection limits.
     """
 
     # -----------------------------------------------------
@@ -96,7 +86,6 @@ def apply_rvq_rules(
     for rule in rules:
         if not all(k in rule for k in ["data_code", "rvq_code", "match_type"]):
             raise ValueError("Each rule must contain data_code, rvq_code, and match_type.")
-
         if rule["match_type"] not in {"full", "prefix", "suffix", "contains"}:
             raise ValueError(f"Invalid match_type '{rule['match_type']}'.")
 
@@ -106,162 +95,126 @@ def apply_rvq_rules(
     cleaned_df = df.copy()
 
     # -----------------------------------------------------
-    # 2. VALIDATION - Soft Checks
+    # 2. PREP - Remove missing columns (widget handles soft validation)
     # -----------------------------------------------------
-    warnings = []
-
-    missing_cols = [c for c in columns if c not in cleaned_df.columns]
-    if missing_cols:
-        warnings.append(f"Columns not found and skipped: {missing_cols}")
-        columns = [c for c in columns if c in cleaned_df.columns]
-
-    if negative_rule_enabled and not negative_rvq_code:
-        warnings.append("Negative rule enabled but no negative_rvq_code provided.")
+    columns = [c for c in columns if c in cleaned_df.columns]
 
     if negative_exceptions is None:
         negative_exceptions = []
 
-
     # -----------------------------------------------------
-    # 3. CORE PROCESSING (Simplified)
+    # 3. CORE PROCESSING
     # -----------------------------------------------------
-    summary_dict = {}        # Counts of RVQ codes per column
-    detection_limits = {}    # Extracted detection limits per column/RVQ
+    rvq_counts = {}          # {column: {rvq_code: count}}
+    detection_limits = {}    # {column: {rvq_code: {limit: count}}}
 
     for col in columns:
 
-        # -------------------------------------------------
-        # 3A. Create the RVQ column beside the data column
-        # -------------------------------------------------
         rvq_col = f"{col}_RVQ"
 
+        # Remove existing RVQ column if present
         if rvq_col in cleaned_df.columns:
             cleaned_df = cleaned_df.drop(columns=[rvq_col])
 
+        # Insert RVQ column beside the data column
         col_pos = cleaned_df.columns.get_loc(col)
         cleaned_df.insert(col_pos + 1, rvq_col, "")
 
-        summary_dict[col] = {}
+        rvq_counts[col] = {}
         detection_limits[col] = {}
 
-        # Work with strings for pattern matching
         series = cleaned_df[col].astype(str)
-        
+
         # -------------------------------------------------
-        # 3B. Apply each RVQ rule
+        # 3A. APPLY USER-DEFINED RVQ RULES
         # -------------------------------------------------
         for rule in rules:
-            code = rule["data_code"]      # e.g., "<", "-1", "L"
-            rvq  = rule["rvq_code"]       # e.g., "BDL", "ND"
-            match = rule["match_type"]    # "full" or "contains"
+            code = rule["data_code"]
+            rvq = rule["rvq_code"]
+            match = rule["match_type"]
 
-            # -------------------------
             # Determine matching rows
-            # -------------------------
             if match == "full":
-                # Cell must equal the data code exactly
                 mask = series == code
 
             elif match == "contains":
-
-                # Special case: user enters "nan"
                 if code.lower() == "nan":
                     mask = (
-                        series.str.contains("nan", case=False, na=False) |
-                        (series.str.strip() == "") |   # blank cells
-                        (series == "nan") |
-                        (series == "NaN") |
-                        (series == "NAN")
+                        series.str.contains("nan", case=False, na=False)
+                        | (series.str.strip() == "")
+                        | (series == "nan")
+                        | (series == "NaN")
+                        | (series == "NAN")
                     )
                 else:
-                    # Normal contains rule: code appears anywhere in the cell
                     mask = series.str.contains(re.escape(code), na=False)
 
             else:
-                # Should never happen, but safe fallback
                 mask = False
 
             if not mask.any():
                 continue
 
-
-            # -------------------------------------------------
-            # Assign RVQ code to matching rows
-            # -------------------------------------------------
+            # Assign RVQ code
             cleaned_df.loc[mask, rvq_col] = rvq
-            summary_dict[col][rvq] = summary_dict[col].get(rvq, 0) + mask.sum()
+            rvq_counts[col][rvq] = rvq_counts[col].get(rvq, 0) + mask.sum()
 
             # -------------------------------------------------
-            # Extract detection limits
+            # Extract detection limits (FULL MATCH)
             # -------------------------------------------------
-
-            # FULL MATCH CASE:
-            # If the entire cell equals the data code, and the code itself
-            # contains a number (e.g., "-1"), then that number is the limit.
             if match == "full":
                 nums = re.findall(r"([0-9]*\.?[0-9]+)", code)
                 if nums:
                     limit = float(nums[0])
-
-                    # Store in summary
                     detection_limits[col].setdefault(rvq, {})
                     detection_limits[col][rvq][limit] = (
                         detection_limits[col][rvq].get(limit, 0) + mask.sum()
                     )
 
-                    # Add limit directly to RVQ cell
                     cleaned_df.loc[mask, rvq_col] = cleaned_df.loc[mask, rvq_col].apply(
                         lambda x: f"{rvq} [{limit}]" if x == rvq else x
                     )
 
-
-            # CONTAINS CASE:
-            # Extract ANY number in the cell (except those inside the code itself)
+            # -------------------------------------------------
+            # Extract detection limits (CONTAINS)
+            # -------------------------------------------------
             if match == "contains":
                 number_lists = series[mask].str.findall(r"([0-9]*\.?[0-9]+)")
 
-                # Iterate row-by-row so we can assign limits correctly
                 for idx, nums in zip(series[mask].index, number_lists):
                     if nums:
                         limit = float(nums[0])
-
-                        # Store in summary
                         detection_limits[col].setdefault(rvq, {})
                         detection_limits[col][rvq][limit] = (
                             detection_limits[col][rvq].get(limit, 0) + 1
                         )
 
-                        # Add limit directly to RVQ cell
                         if cleaned_df.at[idx, rvq_col] == rvq:
                             cleaned_df.at[idx, rvq_col] = f"{rvq} [{limit}]"
 
-
-            # -------------------------------------------------
             # Optionally remove original data code
-            # -------------------------------------------------
             if not keep_original:
                 cleaned_df.loc[mask, col] = ""
 
-
         # -----------------------------------------------------
-        # 3D. Negative-value rule (runs AFTER manual rules)
+        # 3B. NEGATIVE VALUE RULE
         # -----------------------------------------------------
         if negative_rule_enabled and col not in negative_exceptions and negative_rvq_code:
 
             numeric = pd.to_numeric(cleaned_df[col], errors="coerce")
-
-            # Only flag negative values that do NOT already have an RVQ
             neg_mask = (numeric < 0) & (cleaned_df[rvq_col] == "")
 
             if neg_mask.any():
+
                 cleaned_df.loc[neg_mask, rvq_col] = cleaned_df.loc[neg_mask].apply(
                     lambda row: f"{negative_rvq_code} [{abs(float(row[col]))}]",
-                    axis=1)
+                    axis=1
+                )
 
-                                
-                summary_dict[col][negative_rvq_code] = (summary_dict[col].get(negative_rvq_code, 0) + neg_mask.sum())
+                rvq_counts[col][negative_rvq_code] = (
+                    rvq_counts[col].get(negative_rvq_code, 0) + neg_mask.sum()
+                )
 
-                # Detection limit = absolute value of the negative number
                 for val in numeric[neg_mask].dropna():
                     limit = abs(float(val))
                     detection_limits[col].setdefault(negative_rvq_code, {})
@@ -272,45 +225,33 @@ def apply_rvq_rules(
                 if not keep_original:
                     cleaned_df.loc[neg_mask, col] = ""
 
-
     # -----------------------------------------------------
-    # 4. SUMMARY
+    # 4. BUILD METADATA TABLE
     # -----------------------------------------------------
-    summary_dict["_rvq_task"] = True
-    if warnings:
-        summary_dict["warnings"] = "; ".join(warnings)
+    rows = []
 
-    # -----------------------------------------------------
-    # 5. SUMMARY DATAFRAME
-    # -----------------------------------------------------
-    summary_rows = []
-
-    for col, rvqs in summary_dict.items():
-        if col.startswith("_"):
-            continue
-
+    for col, rvqs in rvq_counts.items():
         for rvq_code, count in rvqs.items():
 
             if rvq_code in detection_limits[col]:
                 for limit, limit_count in detection_limits[col][rvq_code].items():
-                    summary_rows.append({
+                    rows.append({
                         "Variable": col,
                         "RVQ Code": rvq_code,
                         "Detection Limit": limit,
-                        "Count": limit_count
+                        "Count": limit_count,
                     })
             else:
-                summary_rows.append({
+                rows.append({
                     "Variable": col,
                     "RVQ Code": rvq_code,
                     "Detection Limit": None,
-                    "Count": count
+                    "Count": count,
                 })
 
-    summary_df = pd.DataFrame(summary_rows)
+    rvq_metadata_df = pd.DataFrame(rows)
 
     # -----------------------------------------------------
-    # 6. RETURN
+    # 5. RETURN
     # -----------------------------------------------------
-    return cleaned_df, summary_dict, summary_df
-
+    return cleaned_df, rvq_metadata_df

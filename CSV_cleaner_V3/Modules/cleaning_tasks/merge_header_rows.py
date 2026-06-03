@@ -5,13 +5,17 @@ import streamlit as st
 def merge_header_rows(
     df: pd.DataFrame,
     *,
-    row=None,
-    filename=None,
+    row: int,
+    filename: str,
     **kwargs
 ):
     """
-    Merge a selected metadata row (based on ORIGINAL row numbers)
-    into the existing header row.
+    This task:
+        - Uses row_map to translate ORIGINAL row → current index
+        - Merges values from that row into the header
+        - Drops the merged row
+        - Updates row_map accordingly
+        - Returns only cleaned_df
 
     Parameters
     ----------
@@ -23,16 +27,6 @@ def merge_header_rows(
     filename : str or None
         The name of the file being processed. Required in Streamlit mode
         to retrieve the authoritative row_map from session_state.
-
-    Returns
-    -------
-    cleaned_df : pd.DataFrame
-        The transformed dataframe with the selected row merged into the header.
-    summary : dict
-        A dictionary describing the changes made by the task, including
-        the updated row_map.
-    summary_df : None
-        This task does not produce a supplementary table.
 
     ----------------------------------------------------------------------
     OFFLINE / NON‑STREAMLIT USAGE
@@ -58,30 +52,25 @@ def merge_header_rows(
     """
 
     # -----------------------------------------------------
-    # 1. HARD VALIDATION (raise errors)
+    # 1. VALIDATION – Hard Errors
     # -----------------------------------------------------
+
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Input must be a pandas DataFrame.")
 
     if row is None:
         raise ValueError("A row number must be provided for merging.")
 
-    if filename is None:
+    if not filename:
         raise ValueError("filename must be provided to retrieve row_map.")
+
+    if "row_map" not in st.session_state:
+        raise ValueError("row_map not found in session_state.")
 
     if filename not in st.session_state.row_map:
         raise ValueError(f"No row_map found for file '{filename}'.")
 
-    # -----------------------------------------------------
-    # 2. SOFT VALIDATION
-    # -----------------------------------------------------
-    warnings = []
-
-    # Retrieve authoritative row_map - FOR STREAMLIT USE
     row_map = st.session_state.row_map[filename]
-
-    #********** If running without streamlit, use:
-    # row_map = list(range(1, len(df) + 1)) 
 
     if len(row_map) != len(df):
         raise ValueError(
@@ -89,54 +78,55 @@ def merge_header_rows(
             "This indicates an internal workflow error."
         )
 
-    # -----------------------------------------------------
-    # 3. CORE PROCESSING
-    # -----------------------------------------------------
     cleaned_df = df.copy()
 
-    # Map ORIGINAL row number → current index
+    # -----------------------------------------------------
+    # 2. CORE PROCESSING
+    # -----------------------------------------------------
+
+    # Convert ORIGINAL row number → current index
     try:
         idx = row_map.index(row)
     except ValueError:
-        warnings.append(f"Row {row} not found in this file. It was skipped.")
-        return cleaned_df, {"warnings": warnings, "row_map": row_map}, None
+        # Row not found → nothing to merge
+        return cleaned_df
 
     # Merge selected row into header
     header = list(cleaned_df.columns.astype(str))
     vals = list(cleaned_df.iloc[idx])
 
-    header = [
+    merged_header = [
         f"{h}_{v}" if pd.notna(v) and str(v).strip() != "" else h
         for h, v in zip(header, vals)
     ]
 
-    # Drop merged row + update row_map
+    # Drop the merged row
     cleaned_df = cleaned_df.drop(index=[idx]).reset_index(drop=True)
 
-    new_row_map = [
-        row_map[i] for i in range(len(row_map)) if i != idx
-    ]
-
-    cleaned_df.columns = header
-
     # -----------------------------------------------------
-    # 4. SUMMARY DICTIONARY
+    # 3. UPDATE ROW MAP (Streamlit mode)
     # -----------------------------------------------------
-    summary = {
-        "merged_row": row,
-        "row_map": new_row_map,
-    }
-    summary["preview_index"] = kwargs.get("preview_index")
-
-    if warnings:
-        summary["warnings"] = warnings
+    new_row_map = [row_map[i] for i in range(len(row_map)) if i != idx]
+    st.session_state.row_map[filename] = new_row_map
 
     # -----------------------------------------------------
-    # 5. OPTIONAL SUMMARY DATAFRAME
+    # 4. PURE PYTHON MODE (no Streamlit)
     # -----------------------------------------------------
-    summary_df = None
+    # If using this function outside Streamlit, you must maintain your own row_map.
+    #
+    # Example:
+    #     # ORIGINAL row_map before merging
+    #     row_map = list(range(1, len(df) + 1))
+    #
+    #     # Remove the merged row (idx is the CURRENT index)
+    #     new_row_map = [row_map[i] for i in range(len(row_map)) if i != idx]
+    #
+    # The task itself does NOT depend on Streamlit; only the row_map update does.
+
+    # Apply new header
+    cleaned_df.columns = merged_header
 
     # -----------------------------------------------------
-    # 6. RETURN STANDARDIZED OUTPUT
+    # 5. RETURN
     # -----------------------------------------------------
-    return cleaned_df, summary, summary_df
+    return cleaned_df

@@ -1,4 +1,6 @@
 import streamlit as st
+from Modules.utils.ui_utils import big_caption
+
 
 def add_row_widget(df):
     """
@@ -8,19 +10,10 @@ def add_row_widget(df):
         - manual entry
         - pasting a delimited list
         - auto-generating alphabetical headers
-
-    Returns
-    -------
-    dict or None
-        {
-            "row_values": list[str] or None,
-            "as_header": bool,
-            "auto_headers": bool
-        }
-        or None if the user has not completed the widget.
+        - choosing row insertion position (unless using as header)
     """
 
-    st.markdown("""
+    big_caption("""
     Add a new row to your table. You can enter values manually, paste a delimited list,  
     or auto-generate alphabetical headers (A, B, C, ...).
     """)
@@ -28,27 +21,24 @@ def add_row_widget(df):
     # ---------------------------------------------------------
     # Preview
     # ---------------------------------------------------------
+    st.markdown("")
     st.markdown("##### Preview of your data")
     st.dataframe(df.head(5))
 
     # ---------------------------------------------------------
     # Input mode selection
     # ---------------------------------------------------------
-    st.markdown("##### How would you like to enter the row values?")
-    mode = st.radio(
-        "Select",
-        ["Manual entry", "Paste delimited list", "Generate alphabetical headers"],
-        horizontal=True
-    )
+    st.markdown(" ")
+    st.markdown("#### How would you like to enter the row values?")
+    mode = st.radio("Select", ["Manual entry", "Paste delimited list", "Generate alphabetical headers"], horizontal=True)
 
     row_values = None
     auto_headers = False
-
     # ---------------------------------------------------------
     # AUTO-GENERATE HEADERS
     # ---------------------------------------------------------
     if mode == "Generate alphabetical headers":
-        st.info("Alphabetical headers (A, B, C, ...) will replace the current column names.")
+        st.warning("⚠️ Alphabetical headers (A, B, C, ...) will replace the current column names")
         auto_headers = True
 
     # ---------------------------------------------------------
@@ -92,12 +82,32 @@ def add_row_widget(df):
             row_values = []
 
     # ---------------------------------------------------------
-    # Header option
+    # Header vs Position Options
     # ---------------------------------------------------------
+    st.markdown("")
+    st.markdown("#### Row Options")
+
     as_header = st.checkbox(
-        "Use this row as the new header",
+        "Use as header",
         disabled=auto_headers
     )
+
+    # Disable position if using header OR auto_headers
+    position_disabled = as_header or auto_headers
+
+    # Create a narrow column for the number input
+    pos_col = st.columns([0.2, 0.8])[0]
+
+    with pos_col:
+        position = st.number_input(
+            "Row position",
+            min_value=0,
+            max_value=len(df),
+            value=0,
+            step=1,
+            disabled=position_disabled
+        )
+
 
     st.markdown("---")
     apply_now = st.button("Add Row", type="primary")
@@ -106,7 +116,8 @@ def add_row_widget(df):
         return {
             "row_values": row_values,
             "as_header": as_header,
-            "auto_headers": auto_headers
+            "auto_headers": auto_headers,
+            "position": position
         }
 
     return None

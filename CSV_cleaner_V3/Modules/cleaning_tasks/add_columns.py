@@ -1,6 +1,6 @@
 import pandas as pd
 
-def add_cols(df: pd.DataFrame, *, filename=None, variable_names, values, columns):
+def add_cols(df: pd.DataFrame, *, variable_names, values, columns, **kwargs):
 
     """
     Add one or more new columns to a DataFrame at user-selected positions.
@@ -20,10 +20,6 @@ def add_cols(df: pd.DataFrame, *, filename=None, variable_names, values, columns
     -------
     cleaned_df : pd.DataFrame
         The updated dataframe.
-    summary : dict
-        A dictionary describing what was added.
-    summary_df : None
-        No supplementary dataframe for this task.
     """
 
     # -----------------------------------------------------
@@ -72,20 +68,6 @@ def add_cols(df: pd.DataFrame, *, filename=None, variable_names, values, columns
         cleaned_df.insert(pos - 1, name, value)
 
     # -----------------------------------------------------
-    # 3. SUMMARY DICT
+    # 3. RETURN STANDARDIZED OUTPUT
     # -----------------------------------------------------
-    summary = {
-        "columns_added": variable_names,
-        "insert_positions": columns,
-        "row_count": len(cleaned_df),
-    }
-
-    # -----------------------------------------------------
-    # 4. SUMMARY DATAFRAME (optional)
-    # -----------------------------------------------------
-    summary_df = None
-
-    # -----------------------------------------------------
-    # 5. RETURN STANDARDIZED OUTPUT
-    # -----------------------------------------------------
-    return cleaned_df, summary, summary_df
+    return cleaned_df

@@ -1,112 +1,120 @@
 import streamlit as st
 import pandas as pd
 
-# ---------------------------------------------------------
-# Helper functions
-# ---------------------------------------------------------
-
-def excel_label_to_index(label: str) -> int:
-    label = label.upper()
-    index = 0
-    for i, char in enumerate(reversed(label)):
-        index += (ord(char) - 64) * (26 ** i)
-    return index - 1
-
-
-def excel_index_to_label(n: int) -> str:
-    result = ""
-    while n >= 0:
-        n, remainder = divmod(n, 26)
-        result = chr(65 + remainder) + result
-        n -= 1
-    return result
-
-
-def parse_range(input_str: str, df: pd.DataFrame) -> list:
-    input_str = input_str.replace(" ", "").upper()
-    if "-" not in input_str:
-        return []
-
-    try:
-        start_label, end_label = input_str.split("-")
-        start_idx = excel_label_to_index(start_label)
-        end_idx = excel_label_to_index(end_label)
-
-        if start_idx > end_idx:
-            start_idx, end_idx = end_idx, start_idx
-
-        if start_idx < 0 or end_idx >= len(df.columns):
-            return []
-
-        return df.columns[start_idx:end_idx + 1].tolist()
-
-    except Exception:
-        return []
+from Modules.utils.ui_utils import big_caption
 
 
 # ---------------------------------------------------------
-# Main widget
+# Auto-detection rules based on column name patterns
 # ---------------------------------------------------------
+AUTO_TYPE_MAP = {
+    "date": "date",
+    "time": "time_only",
+    "datetime": "date",
+    "station": "string",
+    "location": "string",
+    "notes": "string",
+    "type": "string",
+    "units": "string",
+    "code": "string",
+    "comments": "string",
+}
+
+
+def detect_type(colname: str) -> str:
+    """
+    Return an auto-detected type based on column name. Defaults to float because, you know, environmental data.
+    """
+    name = colname.lower()
+
+    for keyword, dtype in AUTO_TYPE_MAP.items():
+        if keyword in name:
+            return dtype
+
+    # Default for environmental data!
+    return "float"
+
+
 
 def assign_datatype_widgets(df):
     """
-    Streamlit widget for assigning data types to selected columns.
-
-    This widget:
-    - shows a preview of the dataset with Excel-style column labels
-    - lets the user select columns using multiselects or Excel-style ranges
-    - builds a mapping of column_name --> chosen data type
-    - returns the mapping only when the user clicks "Next"
-
-    Returns
-    -------
-    dict or None
-        {
-            "type_mapping": {column_name: dtype, ...}
-        }
-        or None if the user has not completed the widget.
+    Widget for assigning data types to each column.
+    - Auto-detects likely types based on column names
+    - Shows human-readable labels for each type
     """
 
-    st.markdown("##### Column Preview")
+    # ---------------------------------------------------------
+    # Intro text - explain WHY this matters
+    # ---------------------------------------------------------
+    big_caption(
+        "Assigning data types ensures tasks behave correctly downstream, "
+        "like parsing dates, for example. <br> Also guarantees your Excel "
+        "download preserves real dates, numbers, and text."
+    )
 
-    preview = df.head(2).copy()
-    preview.columns = [f"{excel_index_to_label(i)} | {col}" for i, col in enumerate(df.columns)]
-    st.dataframe(preview)
-
-    st.markdown("##### Assign Columns to Data Types")
-
-    dtypes = ["date_only", "time_only", "date", "integer", "float", "string"]
-
-    dtype_labels = {
-        "date_only": "Date Only (YYYY-MM-DD)",
-        "time_only": "Time Only (HH:MM:SS)",
-        "date": "Full Datetime (date + time)",
-        "integer": "Integer (whole numbers)",
-        "float": "Float (decimal numbers)",
-        "string": "String (text)"
-    }
-
-    # Collect user selections
-    type_mapping = {}
-
-    st.caption("Tip: You can select columns individually or enter Excel-style ranges like A-D.")
-    for dtype in dtypes:
-        with st.expander(f"Select {dtype_labels[dtype]} columns"):
-            selected = st.multiselect(f"Choose columns for {dtype_labels[dtype]}",
-                options=df.columns.tolist(),
-                key=f"{dtype}_select")
-            
-            ranged = parse_range(
-                st.text_input("Or enter column range (e.g., B-F)", key=f"{dtype}_range"),df)
-
-            for col in set(selected + ranged):
-                type_mapping[col] = dtype
-
-    # Show info if nothing selected
-    if not type_mapping:
-        st.info("No columns selected yet.")
+    # ---------------------------------------------------------
+    # Defensive guards
+    # ---------------------------------------------------------
+    if not isinstance(df, pd.DataFrame):
+        st.error("No valid data available for preview.")
         return None
 
-    # Return mapping to reflect original col order
-    ordered_mapping = {col: type_mapping[col] for col in df.columns if col in type_mapping}
-    return {"type_mapping": ordered_mapping}
+    if df.empty:
+        st.warning("Your dataset is empty - nothing to preview.")
+        return None
+
+    # ---------------------------------------------------------
+    # Human-readable labels for the dropdown
+    # ---------------------------------------------------------
+    dtype_options = {
+        "string": "String (text)",
+        "integer": "Integer (whole numbers)",
+        "float": "Float (decimal numbers)",
+        "date": "Full Datetime (date + time)",
+        "date_only": "Date Only (YYYY-MM-DD)",
+        "time_only": "Time Only (HH:MM:SS)",
+    }
+
+    type_mapping = {}
+
+    # ---------------------------------------------------------
+    # Column-by-column selection
+    # ---------------------------------------------------------
+    st.write("#### Assign a datatype to each column in your table")
+
+    for col in df.columns:
+
+        # Auto-detect a reasonable default
+        auto_type = detect_type(col)
+
+        # Curator-friendly label
+        st.markdown(f"**{col}**")
+
+        selected = st.selectbox(
+            f"Select datatype for '{col}'",
+            options=list(dtype_options.keys()),
+            index=list(dtype_options.keys()).index(auto_type),
+            format_func=lambda x: dtype_options[x],
+            key=f"type_{col}"
+        )
+
+        type_mapping[col] = selected
+
+        st.markdown("---")
+
+    # ---------------------------------------------------------
+    # Execute-once trigger button
+    # ---------------------------------------------------------
+    if st.button("Apply Types", type="primary"):
+        st.session_state.assign_types_trigger = True
+
+    triggered = st.session_state.get("assign_types_trigger", False)
+    st.session_state.assign_types_trigger = False
+
+    if not triggered:
+        return None
+
+    # ---------------------------------------------------------
+    # SUCCESS ---> Return kwargs for the task
+    # ---------------------------------------------------------
+    return {"type_mapping": type_mapping}

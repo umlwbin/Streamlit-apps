@@ -9,15 +9,16 @@ UNIT_MAP for creating Machine‑Safe Units
 - Values: normalized ASCII-safe units
 
 The goal is to produce units that are machine‑safe (no ambiguous slashes, percent signs, or symbols)
+and compatible with CF/UDUNITS conventions.
 
-*** IMPORTANT *** 
+*** IMPORTANT ************************************************************************************
 When adding the keys, please only add them as lower case, even if there is upper case in the raw units. 
-
+**************************************************************************************************
 
 Rules and Examples
 -------------------
 
-This mapping follows CF Convention rules, which uses the UDUNITS library when manipulating units. 
+This mapping follows CF Convention rules, which use the UDUNITS library for unit parsing:
 https://docs.unidata.ucar.edu/udunits/current/udunits2lib.html#Database
 
 1. Lowercasing and Whitespace Normalization
@@ -26,6 +27,7 @@ https://docs.unidata.ucar.edu/udunits/current/udunits2lib.html#Database
        " Deg C "      --> "deg c"
 
 2. Replace Slashes with Space‑Separated Division
+   - Slashes are replaced with explicit negative exponents.
    - Examples:
        "mg/l"         --> "mg l-1"
        "cells/ml"     --> "cells ml-1"
@@ -44,7 +46,7 @@ https://docs.unidata.ucar.edu/udunits/current/udunits2lib.html#Database
        "us cm^-1"     --> "uS cm-1"
 
 5. Normalize Degree Symbols
-   - Degree symbols are removed
+   - Degree symbols are removed and standardized.
    - Examples:
        "deg c"        --> "degC"
        "degc"         --> "degC"
@@ -57,12 +59,21 @@ https://docs.unidata.ucar.edu/udunits/current/udunits2lib.html#Database
        "%sat"         --> "percent_sat"
        "%rh"          --> "percent_rh"
 
+7. Insert Explicit Spaces Between Adjacent Unit Tokens (Multiplication Rule)
+   - When multiple unit symbols appear “squished together” with no separators,
+     insert a space between each unit token so multiplication is explicit.
+   - This avoids ambiguity and follows UDUNITS conventions.
+   - Examples:
+       "uscm^-1"                  --> "uS cm-1"
+       "kgm^-3"                   --> "kg m-3"
+       "mgC/m^3"                  --> "mgC m-3"
+       "umolphotons/m^2/sec"      --> "umol_photons m-2 s-1"
+
 Usage
 -----
-Use `get_unit_map()` to retrieve the UNIT_MAP for header
-cleaning tasks
-
+Use `get_unit_map()` to retrieve the UNIT_MAP for header cleaning tasks.
 """
+
 
 UNIT_MAP = {
 

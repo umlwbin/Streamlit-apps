@@ -8,6 +8,7 @@ from processing.parsing_file import extract_metadata_and_data
 from ui_utils import big_caption
 
 
+
 # ---------------------------------------------------------
 # INTRO SECTION
 # ---------------------------------------------------------
@@ -74,6 +75,8 @@ def upload_step():
     - When active, it shows a file uploader.
     - When completed, it shows a summary and a button to redo the step.
     """
+
+    st.markdown("######")
     st.markdown("##### 1. Upload Castaway CTD Files")
 
     active = (st.session_state.castaway_step == 1)
@@ -90,9 +93,10 @@ def upload_step():
 
     # ACTIVE STEP
     files = st.file_uploader("Upload one or more Castaway CTD CSV files", type="csv",accept_multiple_files=True)
-
+    
     if files:
         st.session_state.castaway_files = files
+        st.session_state.castaway_custom_names = None
 
     if st.button("Next", key="next_upload"):
         if st.session_state.castaway_files:
@@ -112,6 +116,8 @@ def extract_step():
     - Splits metadata (top block) from the data table
     - Stores both in session_state for later steps
     """
+
+    st.markdown("######")
     st.markdown("##### 2. Extract Metadata and Data")
 
     active = (st.session_state.castaway_step == 2)
@@ -144,26 +150,33 @@ def extract_step():
 
 
 # ---------------------------------------------------------
-# STEP 3 — SELECT METADATA VARIABLES
+# STEP 3 - SELECT METADATA VARIABLES
 # ---------------------------------------------------------
+
+from processing.normalizing_headers import clean_metadata_name
 
 def select_metadata_step():
     """
-    Step 3: Let the curator choose which metadata variables to extract.
+    Step 3: Let the user choose which metadata variables to extract.
 
-    These selected variables will later be added as new columns
-    to the cleaned data table.
+    - Cleans metadata variable names (removes leading %, symbols, etc.)
+    - Automatically pre-selects common Castaway metadata fields:
+        Cast time (UTC)
+        Start latitude
+        Start longitude
+        File name
     """
+
+    st.markdown("######")
     st.markdown("##### 3. Select Metadata Variables to Extract")
 
     active = (st.session_state.castaway_step == 3)
 
     if not active:
         if st.session_state.castaway_selected_vars:
-            st.success(
-                "Selected: " + ", ".join(st.session_state.castaway_selected_vars)
-            )
+            st.success("Selected: " + ", ".join(st.session_state.castaway_selected_vars))
             if st.button("Change Metadata Selection"):
+                st.session_state.castaway_custom_names = None
                 go_to_step(3)
         else:
             st.info("Waiting for selection…")
@@ -171,9 +184,28 @@ def select_metadata_step():
 
     # ACTIVE STEP
     metadata_df = st.session_state.castaway_metadata[0]
-    vars_list = metadata_df["Variable"].tolist()
 
-    selected = st.multiselect("Choose variables to extract", vars_list)
+    # Clean the metadata variable names
+    raw_vars = metadata_df["Variable"].astype(str).tolist()
+    cleaned_vars = [clean_metadata_name(v) for v in raw_vars]
+
+    # Default variables you want pre-selected
+    default_vars = [
+        "Cast time UTC",
+        "Start latitude",
+        "Start longitude",
+        "File name"
+    ]
+
+    # Only pre-select those that actually exist in the file
+    defaults_present = [v for v in default_vars if v in cleaned_vars]
+
+    selected = st.multiselect(
+        "Choose variables to extract",
+        options=cleaned_vars,
+        default=defaults_present,
+        placeholder="Select metadata variables..."
+    )
 
     if st.button("Next", key="next_select"):
         st.session_state.castaway_selected_vars = selected
@@ -181,64 +213,142 @@ def select_metadata_step():
 
 
 # ---------------------------------------------------------
-# STEP 4 — NORMALIZE VARIABLE NAMES
+# STEP 4 - EXTRACT VARIABLES
 # ---------------------------------------------------------
+from processing.normalizing_headers import clean_metadata_name
+from processing.helpers import safe_insert_column
 
 def normalize_variables_step():
     """
-    Step 4: Choose how column names should be formatted.
+    Step 4: Allow the curator to manually rename variables using an editable table.
 
-    Options:
-    - Keep original names
-    - snake_case
-    - ODV-friendly (UPPERCASE_UNDERSCORES)
-
-    This ensures consistent naming across files.
+    - Shows ALL variables (measured + metadata + user-added)
+    - Auto-standardizes ONLY ODV-critical variables
+    - Leaves measured variables unchanged unless edited
+    - Removes additional normalization modes
     """
-    st.markdown("##### 4. Normalize Variable Names")
+
+    st.markdown("######")
+    st.markdown("##### 4. Normalize & Rename Variable Names")
 
     active = (st.session_state.castaway_step == 4)
 
     if not active:
-        norm = st.session_state.get("castaway_normalization")
-        if norm:
-            st.success(f"Normalization: {norm}")
-            if st.button("Change Normalization"):
+        if ("castaway_custom_names" in st.session_state and st.session_state.castaway_custom_names is not None ):
+            st.success("Custom variable names saved.")
+            if st.button("Change Variable Names"):
                 go_to_step(4)
         else:
             st.info("Waiting for normalization choice…")
         return
 
-    # ACTIVE STEP
-    choice = st.radio(
-        "Choose how variable names should be normalized:",
-        [
-            "Keep original names",
-            "snake_case",
-            "ODV-friendly (UPPERCASE_UNDERSCORES)"
-        ],
-        index=None
+
+    # ---------------------------------------------------------
+    # Build a preview dataframe that includes:
+    # - measured variables
+    # - metadata-extracted variables
+    # - required ODV variables (Cruise, Station, Type)
+    # - user-added variables
+    # ---------------------------------------------------------
+    df = st.session_state.castaway_data[0].copy()
+
+    # 1. Insert selected metadata variables
+    meta = st.session_state.castaway_metadata[0]
+    for var in st.session_state.castaway_selected_vars:
+        var_clean = clean_metadata_name(var)
+        row = meta[meta["Variable"].astype(str).str.contains(var, regex=False)]
+        if not row.empty:
+            value = row["Value"].iloc[0]
+            safe_insert_column(df, var_clean, value)
+
+    # 2. Insert required ODV variables (always present)
+    required = {"Cruise": "", "Station": "", "Type": ""}
+    for k, v in required.items():
+        safe_insert_column(df, k, v)
+
+    # 3. Insert user-added variables (if any)
+    if st.session_state.castaway_new_vars:
+        for name, value in st.session_state.castaway_new_vars.items():
+            safe_insert_column(df, name, value)
+
+    # ---------------------------------------------------------
+    # Extract the full list of variables for the table
+    # ---------------------------------------------------------
+    original_cols = df.columns.tolist()
+
+    # ---------------------------------------------------------
+    # Auto-standardization rules (ODV-critical only)
+    # ---------------------------------------------------------
+    def standardize(name):
+        n = name.lower()
+
+        if "cruise" in n:
+            return "Cruise"
+        if "station" in n:
+            return "Station"
+        if "type" in n:
+            return "Type"
+        if "date" in n:
+            return "yyyy-mm-ddThh:mm:ss.sss"
+        if "longitude" in n:
+            return "Longitude [degrees_east]"
+        if "latitude" in n:
+            return "Latitude [degrees_north]"
+        if "depth" in n:
+            return "Bot. Depth [m]"
+
+        # Measured variables: leave unchanged
+        return name
+
+    # ---------------------------------------------------------
+    # Build editable table
+    # ---------------------------------------------------------
+    import pandas as pd
+
+    table_df = pd.DataFrame({
+        "Original Name": original_cols,
+        "New Name": [standardize(c) for c in original_cols]
+    })
+
+    edited = st.data_editor(
+        table_df,
+        num_rows="dynamic",
+        use_container_width=True,
+        key="castaway_name_editor"
     )
 
-    if choice and st.button("Next", key="next_normalize"):
-        st.session_state.castaway_normalization = choice
+
+    # ---------------------------------------------------------
+    # Save and continue
+    # ---------------------------------------------------------
+    if st.button("Next", key="next_normalize"):
+        st.session_state.castaway_custom_names = {
+            row["Original Name"]: row["New Name"]
+            for _, row in edited.iterrows()
+        }
+
+        # No additional normalization modes
+        st.session_state.castaway_normalization = "Keep cleaned names"
+
         advance_step()
 
 
-# ---------------------------------------------------------
-# STEP 5 — ADD NEW VARIABLES
-# ---------------------------------------------------------
 
+
+
+# ---------------------------------------------------------
+# STEP 5 - ADD NEW VARIABLES
+# ---------------------------------------------------------
 def add_new_vars_step():
     """
     Step 5: Allow the curator to add new variables manually.
 
-    These might include:
-    - Site ID
-    - Deployment ID
-    - Notes
-    - Any contextual metadata not present in the file
+    - Cruise, Station, Type are always present
+    - They are visually highlighted
+    - Warnings appear if they are blank or misspelled
     """
+
+    st.markdown("######")
     st.markdown("##### 5. Add New Variables (Optional)")
 
     active = (st.session_state.castaway_step == 5)
@@ -258,29 +368,96 @@ def add_new_vars_step():
             st.info("Waiting for new variables to add…")
         return
 
-    # ACTIVE STEP
-    add = st.radio("Add new variables?", ["Yes", "No"], index=None)
+    # ---------------------------------------------------------
+    # 1. Ensure Cruise / Station / Type exist by default
+    # ---------------------------------------------------------
+    required = {"Cruise": "", "Station": "", "Type": ""}
+
+    if st.session_state.castaway_new_vars is None:
+        st.session_state.castaway_new_vars = required.copy()
+    else:
+        # Ensure required keys exist even if user revisits the step
+        for k, v in required.items():
+            st.session_state.castaway_new_vars.setdefault(k, v)
+
+    vars_dict = st.session_state.castaway_new_vars.copy()
+
+    st.markdown(" ")
+    st.markdown("**Required ODV Variables**")
+    big_caption("These must be present for ODV compatibility")
+
+    # ---------------------------------------------------------
+    # 2. Highlight required variables with colored boxes
+    # ---------------------------------------------------------
+    for key in ["Cruise", "Station", "Type"]:
+        val = vars_dict.get(key, "")
+
+        st.markdown(f"""
+            <div style=" padding:10px; border-radius:6px; background-color:#f0f7ff; border-left:6px solid #1f77b4;margin-bottom:8px;">
+                <strong>{key}</strong><br>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        vars_dict[key] = st.text_input(f"{key} value", value=val,)
+
+    # ---------------------------------------------------------
+    # 3. Validation warnings
+    # ---------------------------------------------------------
+    missing_required = [k for k in required if vars_dict.get(k, "").strip() == ""]
+
+    if missing_required:
+        st.warning(
+            "⚠️ The following required ODV variables are blank: "
+            + ", ".join(missing_required)
+        )
+
+    # Detect misspellings (user renamed them incorrectly)
+    # Required keys MUST be exactly Cruise, Station, Type
+    user_keys = set(vars_dict.keys())
+    required_keys = set(required.keys())
+
+    misspelled = [
+        k for k in user_keys
+        if any(req.lower() in k.lower() and k not in required_keys for req in required_keys)
+    ]
+
+    if misspelled:
+        st.error(
+            "❌ These variables look like misspellings of required ODV fields: "
+            + ", ".join(misspelled)
+        )
+        st.info("Required names must be exactly: Cruise, Station, Type")
+
+    # ---------------------------------------------------------
+    # 4. Ask whether the user wants to add more variables
+    # ---------------------------------------------------------
+    st.markdown("---")
+    add = st.radio("Add additional variables?", ["Yes", "No"], index=None)
 
     if add is None:
         return
 
     if add == "No":
-        st.session_state.castaway_new_vars = {}
+        st.session_state.castaway_new_vars = vars_dict
         advance_step()
         return
 
-    num = st.number_input("How many variables?", min_value=1, value=1)
+    # ---------------------------------------------------------
+    # 5. Add additional variables
+    # ---------------------------------------------------------
+    num = st.number_input("How many additional variables?", min_value=1, value=1)
 
-    vars_dict = {}
     for i in range(num):
         col1, col2 = st.columns(2)
         name = col1.text_input(f"Variable {i+1} name")
         value = col2.text_input(f"Variable {i+1} value")
-        vars_dict[name] = value
+        if name:
+            vars_dict[name] = value
 
     if st.button("Next", key="next_newvars"):
         st.session_state.castaway_new_vars = vars_dict
         advance_step()
+
 
 
 # ---------------------------------------------------------
@@ -296,6 +473,8 @@ def omit_vars_step():
     - Dropping columns not needed for analysis
     - Cleaning up the final dataset
     """
+
+    st.markdown("######")
     st.markdown("##### 6. Omit Unnecessary Variables")
 
     active = (st.session_state.castaway_step == 6)
@@ -343,6 +522,8 @@ def download_step():
     - Shows a preview
     - Lets the curator download the final CSV
     """
+
+    st.markdown("######")
     st.markdown("##### 7. Download Cleaned Data")
 
     active = (st.session_state.castaway_step == 7)
@@ -357,6 +538,8 @@ def download_step():
         st.session_state.castaway_selected_vars,
         st.session_state.castaway_new_vars,
         st.session_state.castaway_omit_vars,
+        st.session_state.castaway_custom_names,      
+        st.session_state.castaway_normalization     
     )
 
     st.success("All done! 🎉 Your cleaned Castaway CTD file is ready.")

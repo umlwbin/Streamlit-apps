@@ -23,6 +23,7 @@ def init_castaway_state():
         "castaway_normalization": None,     # Naming convention choice
         "castaway_new_vars": None,          # User‑added variables
         "castaway_omit_vars": None,         # Columns to remove
+        "castaway_custom_names": None,   
     }
 
     for key, value in defaults.items():
@@ -79,6 +80,7 @@ def reset_castaway_workflow():
         "castaway_normalization",
         "castaway_new_vars",
         "castaway_omit_vars",
+        "castaway_custom_names", 
     ]
 
     for key in keys_to_reset:

@@ -18,6 +18,7 @@ from Modules.cleaning_tasks.reshape import reshape
 from Modules.cleaning_tasks.split_cols import split_column
 from Modules.cleaning_tasks.tidy_data import basic_cleaning
 from Modules.cleaning_tasks.merge_ymd import merge_ymd
+from Modules.cleaning_tasks.remove_rows import remove_rows
 
 
 # ---------------------------------------------------------
@@ -39,6 +40,7 @@ TASKS = {
     "Parse Date":parse_dates,
     "Reorder columns":reorder_columns,
     "Remove columns":remove_columns,
+    "Remove rows":remove_rows,
     "Remove Metadata Rows":remove_metadata_rows,
     "Rename columns":rename_columns,
     "Reshape Data - Transpose or Pivot":reshape,

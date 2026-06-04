@@ -18,6 +18,7 @@ from Modules.task_widgets.reshape_widgets import reshape_widgets
 from Modules.task_widgets.split_cols_widgets import split_column_widget
 from Modules.task_widgets.tidy_data_widgets import tidy_data_widgets
 from Modules.task_widgets.merge_ymd_widgets import merge_ymd_widgets
+from Modules.task_widgets.remove_rows_widgets import remove_rows_widgets
 
 
 # ---------------------------------------------------------
@@ -39,6 +40,7 @@ WIDGETS = {
     "Parse Date":parse_dates_widgets,
     "Reorder columns":reorder_columns_widget,
     "Remove columns":remove_columns_widgets,
+    "Remove rows":remove_rows_widgets,
     "Remove Metadata Rows":remove_metadata_rows_widget,
     "Rename columns":rename_widgets,
     "Reshape Data - Transpose or Pivot":reshape_widgets,

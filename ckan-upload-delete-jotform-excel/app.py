@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
-import os
+import os, sys
+
+sys.path.append(os.path.dirname(__file__))
 
 # Import pure Python logic from core/
 from core.dataset_builder import create_dataset_dict

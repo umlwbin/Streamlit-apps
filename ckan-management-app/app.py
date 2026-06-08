@@ -1,10 +1,12 @@
 # app.py
 
 #import posit password
-import os
+import sys, os
 import datetime
 import streamlit as st
 import pandas as pd
+
+sys.path.append(os.path.dirname(__file__))
 
 from ckan_utils import get_all_packages, filter_datasets, classify_resources, search_datasets, delete_dataset, filter_by_date, list_users, extract_metadata,analyze_tags, delete_all_resources, search_datasets_by_date
 from erddap_metadata_profile import extract_erddap_attributes

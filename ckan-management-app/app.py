@@ -3,17 +3,16 @@
 #import posit password
 import os
 import datetime
-
-APP_PASSWORD = os.getenv("APP_PASSWORD")
-
 import streamlit as st
 import pandas as pd
+
 from ckan_utils import get_all_packages, filter_datasets, classify_resources, search_datasets, delete_dataset, filter_by_date, list_users, extract_metadata,analyze_tags, delete_all_resources, search_datasets_by_date
 from erddap_metadata_profile import extract_erddap_attributes
 from data_dictionary import build_resource_table
 from group_metadata import get_group_metadata, list_groups
 from data_dictionary_uploader import read_excel_dictionary, map_excel_to_ckan, upload_data_dictionary, get_ckan_schema, clean_excel_dictionary, find_mismatches
 
+APP_PASSWORD = os.getenv("APP_PASSWORD")
 
 st.set_page_config(layout="wide")
 st.title("CKAN Management App")

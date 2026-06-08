@@ -47,7 +47,7 @@ def workflow_intro():
         st.title("Castaway CTD Curation ⛴️")
         big_caption(
             "A guided workflow for cleaning Castaway CTD CSV files. "
-            "This workflow extracts metadata, removes header rows, "
+            "This workflow extracts metadata, normalizes headers, "
             "adds optional variables, and prepares your files for analysis."
         )
 
@@ -213,23 +213,22 @@ def select_metadata_step():
 
 
 # ---------------------------------------------------------
-# STEP 4 - EXTRACT VARIABLES
+# STEP 4 - NORMALIZE VARIABLES
 # ---------------------------------------------------------
 from processing.normalizing_headers import clean_metadata_name
 from processing.helpers import safe_insert_column
 
 def normalize_variables_step():
     """
-    Step 4: Allow the curator to manually rename variables using an editable table.
+    Step 4: Allow the User to manually rename variables using an editable table.
 
     - Shows ALL variables (measured + metadata + user-added)
     - Auto-standardizes ONLY ODV-critical variables
-    - Leaves measured variables unchanged unless edited
-    - Removes additional normalization modes
+    - Leaves measured variables unchanged unless theyre edited
     """
 
     st.markdown("######")
-    st.markdown("##### 4. Normalize & Rename Variable Names")
+    st.markdown("##### 4. Normalize & Rename VariableS")
 
     active = (st.session_state.castaway_step == 4)
 
@@ -262,7 +261,7 @@ def normalize_variables_step():
             safe_insert_column(df, var_clean, value)
 
     # 2. Insert required ODV variables (always present)
-    required = {"Cruise": "", "Station": "", "Type": ""}
+    required = {"Cruise": "", "Station": "", "Type": "", "Bot. Depth [m]": ""}
     for k, v in required.items():
         safe_insert_column(df, k, v)
 
@@ -371,7 +370,7 @@ def add_new_vars_step():
     # ---------------------------------------------------------
     # 1. Ensure Cruise / Station / Type exist by default
     # ---------------------------------------------------------
-    required = {"Cruise": "", "Station": "", "Type": ""}
+    required = {"Cruise": "", "Station": "", "Type": "", "Bot. Depth [m]": ""}
 
     if st.session_state.castaway_new_vars is None:
         st.session_state.castaway_new_vars = required.copy()
@@ -389,7 +388,7 @@ def add_new_vars_step():
     # ---------------------------------------------------------
     # 2. Highlight required variables with colored boxes
     # ---------------------------------------------------------
-    for key in ["Cruise", "Station", "Type"]:
+    for key in ["Cruise", "Station", "Type", "Bot. Depth [m]"]:
         val = vars_dict.get(key, "")
 
         st.markdown(f"""
@@ -426,7 +425,7 @@ def add_new_vars_step():
             "❌ These variables look like misspellings of required ODV fields: "
             + ", ".join(misspelled)
         )
-        st.info("Required names must be exactly: Cruise, Station, Type")
+        st.info("Required names must be: Cruise, Station, Type")
 
     # ---------------------------------------------------------
     # 4. Ask whether the user wants to add more variables
@@ -559,13 +558,6 @@ def download_step():
             mime="text/csv",
             key="download_button"
         )
-
-    with col2:
-        if st.button("🔄 Start Over", key="start_over_button"):
-            reset_castaway_workflow()
-
-
-
 
 
 

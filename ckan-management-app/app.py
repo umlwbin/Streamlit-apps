@@ -1,6 +1,4 @@
 # app.py
-
-#import posit password
 import sys, os
 import datetime
 import streamlit as st
@@ -14,6 +12,7 @@ from data_dictionary import build_resource_table
 from group_metadata import get_group_metadata, list_groups
 from data_dictionary_uploader import read_excel_dictionary, map_excel_to_ckan, upload_data_dictionary, get_ckan_schema, clean_excel_dictionary, find_mismatches
 
+#import posit password
 APP_PASSWORD = os.getenv("APP_PASSWORD")
 
 st.set_page_config(layout="wide")

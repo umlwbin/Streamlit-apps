@@ -5,6 +5,28 @@ from vocab_parser import build_vocab_dict
 
 st.set_page_config(page_title="CanWIN Vocabulary", page_icon="📖", layout="wide")
 
+# ---------------------------------------------------------
+# Increase the size of widget labels
+# ---------------------------------------------------------
+st.html("""
+<style>
+    /* All widget labels */
+    [data-testid="stWidgetLabel"] p {
+        font-size: 18px !important;
+    }
+
+    /* All markdown text */
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdown"] p,
+    .stMarkdown p {
+        font-size: 18px !important;
+    }
+</style>
+""")
+
+
+
+
 # -----------------------------
 # Page Title + Intro
 # -----------------------------
@@ -18,7 +40,7 @@ st.sidebar.markdown(
     Using standardized vocabularies makes your datasets more interoperable, reusable, and aligned with international standards such as **BODC** and **CF**.
 
     ### Steps
-    1. Select a common name for the variable from the dropdown. 
+    1. Select a **common name** for the variable from the dropdown. 
     2. Browse the list of **standardized variable names** under that common name.
     3. Choose the term whose **definition** best matches your variable.
     4. Add the **Source Link** to your data dictionary.
@@ -35,7 +57,12 @@ categories = list(var_dict.keys())
 # Dropdown 1: Category
 # -----------------------------
 st.markdown("#### 👩🏽‍🔬 Choose a variable")
-var_selection = st.selectbox("Select an option", categories)
+search_term = st.text_input("Type to search", placeholder="Start typing...")
+st.caption("Press **Enter** to update the list (or click anywhere)")
+st.markdown(" ")
+
+filtered_categories = [c for c in categories if search_term.lower() in c.lower()]
+var_selection = st.selectbox("Select", filtered_categories)
 
 selected_category = var_dict[var_selection]
 canwin_names = selected_category["canwin_names"]
@@ -46,7 +73,7 @@ st.markdown("---")
 # Dropdown 2: Standardized Name
 # -----------------------------
 st.markdown(f"#### Standardized names under **{var_selection}**")
-stan_selection = st.selectbox("Select an option", canwin_names)
+stan_selection = st.selectbox("Select", canwin_names)
 
 idx = canwin_names.index(stan_selection)
 st.markdown(" ")
@@ -96,17 +123,28 @@ source_label = (
     else "Climate and Forecast (CF) vocabulary"
 )
 
-st.markdown("#### 📚 Source vocabulary")
-st.write(source_label)
+with st.container(border=True):
 
-st.markdown("#### 🏷️ Preferred label")
-st.write(selected_category["source_names"][idx])
+    st.markdown("#### ✅ CanWIN Common Name")
+    st.write(var_selection)
 
-st.markdown("#### 🔗 Source link")
-st.write(selected_category["links"][idx])
+    st.markdown("#### 🎯 Standardized name")
+    st.write(stan_selection)
 
-st.markdown("#### ✅ CanWIN Common Name")
-st.write(var_selection)
+    st.markdown("#### 🏷️ Alternate label")
+
+    if stan_selection!= selected_category["source_names"][idx]:
+        st.write(selected_category["source_names"][idx])
+    else:
+        st.write("")
+
+    st.markdown("#### 📚 Source vocabulary")
+    st.write(source_label)
+
+    st.markdown("#### 🔗 Source link")
+    st.write(selected_category["links"][idx])
+
+
 
 st.markdown("---")
 

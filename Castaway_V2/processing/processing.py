@@ -31,7 +31,6 @@ def apply_standard_names(name):
 # ------------------------------------------------------------
 # FINAL DATAFRAME BUILDER
 # ------------------------------------------------------------
-
 def build_final_dataframe(
     data_list,
     metadata_list,
@@ -39,16 +38,29 @@ def build_final_dataframe(
     new_vars,
     omit_list,
     custom_names,
-    normalization_mode="Keep cleaned names"
 ):
+    """
+    Build the final cleaned dataset by combining:
+    - The extracted data tables
+    - Selected metadata variables
+    - Required ODV variables (Cruise, Station, Type)
+    - Auto-extracted Bot. Depth [m]
+    - User-added variables
+    - Columns the user wants to omit
+    - User renaming (no additional normalization)
+    """
 
     final_frames = []
 
     for df, meta in zip(data_list, metadata_list):
 
+        df = df.copy()
+
+        # --------------------------------------------------------
+        # 1. Insert selected metadata variables
+        # --------------------------------------------------------
         meta = meta.dropna(axis=1, how="all")
 
-        # 1. Insert selected metadata variables
         for var in selected_vars:
             var_clean = clean_metadata_name(var)
             row = meta[meta["Variable"].astype(str).str.contains(var, regex=False)]
@@ -56,24 +68,43 @@ def build_final_dataframe(
                 value = row["Value"].iloc[0]
                 safe_insert_column(df, var_clean, value)
 
-        # 2. Insert new user-defined variables
-        for name, value in new_vars.items():
-            safe_insert_column(df, name, value)
+        # --------------------------------------------------------
+        # 2. Insert required ODV variables (Cruise, Station, Type)
+        # --------------------------------------------------------
+        required = {"Cruise": "", "Station": "", "Type": ""}
+        for k, v in required.items():
+            safe_insert_column(df, k, v)
 
-        # 3. Remove unwanted columns
-        df = drop_columns(df, omit_list)
+        # --------------------------------------------------------
+        # 3. Insert user-defined variables
+        # --------------------------------------------------------
+        if new_vars:
+            for name, value in new_vars.items():
+                safe_insert_column(df, name, value)
 
+        # --------------------------------------------------------
+        # 4. Auto-extract Bot. Depth [m] from last Depth value
+        # --------------------------------------------------------
+        if "Depth" in df.columns:
+            bottom_depth = df["Depth"].dropna().iloc[-1]
+            df["Bot. Depth [m]"] = bottom_depth
 
-        # 4. Normalize column names
+        # --------------------------------------------------------
+        # 5. Remove unwanted columns
+        # --------------------------------------------------------
+        if omit_list:
+            df = df.drop(columns=omit_list, errors="ignore")
+
+        # --------------------------------------------------------
+        # 6. Apply renaming rules
+        # --------------------------------------------------------
         new_cols = []
         for col in df.columns:
 
-            # Trim whitespace only
             col_stripped = col.strip()
-
             lowered = col_stripped.lower()
 
-            # Step 1: automatic ODV standardization (only these 7)
+            # ODV auto-standardization
             if "cruise" in lowered:
                 new_cols.append("Cruise")
                 continue
@@ -92,30 +123,29 @@ def build_final_dataframe(
             if "latitude" in lowered:
                 new_cols.append("Latitude [degrees_north]")
                 continue
-            if "depth" in lowered:
+            if lowered == "bot. depth [m]" or "bot" in lowered:
                 new_cols.append("Bot. Depth [m]")
                 continue
 
-            # Step 2: user overrides (from Step 4)
-            if col in custom_names:
+            # User overrides
+            if custom_names and col in custom_names:
                 new_cols.append(custom_names[col])
                 continue
 
-            # Step 3: no additional cleaning — keep exactly as provided
+            # Default: keep as-is (only trim whitespace)
             new_cols.append(col_stripped)
 
         df.columns = new_cols
 
-
         final_frames.append(df)
 
     # --------------------------------------------------------
-    # 5. Combine all cleaned files
+    # 7. Combine all cleaned files
     # --------------------------------------------------------
     final_df = pd.concat(final_frames, ignore_index=True)
 
     # --------------------------------------------------------
-    # 6. Enforce ODV column order (AFTER concatenation)
+    # 8. Enforce ODV column order
     # --------------------------------------------------------
     odv_order = [
         "Cruise",
@@ -132,11 +162,12 @@ def build_final_dataframe(
 
     final_df = final_df[present_odv_cols + remaining_cols]
 
-    # 7. Move "File name" to the end if present
+    # --------------------------------------------------------
+    # 9. Move "File name" to the end if present
+    # --------------------------------------------------------
     if "File name" in final_df.columns:
         cols = [c for c in final_df.columns if c != "File name"]
         cols.append("File name")
         final_df = final_df[cols]
-
 
     return final_df

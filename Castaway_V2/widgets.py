@@ -207,150 +207,34 @@ def select_metadata_step():
         placeholder="Select metadata variables..."
     )
 
+    st.info(
+        "If you extract **Cast time UTC**, **Start latitude**, or **Start longitude**, "
+        "they will be automatically renamed to their required ODV names:\n\n"
+        "- yyyy-mm-ddThh:mm:ss.sss\n"
+        "- Latitude [degrees_north]\n"
+        "- Longitude [degrees_east]\n\n"
+        "These variables are ODV‑required and will not appear in the rename table in step 6."
+    )
+    
+
     if st.button("Next", key="next_select"):
         st.session_state.castaway_selected_vars = selected
         advance_step()
 
 
 # ---------------------------------------------------------
-# STEP 4 - NORMALIZE VARIABLES
-# ---------------------------------------------------------
-from processing.normalizing_headers import clean_metadata_name
-from processing.helpers import safe_insert_column
-
-def normalize_variables_step():
-    """
-    Step 4: Allow the User to manually rename variables using an editable table.
-
-    - Shows ALL variables (measured + metadata + user-added)
-    - Auto-standardizes ONLY ODV-critical variables
-    - Leaves measured variables unchanged unless theyre edited
-    """
-
-    st.markdown("######")
-    st.markdown("##### 4. Normalize & Rename VariableS")
-
-    active = (st.session_state.castaway_step == 4)
-
-    if not active:
-        if ("castaway_custom_names" in st.session_state and st.session_state.castaway_custom_names is not None ):
-            st.success("Custom variable names saved.")
-            if st.button("Change Variable Names"):
-                go_to_step(4)
-        else:
-            st.info("Waiting for normalization choice…")
-        return
-
-
-    # ---------------------------------------------------------
-    # Build a preview dataframe that includes:
-    # - measured variables
-    # - metadata-extracted variables
-    # - required ODV variables (Cruise, Station, Type)
-    # - user-added variables
-    # ---------------------------------------------------------
-    df = st.session_state.castaway_data[0].copy()
-
-    # 1. Insert selected metadata variables
-    meta = st.session_state.castaway_metadata[0]
-    for var in st.session_state.castaway_selected_vars:
-        var_clean = clean_metadata_name(var)
-        row = meta[meta["Variable"].astype(str).str.contains(var, regex=False)]
-        if not row.empty:
-            value = row["Value"].iloc[0]
-            safe_insert_column(df, var_clean, value)
-
-    # 2. Insert required ODV variables (always present)
-    required = {"Cruise": "", "Station": "", "Type": "", "Bot. Depth [m]": ""}
-    for k, v in required.items():
-        safe_insert_column(df, k, v)
-
-    # 3. Insert user-added variables (if any)
-    if st.session_state.castaway_new_vars:
-        for name, value in st.session_state.castaway_new_vars.items():
-            safe_insert_column(df, name, value)
-
-    # ---------------------------------------------------------
-    # Extract the full list of variables for the table
-    # ---------------------------------------------------------
-    original_cols = df.columns.tolist()
-
-    # ---------------------------------------------------------
-    # Auto-standardization rules (ODV-critical only)
-    # ---------------------------------------------------------
-    def standardize(name):
-        n = name.lower()
-
-        if "cruise" in n:
-            return "Cruise"
-        if "station" in n:
-            return "Station"
-        if "type" in n:
-            return "Type"
-        if "date" in n:
-            return "yyyy-mm-ddThh:mm:ss.sss"
-        if "longitude" in n:
-            return "Longitude [degrees_east]"
-        if "latitude" in n:
-            return "Latitude [degrees_north]"
-        if "depth" in n:
-            return "Bot. Depth [m]"
-
-        # Measured variables: leave unchanged
-        return name
-
-    # ---------------------------------------------------------
-    # Build editable table
-    # ---------------------------------------------------------
-    import pandas as pd
-
-    table_df = pd.DataFrame({
-        "Original Name": original_cols,
-        "New Name": [standardize(c) for c in original_cols]
-    })
-
-    edited = st.data_editor(
-        table_df,
-        num_rows="dynamic",
-        use_container_width=True,
-        key="castaway_name_editor"
-    )
-
-
-    # ---------------------------------------------------------
-    # Save and continue
-    # ---------------------------------------------------------
-    if st.button("Next", key="next_normalize"):
-        st.session_state.castaway_custom_names = {
-            row["Original Name"]: row["New Name"]
-            for _, row in edited.iterrows()
-        }
-
-        # No additional normalization modes
-        st.session_state.castaway_normalization = "Keep cleaned names"
-
-        advance_step()
-
-
-
-
-
-# ---------------------------------------------------------
-# STEP 5 - ADD NEW VARIABLES
+# STEP 4- ADD NEW VARIABLES
 # ---------------------------------------------------------
 def add_new_vars_step():
     """
-    Step 5: Allow the curator to add new variables manually.
-
+    Step 4: Allow the curator to add new variables manually.
     - Cruise, Station, Type are always present
-    - They are visually highlighted
-    - Warnings appear if they are blank or misspelled
     """
 
     st.markdown("######")
-    st.markdown("##### 5. Add New Variables (Optional)")
+    st.markdown("##### 4. Add New Variables (Optional)")
 
-    active = (st.session_state.castaway_step == 5)
+    active = (st.session_state.castaway_step == 4)
 
     if not active:
         if st.session_state.castaway_new_vars is not None:
@@ -362,7 +246,7 @@ def add_new_vars_step():
             else:
                 st.info("No new variables added.")
             if st.button("Change New Variables"):
-                go_to_step(5)
+                go_to_step(4)
         else:
             st.info("Waiting for new variables to add…")
         return
@@ -370,7 +254,7 @@ def add_new_vars_step():
     # ---------------------------------------------------------
     # 1. Ensure Cruise / Station / Type exist by default
     # ---------------------------------------------------------
-    required = {"Cruise": "", "Station": "", "Type": "", "Bot. Depth [m]": ""}
+    required = {"Cruise": "", "Station": "", "Type": ""}
 
     if st.session_state.castaway_new_vars is None:
         st.session_state.castaway_new_vars = required.copy()
@@ -386,18 +270,15 @@ def add_new_vars_step():
     big_caption("These must be present for ODV compatibility")
 
     # ---------------------------------------------------------
-    # 2. Highlight required variables with colored boxes
+    # 2.  Show Required variables
     # ---------------------------------------------------------
-    for key in ["Cruise", "Station", "Type", "Bot. Depth [m]"]:
+    for key in ["Cruise", "Station", "Type"]:
         val = vars_dict.get(key, "")
 
-        st.markdown(f"""
-            <div style=" padding:10px; border-radius:6px; background-color:#f0f7ff; border-left:6px solid #1f77b4;margin-bottom:8px;">
-                <strong>{key}</strong><br>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        vars_dict[key] = st.text_input(f"{key} value", value=val,)
+        st.markdown(f"**{key}**")
+        vars_dict[key] = st.text_input(f"Enter {key} value", value=val,)
+        st.markdown(" ")
+
 
     # ---------------------------------------------------------
     # 3. Validation warnings
@@ -459,24 +340,20 @@ def add_new_vars_step():
 
 
 
-# ---------------------------------------------------------
-# STEP 6 — OMIT VARIABLES
-# ---------------------------------------------------------
 
+
+# ---------------------------------------------------------
+# STEP 5- OMIT VARIABLES
+# ---------------------------------------------------------
 def omit_vars_step():
     """
-    Step 6: Let the curator remove unwanted columns from the data table.
-
-    This is useful for:
-    - Removing noisy variables
-    - Dropping columns not needed for analysis
-    - Cleaning up the final dataset
+    Step 5: Let the curator remove unwanted columns from the data table.
     """
 
     st.markdown("######")
-    st.markdown("##### 6. Omit Unnecessary Variables")
+    st.markdown("##### 5. Omit Unnecessary Variables")
 
-    active = (st.session_state.castaway_step == 6)
+    active = (st.session_state.castaway_step == 5)
 
     if not active:
         if st.session_state.castaway_omit_vars is not None:
@@ -485,7 +362,7 @@ def omit_vars_step():
                 if st.session_state.castaway_omit_vars else "No variables omitted."
             )
             if st.button("Change Omitted Variables"):
-                go_to_step(6)
+                go_to_step(5)
         else:
             st.info("Waiting to omit unneeded variables...")
         return
@@ -505,8 +382,125 @@ def omit_vars_step():
         advance_step()
 
 
+
+
 # ---------------------------------------------------------
-# STEP 7 — DOWNLOAD CLEANED DATA
+# STEP 6 - RENAME VARIABLES
+# ---------------------------------------------------------
+from processing.normalizing_headers import clean_metadata_name
+from processing.helpers import safe_insert_column
+
+def normalize_variables_step():
+    """
+    Step 6: Allow the User to manually rename variables using an editable table.
+    """
+
+    st.markdown("######")
+    st.markdown("##### 6. Rename Variables")
+
+    active = (st.session_state.castaway_step == 6)
+
+    if not active:
+        if st.session_state.castaway_custom_names is not None:
+            st.success("Custom variable names saved.")
+            if st.button("Change Variable Names"):
+                go_to_step(6)
+        else:
+            st.info("Waiting for normalization choice…")
+        return
+
+    # ---------------------------------------------------------
+    # Build the dataframe exactly as it will appear BEFORE renaming
+    # ---------------------------------------------------------
+    df = st.session_state.castaway_data[0].copy()
+
+    # Insert selected metadata variables
+    meta = st.session_state.castaway_metadata[0]
+    for var in st.session_state.castaway_selected_vars:
+        var_clean = clean_metadata_name(var)
+        row = meta[meta["Variable"].astype(str).str.contains(var, regex=False)]
+        if not row.empty:
+            value = row["Value"].iloc[0]
+            safe_insert_column(df, var_clean, value)
+
+    # Insert required ODV variables (Cruise, Station, Type only)
+    required = {"Cruise": "", "Station": "", "Type": ""}
+    for k, v in required.items():
+        safe_insert_column(df, k, v)
+
+    # Insert user-added variables
+    if st.session_state.castaway_new_vars:
+        for name, value in st.session_state.castaway_new_vars.items():
+            safe_insert_column(df, name, value)
+
+    # Remove omitted variables
+    if st.session_state.castaway_omit_vars:
+        df = df.drop(columns=st.session_state.castaway_omit_vars, errors="ignore")
+
+    # ---------------------------------------------------------
+    # Extract columns for rename table
+    # ---------------------------------------------------------
+    original_cols = df.columns.tolist()
+
+    # ODV-required variables (remove anything that will be auto-standardized)
+    def is_non_editable(name):
+        n = name.lower()
+        return (
+            "cruise" in n or
+            "station" in n or
+            "type" in n or
+            "time" in n or
+            "longitude" in n or
+            "latitude" in n or
+            "bot" in n
+        )
+
+    editable_cols = [c for c in original_cols if not is_non_editable(c)]
+
+
+    # ---------------------------------------------------------
+    # Build editable table
+    # ---------------------------------------------------------
+    import pandas as pd
+    table_df = pd.DataFrame({
+        "Original Name": editable_cols,
+        "New Name": editable_cols.copy()
+    })
+
+
+    st.info("**You can rename any variable in the table below**. \n\nODV-required variables are not editable and have been excluded from the table. \n" 
+    "These variables will appear in your final dataset exactly as shown:\n\n"
+    "- Cruise\n"
+    "- Station\n"
+    "- Type\n"
+    "- yyyy-mm-ddThh:mm:ss.sss\n"
+    "- Longitude [degrees_east]\n"
+    "- Latitude [degrees_north]\n"
+    "- Bot. Depth [m]"
+        )
+
+    edited = st.data_editor(
+        table_df,
+        num_rows="dynamic",
+        use_container_width=True,
+        key="castaway_name_editor"
+    )
+
+
+    # ---------------------------------------------------------
+    # Save and continue
+    # ---------------------------------------------------------
+    if st.button("Next", key="next_normalize"):
+        st.session_state.castaway_custom_names = {
+            row["Original Name"]: row["New Name"]
+            for _, row in edited.iterrows()
+        }
+        advance_step()
+
+
+
+# ---------------------------------------------------------
+# STEP 7 - DOWNLOAD CLEANED DATA
 # ---------------------------------------------------------
 
 def download_step():
@@ -537,13 +531,19 @@ def download_step():
         st.session_state.castaway_selected_vars,
         st.session_state.castaway_new_vars,
         st.session_state.castaway_omit_vars,
-        st.session_state.castaway_custom_names,      
-        st.session_state.castaway_normalization     
+        st.session_state.castaway_custom_names    
+        )
+
+    num_files = len(st.session_state.castaway_data)
+
+    st.success(
+        f"All done! 🎉🎉\n\n Your cleaned Castaway CTD file is ready.\n\n"
+        f"**{num_files} file(s) were merged successfully.**"
     )
 
-    st.success("All done! 🎉 Your cleaned Castaway CTD file is ready.")
 
     # --- FINAL PREVIEW ---
+    st.markdown(" ")
     st.markdown("**Final Preview**")
     st.dataframe(final_df.head(50), use_container_width=True)
 

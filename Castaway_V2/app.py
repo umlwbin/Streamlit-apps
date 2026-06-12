@@ -39,9 +39,9 @@ def main():
     upload_step()
     extract_step()
     select_metadata_step()
-    normalize_variables_step()
     add_new_vars_step()
-    omit_vars_step()
+    omit_vars_step()   
+    normalize_variables_step()
     download_step()
 
 

@@ -307,14 +307,16 @@ with tab11:
     resource_id = st.text_input("CKAN Resource ID (CSV resource)", key="dd_resource_id")
     api_key = st.text_input("CKAN API Key", type="password", key="dd_upload_api_key")
 
-    if excel_file:
+    # Only proceed when ALL required inputs are provided
+    if excel_file and resource_id and api_key:
+
         df = read_excel_dictionary(excel_file)
         df = clean_excel_dictionary(df)
 
-        st.subheader("Preview Excel Data")
+        st.markdown("### Preview Excel Data")
         st.dataframe(df)
 
-        st.markdown("### Step 1: Map Excel Columns to CKAN Metadata Fields")
+        st.markdown("#### Step 1: Map Excel Columns to CKAN Metadata Fields")
 
         excel_columns = list(df.columns)
 

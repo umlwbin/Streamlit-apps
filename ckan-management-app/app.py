@@ -13,7 +13,7 @@ from ckan_utils import (
 )
 
 from erddap_metadata_profile import extract_erddap_attributes
-from data_dictionary import build_resource_table
+#from data_dictionary import build_resource_table
 from group_metadata import get_group_metadata, list_groups
 from data_dictionary_uploader import read_excel_dictionary, map_excel_to_ckan, upload_data_dictionary, get_ckan_schema, clean_excel_dictionary, find_mismatches
 

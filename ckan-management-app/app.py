@@ -6,7 +6,12 @@ import pandas as pd
 
 sys.path.append(os.path.dirname(__file__))
 
-from ckan_utils import get_all_packages, filter_datasets, classify_resources, search_datasets, delete_dataset, filter_by_date, list_users, extract_metadata,analyze_tags, delete_all_resources, search_datasets_by_date
+from ckan_utils import (
+    get_all_packages, filter_datasets, classify_resources, search_datasets,
+    delete_dataset, filter_by_date, list_users, extract_metadata,
+    analyze_tags, delete_all_resources, search_datasets_by_date
+)
+
 from erddap_metadata_profile import extract_erddap_attributes
 from data_dictionary import build_resource_table
 from group_metadata import get_group_metadata, list_groups
@@ -17,16 +22,19 @@ APP_PASSWORD = os.getenv("APP_PASSWORD")
 
 st.set_page_config(layout="wide")
 st.title("CKAN Management App")
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13 = st.tabs(
+
+#tab9, - "CSV variables" - depended on data_dictionry.py - moved to archive
+
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8,  tab10, tab11, tab12, tab13 = st.tabs(
     ["Resource Checker", "Dataset Search", "Dataset Delete", "Date Filter", "User Management", "Metadata Extractor", 
-     "Keyword Analysis", "ERDDAP Metadata Attributes", "CSV variables", "Theme Metadata", "Data Dictionary Uploader", 
-     "Remove All Resources from Dataset", "Dataset Search by Date"])
+     "Keyword Analysis", "ERDDAP Metadata Attributes", "Theme Metadata", "Data Dictionary Uploader", 
+     "Remove All Resources from Dataset", "Dataset Search by Date",])
 
 # --- Password Gate ---
 st.sidebar.header("Authentication")
 password = st.sidebar.text_input("Enter app password", type="password")
 
-
+APP_PASSWORD = "C3osE&Gdm"
 if password != APP_PASSWORD:
     st.warning("Please enter the correct password in the sidebar to access the app.")
     st.stop()  # Prevents the rest of the app from running
@@ -249,24 +257,24 @@ with tab8:
 
 
 
-with tab9:
-    import csv
-    st.header("Variable Checker")
-    st.markdown("Extract CSV headers, labels and description from data dictionary ")
+# with tab9:
+#     import csv
+#     st.header("Variable Checker")
+#     st.markdown("Extract CSV headers, labels and description from data dictionary ")
 
-    if st.button("Grab headers!"):
-        with st.spinner("Fetching CSV resources and data dictionaries..."):
-            df = build_resource_table()
+#     if st.button("Grab headers!"):
+#         with st.spinner("Fetching CSV resources and data dictionaries..."):
+#             df = build_resource_table()
 
-        st.success("All done")
-        st.dataframe(df)
+#         st.success("All done")
+#         st.dataframe(df)
 
-        st.download_button(
-            label="Download resource table",
-            data=df.to_csv(index=False, quoting=csv.QUOTE_MINIMAL),
-            file_name="variable_standardization.csv",
-            mime="text/csv"
-        )
+#         st.download_button(
+#             label="Download resource table",
+#             data=df.to_csv(index=False, quoting=csv.QUOTE_MINIMAL),
+#             file_name="variable_standardization.csv",
+#             mime="text/csv"
+#         )
 
 
 with tab10:
@@ -303,35 +311,76 @@ with tab11:
     if excel_file:
         df = read_excel_dictionary(excel_file)
         df = clean_excel_dictionary(df)
+
         st.subheader("Preview Excel Data")
         st.dataframe(df)
 
+        st.markdown("### Step 1: Map Excel Columns to CKAN Metadata Fields")
 
-        if st.button("Check for mismatches"):
-            try:
-                ckan_columns = get_ckan_schema(resource_id, api_key)
-                missing_in_ckan, missing_in_excel = find_mismatches(df, ckan_columns)
+        excel_columns = list(df.columns)
 
-                st.subheader("Columns in Excel but NOT in CKAN")
-                st.write(missing_in_ckan)
+        ckan_fields = {
+            "id": "CKAN Field Name (id)",
+            "info.label": "Label (info.label)",
+            "info.notes": "Description (info.notes)",
+            "info.units": "Units (info.units)",
+            "info.media_type": "Media Type (info.media_type)",
+            "info.result_value_type": "Result Value Type (info.result_value_type)",
+            "info.statistic_applied": "Statistic Applied (info.statistic_applied)"
+        }
 
-                st.subheader("Columns in CKAN but NOT in Excel")
-                st.write(missing_in_excel)
+        # Auto-detection rules (lowercase partial matches)
+        auto_map_rules = {
+            "id": ["name in file"],
+            "info.label": ["common"],
+            "info.notes": ["description"],
+            "info.units": ["units"],
+            "info.media_type": ["media"],
+            "info.result_value_type": ["result value type"],
+            "info.statistic_applied": ["statistic applied"]
+        }
 
-            except Exception as e:
-                st.error(f"Error checking mismatches: {e}")
+        # Initialize mapping if not present
+        if "column_mapping" not in st.session_state:
+            st.session_state["column_mapping"] = {}
 
-        # Initialize session state
-        if "mapped" not in st.session_state:
-            st.session_state["mapped"] = None
+        # Auto-select columns based on partial matches
+        for ckan_key, patterns in auto_map_rules.items():
+            selected = "-- None --"
+            for col in excel_columns:
+                col_l = col.lower()
+                if any(p in col_l for p in patterns):
+                    selected = col
+                    break
+            st.session_state["column_mapping"][ckan_key] = selected
 
+                
+        for ckan_key, label in ckan_fields.items():
+            st.session_state["column_mapping"][ckan_key] = st.selectbox(
+                f"Select Excel column for **{label}**",
+                ["-- None --"] + excel_columns,
+                index=(["-- None --"] + excel_columns).index(st.session_state["column_mapping"][ckan_key]),
+                key=f"map_{ckan_key}"
+            )
+
+
+        st.info("""
+        **Important:**  
+        The CKAN `id` field must match the column names in the uploaded data file.  
+        This is how CKAN knows which metadata belongs to which variable.
+        """)
+
+        # Step 2: User clicks "Map Columns"
         if st.button("Map Columns"):
-            st.session_state["mapped"] = map_excel_to_ckan(df)
-            st.subheader("Mapped CKAN Fields")
-            st.json(st.session_state["mapped"])
+            mapped = map_excel_to_ckan(df, st.session_state["column_mapping"])
+            st.session_state["mapped"] = mapped
 
+            st.subheader("Mapped CKAN Fields")
+            st.json(mapped)
+
+        # Step 3: Upload to CKAN
         if st.button("Upload to CKAN"):
-            if st.session_state["mapped"] is None:
+            if "mapped" not in st.session_state or st.session_state["mapped"] is None:
                 st.error("Please map the columns first.")
             else:
                 try:
@@ -340,6 +389,7 @@ with tab11:
                     st.json(result)
                 except Exception as e:
                     st.error(f"Error uploading data dictionary: {e}")
+
 
 
 with tab12:

@@ -44,49 +44,47 @@ def clean_excel_dictionary(df):
     """
     Clean the Excel data dictionary by removing rows that should NOT be uploaded.
 
-    Why this matters:
-    - Excel sheets often contain description rows, blank rows, or header-like rows.
-    - CKAN requires each row to represent ONE variable with a valid ID.
-    - This function removes anything that would break the upload.
+    IMPORTANT:
+    This function no longer assumes any specific ID column.
+    The user selects the ID column later in the UI.
 
-    Steps performed:
-    1. Normalize the "Cleaned Variable Name" column (strip spaces, convert to string)
-    2. Remove long description rows (these are not variable IDs)
-    3. Remove rows where the ID contains spaces (real CKAN IDs never contain spaces)
-    4. Remove blank or "nan" IDs
-    5. Remove header-like rows that appear in the Excel sheet
+    This function ONLY removes obvious junk rows:
+    - fully empty rows
+    - rows where all values are NaN
+    - long description blocks
+    - header-like rows that appear inside the sheet
     """
 
-    # Normalize the column so comparisons work reliably
-    df["Cleaned Variable Name"] = (
-        df["Cleaned Variable Name"]
-        .astype(str)
-        .str.strip()
-    )
+    # Drop fully empty rows
+    df = df.dropna(how="all")
 
-    # 1. Remove description rows (these tend to be long text blocks)
-    df = df[df["Cleaned Variable Name"].str.len() < 80]
+    # Remove rows where every cell is blank or whitespace
+    df = df[~df.apply(lambda row: row.astype(str).str.strip().eq("").all(), axis=1)]
 
-    # 2. Remove rows with spaces — CKAN column IDs never contain spaces
-    df = df[~df["Cleaned Variable Name"].str.contains(" ")]
+    # Remove long description rows (any column with > 200 chars)
+    df = df[df.apply(lambda row: all(len(str(v)) < 200 for v in row), axis=1)]
 
-    # 3. Remove blank or "nan" values
+    # Remove header-like rows (case-insensitive)
+    header_like = [
+        "variable name in file",
+        "common variable name",
+        "data type",
+        "measurement units",
+        "allowed values",
+        "missing values",
+        "description"
+    ]
+
+    # Only remove rows where ALL cells match header-like patterns
     df = df[
-        (df["Cleaned Variable Name"] != "") &
-        (df["Cleaned Variable Name"] != "nan")
+        ~df.apply(
+            lambda row: all(str(v).strip().lower() in header_like for v in row),
+            axis=1
+        )
     ]
-
-    # 4. Remove header-like rows that sometimes appear in Excel exports
-    invalid_ids = [
-        "Cleaned Variable Name",
-        "Original Header",
-        "Type",
-        "Notes",
-        "Standardized Source Term",
-    ]
-    df = df[~df["Cleaned Variable Name"].isin(invalid_ids)]
 
     return df
+
 
 
 # ---------------------------------------------------------------------------
@@ -166,74 +164,75 @@ def find_mismatches(df, ckan_columns):
 # ---------------------------------------------------------------------------
 # 6. MAP EXCEL ROWS TO CKAN METADATA FORMAT
 # ---------------------------------------------------------------------------
-def map_excel_to_ckan(df):
+def map_excel_to_ckan(df, mapping):
     """
-    Convert each Excel row into the JSON structure CKAN expects for metadata.
+    Convert Excel rows into CKAN metadata using a user-defined column mapping.
 
-    Important:
-    - This does NOT change the datastore schema.
-    - It only updates metadata fields like label, notes, units, etc.
-
-    CKAN expects metadata in this structure:
-        {
-            "id": "column_name",
-            "info": {
-                "label": "...",
-                "notes": "...",
-                "unit": "...",
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Cleaned Excel data dictionary.
+    mapping : dict
+        User-selected mapping of CKAN fields → Excel column names.
+        Example:
+            {
+                "id": "Original Header",
+                "info.label": "Label",
+                "info.notes": "Description",
                 ...
             }
-        }
 
-    This function builds that structure for each row.
+    Returns
+    -------
+    list of dict
+        CKAN metadata field definitions.
     """
-
-    # Normalize IDs again for safety
-    df["Cleaned Variable Name"] = df["Cleaned Variable Name"].astype(str).str.strip()
-
-    # Remove empty or invalid IDs
-    df = df[df["Cleaned Variable Name"] != ""]
-    df = df[df["Cleaned Variable Name"] != "nan"]
-
-    # Remove header-like rows
-    invalid_ids = [
-        "Cleaned Variable Name",
-        "Original Header",
-        "Type",
-        "Notes",
-        "Standardized Source Term"
-    ]
-    df = df[~df["Cleaned Variable Name"].isin(invalid_ids)]
-
-    # Mapping from Excel column → CKAN metadata field
-    mapping = {
-        "Cleaned Variable Name": "id",
-        "CanWIN Common Name": "info.label",
-        "Data Provider Description": "info.notes",
-        "Units": "info.units",
-        "media_type": "info.media_type",
-        "result_value_type": "info.result_value_type",
-        "statistic_applied": "info.statistic_applied"
-    }
 
     ckan_fields = []
 
-    # Build CKAN metadata for each row
+    # ------------------------------------------------------------
+    # 1. Validate that the user selected an ID column
+    # ------------------------------------------------------------
+    id_col = mapping.get("id")
+
+    if not id_col or id_col == "-- None --":
+        raise ValueError("You must select a column to use as the CKAN 'id' field.")
+
+    if id_col not in df.columns:
+        raise ValueError(f"The selected ID column '{id_col}' does not exist in the Excel file.")
+
+    # ------------------------------------------------------------
+    # 2. Iterate through rows and build CKAN metadata
+    # ------------------------------------------------------------
     for _, row in df.iterrows():
-        field = {}
 
-        # Required CKAN field: the column ID
-        field["id"] = clean_value(row["Cleaned Variable Name"])
+        # Extract and validate the ID value
+        raw_id = str(row[id_col]).strip()
 
-        # Add metadata fields
-        for excel_col, ckan_key in mapping.items():
+        # Skip invalid IDs
+        if raw_id == "" or raw_id.lower() == "nan":
+            continue
+
+        field = {"id": raw_id}
+
+        # --------------------------------------------------------
+        # 3. Map all other CKAN metadata fields dynamically
+        # --------------------------------------------------------
+        for ckan_key, excel_col in mapping.items():
+
             if ckan_key == "id":
-                continue  # already handled above
+                continue  # already handled
+
+            if excel_col in (None, "-- None --"):
+                continue  # user chose not to map this field
+
+            if excel_col not in df.columns:
+                continue  # skip invalid mappings
 
             raw_value = row.get(excel_col, "")
-            value = clean_value(raw_value)
+            value = "" if pd.isna(raw_value) else str(raw_value).strip()
 
-            # CKAN uses nested structure: info.label, info.notes, etc.
+            # CKAN nested structure: info.label, info.notes, etc.
             parent, child = ckan_key.split(".")
             field.setdefault(parent, {})
             field[parent][child] = value
@@ -241,6 +240,7 @@ def map_excel_to_ckan(df):
         ckan_fields.append(field)
 
     return ckan_fields
+
 
 
 # ---------------------------------------------------------------------------

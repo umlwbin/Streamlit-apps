@@ -66,6 +66,20 @@ def classify_resources(canwin_datasets):
 
 #--------------------------------------------------------------------------------------------------------------------
 
+def get_dataset(dataset_id, api_key=None):
+    """
+    Fetch a CKAN dataset (package_show).
+    API key optional unless dataset is private.
+    """
+    url = f"{BASE_URL}/package_show"
+    headers = {"Authorization": api_key} if api_key else {}
+    payload = {"id": dataset_id}
+
+    response = requests.post(url, json=payload, headers=headers)
+    response.raise_for_status()
+    return response.json()["result"]
+
+
 def search_datasets(query, rows=10):
     """Search CKAN datasets by keyword, excluding federated ones."""
     url = f"{BASE_URL}/package_search?q={query}&rows={rows}"
@@ -309,3 +323,4 @@ def search_datasets_by_date(start_date, end_date, rows=100):
 
     # for d in results:
     #     st.write(f"[{d['type'].upper()}]--- {d['title']} ---- Created: {d['metadata_created']}")
+

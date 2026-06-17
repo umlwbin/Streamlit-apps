@@ -34,7 +34,6 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8,  tab10, tab11, tab12, tab13 = st
 st.sidebar.header("Authentication")
 password = st.sidebar.text_input("Enter app password", type="password")
 
-APP_PASSWORD = "C3osE&Gdm"
 if password != APP_PASSWORD:
     st.warning("Please enter the correct password in the sidebar to access the app.")
     st.stop()  # Prevents the rest of the app from running

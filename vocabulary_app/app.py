@@ -57,11 +57,17 @@ categories = list(var_dict.keys())
 # Dropdown 1: Category
 # -----------------------------
 st.markdown("#### 👩🏽‍🔬 Choose a variable")
-search_term = st.text_input("Type to search", placeholder="Start typing...")
-st.caption("Press **Enter** to update the list (or click anywhere)")
+st.caption("Start typing, then press **Enter** to update the list (or click anywhere)")
+search_term = st.text_input("Search", placeholder="Temperature, Alkalinity, etc.")
+
 st.markdown(" ")
 
 filtered_categories = [c for c in categories if search_term.lower() in c.lower()]
+
+if len(filtered_categories) == 0:
+    st.warning("No matching common names found. Try a different search term.")
+    st.stop()
+
 var_selection = st.selectbox("Select", filtered_categories)
 
 selected_category = var_dict[var_selection]
@@ -151,7 +157,4 @@ st.markdown("---")
 # -----------------------------
 # Footer
 # -----------------------------
-st.markdown(
-    "<p style='text-align:center; color:#888;'>Built by CanWIN • University of Manitoba</p>",
-    unsafe_allow_html=True
-)
+st.markdown("<p style='text-align:center; color:#888;'>Built by CanWIN • University of Manitoba</p>", unsafe_allow_html=True)

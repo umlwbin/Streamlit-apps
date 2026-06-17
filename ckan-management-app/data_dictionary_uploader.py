@@ -43,12 +43,6 @@ def read_excel_dictionary(file):
 def clean_excel_dictionary(df):
     """
     Clean the Excel data dictionary by removing rows that should NOT be uploaded.
-
-    IMPORTANT:
-    This function no longer assumes any specific ID column.
-    The user selects the ID column later in the UI.
-
-    This function ONLY removes obvious junk rows:
     - fully empty rows
     - rows where all values are NaN
     - long description blocks
@@ -61,24 +55,31 @@ def clean_excel_dictionary(df):
     # Remove rows where every cell is blank or whitespace
     df = df[~df.apply(lambda row: row.astype(str).str.strip().eq("").all(), axis=1)]
 
-    # Remove long description rows (any column with > 200 chars)
-    # df = df[df.apply(lambda row: all(len(str(v)) < 200 for v in row), axis=1)]
-
-    # Our templates have these explanation rows, remove them
+    # Explanation rows to remove
     explanation_headers = [
         "the exact column name as it appeared",
         "a common or understandable name",
         "the physical units",
-        "a description explaining"]
+        "a description explaining"
+    ]
 
-    # Filter rows: Keep row if ANY pattern is NOT in ANY cell (negated by ~)
-    df = df[~df.astype(str).apply(
-        lambda row: any(any(h in cell.lower() for h in explanation_headers) for cell in row), 
+    # Safe lowercase wrapper
+    def safe_lower(v):
+        if isinstance(v, str):
+            return v.lower()
+        return ""
+
+    # Remove explanation rows safely
+    df = df[~df.apply(
+        lambda row: any(
+            any(h in safe_lower(cell) for h in explanation_headers)
+            for cell in row
+        ),
         axis=1
     )]
 
-
     return df
+
 
 
 
@@ -241,10 +242,48 @@ def map_excel_to_ckan(df, mapping):
 # ---------------------------------------------------------------------------
 # 7. UPLOAD THE METADATA TO CKAN
 # ---------------------------------------------------------------------------
+# def upload_data_dictionary(resource_id, mapped_fields, api_key):
+#     """
+#     Update CKAN metadata (data dictionary) WITHOUT modifying the schema.
+#     Only fields that already exist in CKAN will be updated.
+#     """
+
+#     # 1. Fetch CKAN schema
+#     schema_url = f"{BASE_URL}/datastore_search"
+#     headers = {"Authorization": api_key}
+#     payload = {"resource_id": resource_id, "limit": 0}
+
+#     schema_response = requests.post(schema_url, json=payload, headers=headers)
+#     schema_response.raise_for_status()
+
+#     ckan_fields = [f["id"] for f in schema_response.json()["result"]["fields"]]
+
+#     # 2. Filter mapped fields to only those that exist in CKAN
+#     filtered = []
+#     for field in mapped_fields:
+#         if field["id"] in ckan_fields:
+#             filtered.append(field)
+
+#     # 3. Upload metadata only (no schema changes)
+#     url = f"{BASE_URL}/datastore_create"
+#     payload = {
+#         "resource_id": resource_id,
+#         "force": True,
+#         "fields": filtered,   # metadata only
+#         "records": []         # MUST be empty to avoid schema changes
+#     }
+
+#     response = requests.post(url, json=payload, headers=headers)
+#     response.raise_for_status()
+
+#     return response.json()
+
+
 def upload_data_dictionary(resource_id, mapped_fields, api_key):
     """
     Update CKAN metadata (data dictionary) WITHOUT modifying the schema.
     Only fields that already exist in CKAN will be updated.
+    Extra Excel rows are ignored IF all CKAN fields are present.
     """
 
     # 1. Fetch CKAN schema
@@ -256,23 +295,43 @@ def upload_data_dictionary(resource_id, mapped_fields, api_key):
     schema_response.raise_for_status()
 
     ckan_fields = [f["id"] for f in schema_response.json()["result"]["fields"]]
+    ckan_fields = [c for c in ckan_fields if c != "_id"]  # remove internal field
 
-    # 2. Filter mapped fields to only those that exist in CKAN
-    filtered = []
-    for field in mapped_fields:
-        if field["id"] in ckan_fields:
-            filtered.append(field)
+    # 2. Extract Excel IDs
+    excel_ids = [f["id"] for f in mapped_fields]
 
-    # 3. Upload metadata only (no schema changes)
+    # 3. Check completeness
+    missing_fields = [c for c in ckan_fields if c not in excel_ids]
+
+    if missing_fields:
+        return {
+            "status": "error",
+            "missing_fields": missing_fields,
+            "ignored_fields": [],
+            "updated_fields": []
+        }
+
+    # 4. Filter mapped fields to only those CKAN knows
+    updated_fields = [f for f in mapped_fields if f["id"] in ckan_fields]
+    ignored_fields = [f["id"] for f in mapped_fields if f["id"] not in ckan_fields]
+
+    # 5. Upload metadata only
     url = f"{BASE_URL}/datastore_create"
     payload = {
         "resource_id": resource_id,
         "force": True,
-        "fields": filtered,   # metadata only
-        "records": []         # MUST be empty to avoid schema changes
+        "fields": updated_fields,
+        "records": []
     }
 
     response = requests.post(url, json=payload, headers=headers)
     response.raise_for_status()
 
-    return response.json()
+    return {
+        "status": "success",
+        "missing_fields": [],
+        "ignored_fields": ignored_fields,
+        "updated_fields": [f["id"] for f in updated_fields],
+        "ckan_response": response.json()
+    }
+

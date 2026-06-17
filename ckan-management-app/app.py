@@ -314,9 +314,11 @@ with tab11:
         df = read_excel_dictionary(excel_file)
         df = clean_excel_dictionary(df)
 
-        st.markdown("### Preview Excel Data")
+        st.markdown('')
+        st.markdown("#### Preview Excel Data")
         st.dataframe(df)
 
+        st.markdown('')
         st.markdown("#### Step 1: Map Excel Columns to CKAN Metadata Fields")
 
         excel_columns = list(df.columns)
@@ -385,12 +387,29 @@ with tab11:
             if "mapped" not in st.session_state or st.session_state["mapped"] is None:
                 st.error("Please map the columns first.")
             else:
-                try:
-                    result = upload_data_dictionary(resource_id, st.session_state["mapped"], api_key)
-                    st.success("Data dictionary uploaded successfully!")
-                    st.json(result)
-                except Exception as e:
-                    st.error(f"Error uploading data dictionary: {e}")
+                result = upload_data_dictionary(resource_id, st.session_state["mapped"], api_key)
+
+                # ERROR: Missing required CKAN fields
+                if result["status"] == "error":
+                    st.error("Your Excel file is missing required CKAN fields:")
+                    st.write(result["missing_fields"])
+                    st.stop()
+
+                # SUCCESS
+                st.success("Data dictionary uploaded successfully!")
+
+                # Show ignored fields
+                if result["ignored_fields"]:
+                    st.warning("The following Excel rows were ignored because they are not CKAN fields:")
+                    st.write(result["ignored_fields"])
+
+                # Show updated fields
+                st.info("Updated metadata for the following CKAN fields:")
+                st.write(result["updated_fields"])
+
+                # Show CKAN response
+                st.json(result["ckan_response"])
+
 
 
 

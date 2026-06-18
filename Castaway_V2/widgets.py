@@ -4,10 +4,7 @@ from processing.processing import build_final_dataframe
 
 # Import parsing helpers
 from processing.parsing_file import extract_metadata_and_data
-
 from ui_utils import big_caption
-
-
 
 # ---------------------------------------------------------
 # INTRO SECTION
@@ -64,7 +61,7 @@ def workflow_intro():
         st.image('img/UM-EarthObservationScience-cmyk-left.png',width=200)
 
 # ---------------------------------------------------------
-# STEP 1 — UPLOAD FILES
+# STEP 1 - UPLOAD FILES
 # ---------------------------------------------------------
 
 def upload_step():
@@ -104,7 +101,7 @@ def upload_step():
 
 
 # ---------------------------------------------------------
-# STEP 2 — EXTRACT METADATA + DATA
+# STEP 2 - EXTRACT METADATA + DATA
 # ---------------------------------------------------------
 
 def extract_step():
@@ -132,15 +129,13 @@ def extract_step():
         return
 
     # ACTIVE STEP
-    metadata_list, data_list = extract_metadata_and_data(
-        st.session_state.castaway_files
-    )
+    metadata_list, data_list = extract_metadata_and_data(st.session_state.castaway_files)
 
     st.session_state.castaway_metadata = metadata_list
     st.session_state.castaway_data = data_list
 
     st.markdown("**Metadata Preview**")
-    st.dataframe(metadata_list[0].head())
+    st.dataframe(metadata_list[0].head(15))
 
     st.markdown("**Data Preview**")
     st.dataframe(data_list[0].head())
@@ -232,7 +227,7 @@ def add_new_vars_step():
     """
 
     st.markdown("######")
-    st.markdown("##### 4. Add New Variables (Optional)")
+    st.markdown("##### 4. Add New Variables")
 
     active = (st.session_state.castaway_step == 4)
 
@@ -267,7 +262,8 @@ def add_new_vars_step():
 
     st.markdown(" ")
     st.markdown("**Required ODV Variables**")
-    big_caption("These must be present for ODV compatibility")
+    st.info("These **must** be present for ODV compatibility. \n\n**Bot.Depth [m]** is automatically extracted from the last value in the Depth column.")
+
 
     # ---------------------------------------------------------
     # 2.  Show Required variables
@@ -276,7 +272,7 @@ def add_new_vars_step():
         val = vars_dict.get(key, "")
 
         st.markdown(f"**{key}**")
-        vars_dict[key] = st.text_input(f"Enter {key} value", value=val,)
+        vars_dict[key] = st.text_input(f"Enter **{key}** value", value=val,)
         st.markdown(" ")
 
 
@@ -449,10 +445,11 @@ def normalize_variables_step():
             "cruise" in n or
             "station" in n or
             "type" in n or
-            "time" in n or
+            "cast time" in n or
+            n == "yyyy-mm-ddthh:mm:ss.sss" or
             "longitude" in n or
             "latitude" in n or
-            "bot" in n
+            n == "bot. depth [m]"
         )
 
     editable_cols = [c for c in original_cols if not is_non_editable(c)]
@@ -476,7 +473,9 @@ def normalize_variables_step():
     "- yyyy-mm-ddThh:mm:ss.sss\n"
     "- Longitude [degrees_east]\n"
     "- Latitude [degrees_north]\n"
-    "- Bot. Depth [m]"
+    "- Bot. Depth [m]\n\n"
+    "Note: **Bot. Depth [m]** is automatically extracted as the last "
+        "non-missing value in the **Depth** column."
         )
 
     edited = st.data_editor(
@@ -496,7 +495,6 @@ def normalize_variables_step():
             for _, row in edited.iterrows()
         }
         advance_step()
-
 
 
 # ---------------------------------------------------------
@@ -520,11 +518,12 @@ def download_step():
     st.markdown("##### 7. Download Cleaned Data")
 
     active = (st.session_state.castaway_step == 7)
-
     if not active:
         return
 
+    # ---------------------------------------------------------
     # Build final dataframe using all previous choices
+    # ---------------------------------------------------------
     final_df = build_final_dataframe(
         st.session_state.castaway_data,
         st.session_state.castaway_metadata,
@@ -532,32 +531,34 @@ def download_step():
         st.session_state.castaway_new_vars,
         st.session_state.castaway_omit_vars,
         st.session_state.castaway_custom_names    
-        )
+    )
 
     num_files = len(st.session_state.castaway_data)
 
     st.success(
-        f"All done! 🎉🎉\n\n Your cleaned Castaway CTD file is ready.\n\n"
+        f"All done! 🎉🎉\n\nYour cleaned Castaway CTD file is ready.\n\n"
         f"**{num_files} file(s) were merged successfully.**"
     )
 
+    st.info(
+        "The variable **Bot. Depth [m]** was automatically extracted as the last "
+        "non-missing value in the **Depth** column for each file."
+    )
 
-    # --- FINAL PREVIEW ---
+    # ---------------------------------------------------------
+    # Final preview
+    # ---------------------------------------------------------
     st.markdown(" ")
     st.markdown("**Final Preview**")
     st.dataframe(final_df.head(50), use_container_width=True)
 
-    # --- BUTTON ROW ---
-    col1, col2 = st.columns([1, 1])
-
-    with col1:
-        st.download_button(
-            "⬇️ Download Cleaned CSV",
-            final_df.to_csv(index=False).encode("utf-8"),
-            file_name="castaway_cleaned.csv",
-            mime="text/csv",
-            key="download_button"
-        )
-
-
-
+    # ---------------------------------------------------------
+    # Download button
+    # ---------------------------------------------------------
+    st.download_button(
+        "⬇️ Download Cleaned CSV",
+        final_df.to_csv(index=False).encode("utf-8"),
+        file_name="castaway_cleaned.csv",
+        mime="text/csv",
+        key="download_button"
+    )

@@ -183,8 +183,9 @@ def clean_headers(
             # -----------------------------
             # FINAL HEADER ASSEMBLY
             # -----------------------------
+            # HEre we are putting the units in square bracktes as it is more machine compatible
             if preserve_units and cleaned_units:
-                header = f"{variable_clean} ({cleaned_units})"
+                header = f"{variable_clean} [{cleaned_units}]"
             else:
                 header = variable_clean
 
@@ -193,12 +194,13 @@ def clean_headers(
                 parts = variable_clean.split("_")
                 header = parts[0] + "".join(p.capitalize() for p in parts[1:])
                 if preserve_units and cleaned_units:
-                    header = f"{header} ({cleaned_units})"
+                    header = f"{header} [{cleaned_units}]"
 
             elif naming_style == "Title Case":
                 header = " ".join(p.capitalize() for p in variable_clean.split("_"))
                 if preserve_units and cleaned_units:
-                    header = f"{header} ({cleaned_units})"
+                    header = f"{header} [{cleaned_units}]"
+
 
             # Fallback for empty header
             if header == "":

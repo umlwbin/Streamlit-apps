@@ -28,17 +28,61 @@ st.title("CKAN Management App")
 # ---------------------------------------------------------
 st.html("""
 <style>
-    /* All widget labels */
+
+    /* ---------------------------------------------------------
+       Widget labels (you already have this)
+    --------------------------------------------------------- */
     [data-testid="stWidgetLabel"] p {
-        font-size: 18px !important;
+        font-size: 16px !important;
     }
 
-    /* All markdown text */
+    /* ---------------------------------------------------------
+       Markdown text (you already have this)
+    --------------------------------------------------------- */
     [data-testid="stMarkdownContainer"] p,
     [data-testid="stMarkdown"] p,
     .stMarkdown p {
-        font-size: 18px !important;
+        font-size: 16px !important;
     }
+
+    /* ---------------------------------------------------------
+       Selectbox & Multiselect - dropdown options
+    --------------------------------------------------------- */
+    div[data-baseweb="select"] div {
+        font-size: 16px !important;
+    }
+
+    /* The dropdown menu items */
+    ul[role="listbox"] li {
+        font-size: 16px !important;
+    }
+
+    /* ---------------------------------------------------------
+       Date input text (inside the input box)
+    --------------------------------------------------------- */
+    input[type="date"] {
+        font-size: 16px !important;
+    }
+
+    /* Streamlit wraps date input in a text input — catch that too */
+    [data-testid="stDateInput"] input {
+        font-size: 16px !important;
+    }
+
+    /* ---------------------------------------------------------
+       Date picker popup calendar text
+    --------------------------------------------------------- */
+    .stDateInput .st-bx {
+        font-size: 16px !important;
+    }
+
+    /* ---------------------------------------------------------
+       Generic text input fields
+    --------------------------------------------------------- */
+    input[type="text"] {
+        font-size: 16px !important;
+    }
+
 </style>
 """)
 

@@ -412,14 +412,16 @@ with tab13:
     st.markdown("### Search by Date Created")
     st.markdown("Great for end‑of‑year reporting, onboarding, and curator audits 😎")
 
-    # First-time initialization
     if "tab13_initialized" not in st.session_state:
         if st.button("Start Searching by Date"):
             with st.spinner("Loading CKAN records… this first-time setup may take a moment."):
-                _ = get_native_orgs()   # triggers load_all_native_records() once
+                _ = get_native_orgs()  # triggers cached load
                 st.session_state.tab13_initialized = True
+
+            # Show info AFTER the cache finishes
+            st.success("CKAN records loaded successfully. You can now search by date.")
         else:
-            st.info("Click the button above to load ALL our CKAN records.")
+            st.info("Click the button above to load CKAN records.")
             st.stop()
 
     # ---------------------------------------------------------

@@ -12,7 +12,7 @@ from ckan_utils import (
     analyze_tags, get_group_metadata, list_groups, delete_all_resources
 )
 
-from search_by_date import get_native_orgs,load_all_native_records, search_datasets_by_date
+from search_by_date import get_native_orgs, search_datasets_by_date
 from erddap_metadata_profile import extract_erddap_attributes
 from data_dictionary_uploader import read_excel_dictionary, map_excel_to_ckan, upload_data_dictionary, clean_excel_dictionary
 
@@ -26,93 +26,8 @@ st.title("CKAN Management App")
 # ---------------------------------------------------------
 # Increase the size of widget labels
 # ---------------------------------------------------------
-st.html("""
-<style>
-
-    /* ---------------------------------------------------------
-       Widget labels (you already have this)
-    --------------------------------------------------------- */
-    [data-testid="stWidgetLabel"] p {
-        font-size: 16px !important;
-    }
-
-    /* ---------------------------------------------------------
-       Markdown text (you already have this)
-    --------------------------------------------------------- */
-    [data-testid="stMarkdownContainer"] p,
-    [data-testid="stMarkdown"] p,
-    .stMarkdown p {
-        font-size: 16px !important;
-    }
-
-    /* ---------------------------------------------------------
-       Selectbox & Multiselect - dropdown options
-    --------------------------------------------------------- */
-    div[data-baseweb="select"] div {
-        font-size: 16px !important;
-    }
-
-    /* The dropdown menu items */
-    ul[role="listbox"] li {
-        font-size: 16px !important;
-    }
-
-    /* ---------------------------------------------------------
-       Date input text (inside the input box)
-    --------------------------------------------------------- */
-    input[type="date"] {
-        font-size: 16px !important;
-    }
-
-    /* Streamlit wraps date input in a text input — catch that too */
-    [data-testid="stDateInput"] input {
-        font-size: 16px !important;
-    }
-
-    /* ---------------------------------------------------------
-       Date picker popup calendar text
-    --------------------------------------------------------- */
-    .stDateInput .st-bx {
-        font-size: 16px !important;
-    }
-
-    /* ---------------------------------------------------------
-       Generic text input fields
-    --------------------------------------------------------- */
-    input[type="text"] {
-        font-size: 16px !important;
-    }
-
-    /* ---------------------------------------------------------
-    Multiselect + Selectbox: visible selected items
-    --------------------------------------------------------- */
-    [data-baseweb="tag"] {
-        font-size: 18px !important;
-    }
-
-    /* ---------------------------------------------------------
-    Multiselect + Selectbox: dropdown menu options
-    --------------------------------------------------------- */
-    [data-baseweb="select"] [role="option"] {
-        font-size: 18px !important;
-    }
-
-    /* ---------------------------------------------------------
-    Multiselect + Selectbox: input text inside the widget
-    --------------------------------------------------------- */
-    [data-baseweb="select"] input {
-        font-size: 18px !important;
-    }
-
-    /* ---------------------------------------------------------
-    Multiselect + Selectbox: placeholder text
-    --------------------------------------------------------- */
-    [data-baseweb="select"] div[aria-hidden="true"] {
-        font-size: 18px !important;
-    }
-
-</style>
-""")
+with open("styles.css") as f:
+    st.html(f"<style>{f.read()}</style>")
 
 
 # ---------------------------------------------------------

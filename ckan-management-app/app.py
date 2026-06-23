@@ -469,7 +469,7 @@ with tab13:
     # ---------------------------------------------------------
     # 4. Date range selection
     # ---------------------------------------------------------
-    default_start = datetime.date(2022, 1, 1)
+    default_start = datetime.date(2026, 1, 1)
     default_end = datetime.date.today()
 
     st.markdown(" ")

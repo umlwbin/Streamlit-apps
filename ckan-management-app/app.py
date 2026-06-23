@@ -413,13 +413,15 @@ with tab13:
     st.markdown("### Search by Date Created")
     st.markdown("Great for end‑of‑year reporting, onboarding, and curator audits 😎")
 
-    # ---------------------------------------------------------
-    # Lazy-load the heavy CKAN harvest ONLY when Tab 13 is opened
-    # ---------------------------------------------------------
+    # First-time initialization
     if "tab13_initialized" not in st.session_state:
-        with st.spinner("Loading CKAN records for Search by Date… this first-time setup may take a moment."):
-            _ = load_all_native_records()   # triggers the heavy cached load
-            st.session_state.tab13_initialized = True
+        if st.button("Initialize Search by Date"):
+            with st.spinner("Loading CKAN records… this first-time setup may take a moment."):
+                _ = get_native_orgs()   # triggers load_all_native_records() once
+                st.session_state.tab13_initialized = True
+        else:
+            st.info("Click the button above to load CKAN records.")
+            st.stop()
 
     # ---------------------------------------------------------
     # Ensure session state key exists (prevents attribute errors)
@@ -429,7 +431,6 @@ with tab13:
 
     # ---------------------------------------------------------
     # 1. Load all native organizations (id + title)
-    #    get_native_orgs() returns: [(org_id, org_title), ...]
     # ---------------------------------------------------------
     org_list = get_native_orgs()
 
@@ -437,7 +438,9 @@ with tab13:
     org_titles = [title for oid, title in org_list]
 
     # Map title → id for backend filtering
-    org_lookup = {title: oid for title, oid in org_list}
+    org_lookup = {title: oid for oid, title in org_list}
+
+
 
 
     # ---------------------------------------------------------

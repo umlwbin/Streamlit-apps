@@ -12,7 +12,7 @@ from ckan_utils import (
     analyze_tags, get_group_metadata, list_groups, delete_all_resources
 )
 
-from search_by_date import get_native_orgs, search_datasets_by_date
+from search_by_date import get_native_orgs,load_all_native_records, search_datasets_by_date
 from erddap_metadata_profile import extract_erddap_attributes
 from data_dictionary_uploader import read_excel_dictionary, map_excel_to_ckan, upload_data_dictionary, clean_excel_dictionary
 
@@ -414,6 +414,14 @@ with tab13:
     st.markdown("Great for end‑of‑year reporting, onboarding, and curator audits 😎")
 
     # ---------------------------------------------------------
+    # Lazy-load the heavy CKAN harvest ONLY when Tab 13 is opened
+    # ---------------------------------------------------------
+    if "tab13_initialized" not in st.session_state:
+        with st.spinner("Loading CKAN records for Search by Date… this first-time setup may take a moment."):
+            _ = load_all_native_records()   # triggers the heavy cached load
+            st.session_state.tab13_initialized = True
+
+    # ---------------------------------------------------------
     # Ensure session state key exists (prevents attribute errors)
     # ---------------------------------------------------------
     if "search_results" not in st.session_state:
@@ -423,14 +431,14 @@ with tab13:
     # 1. Load all native organizations (id + title)
     #    get_native_orgs() returns: [(org_id, org_title), ...]
     # ---------------------------------------------------------
-
     org_list = get_native_orgs()
 
     # Build UI labels (titles only)
     org_titles = [title for oid, title in org_list]
 
     # Map title → id for backend filtering
-    org_lookup = {title: oid for oid, title in org_list}
+    org_lookup = {title: oid for title, oid in org_list}
+
 
     # ---------------------------------------------------------
     # 2. Organization multiselect (titles only)

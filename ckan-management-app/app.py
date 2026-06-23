@@ -83,6 +83,34 @@ st.html("""
         font-size: 16px !important;
     }
 
+    /* ---------------------------------------------------------
+    Multiselect + Selectbox: visible selected items
+    --------------------------------------------------------- */
+    [data-baseweb="tag"] {
+        font-size: 18px !important;
+    }
+
+    /* ---------------------------------------------------------
+    Multiselect + Selectbox: dropdown menu options
+    --------------------------------------------------------- */
+    [data-baseweb="select"] [role="option"] {
+        font-size: 18px !important;
+    }
+
+    /* ---------------------------------------------------------
+    Multiselect + Selectbox: input text inside the widget
+    --------------------------------------------------------- */
+    [data-baseweb="select"] input {
+        font-size: 18px !important;
+    }
+
+    /* ---------------------------------------------------------
+    Multiselect + Selectbox: placeholder text
+    --------------------------------------------------------- */
+    [data-baseweb="select"] div[aria-hidden="true"] {
+        font-size: 18px !important;
+    }
+
 </style>
 """)
 

@@ -59,7 +59,6 @@ def load_all_native_records():
 
 # 2. Extract all organizations from native public records
 # ---------------------------------------------------------
-@st.cache_data(ttl=3600)
 def get_native_orgs():
     """
     Return a sorted list of (org_id, org_title) for all native public records.

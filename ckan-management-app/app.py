@@ -8,41 +8,73 @@ sys.path.append(os.path.dirname(__file__))
 
 from ckan_utils import (
     get_all_packages, filter_datasets, classify_resources, search_datasets,
-    delete_dataset, filter_by_date, list_users, extract_metadata,
-    analyze_tags, delete_all_resources, search_datasets_by_date
+    delete_dataset, list_users, extract_metadata,
+    analyze_tags, get_group_metadata, list_groups, delete_all_resources, search_datasets_by_date, get_native_orgs
 )
 
 from erddap_metadata_profile import extract_erddap_attributes
-#from data_dictionary import build_resource_table
-from group_metadata import get_group_metadata, list_groups
-from data_dictionary_uploader import read_excel_dictionary, map_excel_to_ckan, upload_data_dictionary, get_ckan_schema, clean_excel_dictionary, find_mismatches
+from data_dictionary_uploader import read_excel_dictionary, map_excel_to_ckan, upload_data_dictionary, clean_excel_dictionary
 
-#import posit password
-APP_PASSWORD = os.getenv("APP_PASSWORD")
 
+# ---------------------------------------------------------
+# Page Config
+# ---------------------------------------------------------
 st.set_page_config(layout="wide")
 st.title("CKAN Management App")
 
-#tab9, - "CSV variables" - depended on data_dictionry.py - moved to archive
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8,  tab10, tab11, tab12, tab13 = st.tabs(
-    ["Resource Checker", "Dataset Search", "Dataset Delete", "Date Filter", "User Management", "Metadata Extractor", 
+# ---------------------------------------------------------
+# Increase the size of widget labels
+# ---------------------------------------------------------
+st.html("""
+<style>
+    /* All widget labels */
+    [data-testid="stWidgetLabel"] p {
+        font-size: 18px !important;
+    }
+
+    /* All markdown text */
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdown"] p,
+    .stMarkdown p {
+        font-size: 18px !important;
+    }
+</style>
+""")
+
+
+# ---------------------------------------------------------
+# Tabs
+# ---------------------------------------------------------
+st.markdown(" ")
+#tab9, - "CSV variables" - depended on data_dictionry.py - moved to archive
+tab1, tab2, tab3, tab5, tab6, tab7, tab8,  tab10, tab11, tab12, tab13 = st.tabs(
+    ["Resource Checker", "Dataset Search", "Dataset Delete", "User Management", "Metadata Extractor", 
      "Keyword Analysis", "ERDDAP Metadata Attributes", "Theme Metadata", "Data Dictionary Uploader", 
      "Remove All Resources from Dataset", "Dataset Search by Date",])
 
-# --- Password Gate ---
+
+# ---------------------------------------------------------
+# Password Gate
+# ---------------------------------------------------------
+#import posit password
+APP_PASSWORD = os.getenv("APP_PASSWORD")
+
 st.sidebar.header("Authentication")
 password = st.sidebar.text_input("Enter app password", type="password")
 
-APP_PASSWORD ="C3osE&Gdm"
 if password != APP_PASSWORD:
     st.warning("Please enter the correct password in the sidebar to access the app.")
     st.stop()  # Prevents the rest of the app from running
 
 
+# ---------------------------------------------------------
+# Task Functions 
+# ---------------------------------------------------------
+
 # --- Resource Checker ---
 with tab1:
-    st.header("Resource Checker")
+    st.markdown("### Resource Checker")
     if st.button("Run CKAN Resource Check"):
         with st.spinner("Fetching data from CKAN..."):
             all_data = get_all_packages()
@@ -67,7 +99,7 @@ with tab1:
 
 # --- Dataset Search ---
 with tab2:
-    st.header("Dataset Search")
+    st.markdown("### Dataset Search")
     st.markdown("Uses CKAN's **package_search** endpoint. Searches across multiple fields.")
     query = st.text_input("Enter search keyword")
     rows = st.slider("Number of results", 1, 50, 10)
@@ -96,7 +128,7 @@ with tab2:
 
 # --- Dataset Delete ---
 with tab3:
-    st.header("Dataset Delete")
+    st.markdown("### Dataset Delete")
     st.warning("⚠️ Deleting datasets is permanent. Use with caution.")
     dataset_id = st.text_input("Enter dataset ID or name")
     api_key = st.text_input("Enter your CKAN API key", type="password", key="delete_api_key")
@@ -112,43 +144,9 @@ with tab3:
         else:
             st.error("Please provide both dataset ID and API key.")
 
-
-# --- Filter datasets by Date ---
-with tab4:
-    '''
-    Uses CKAN’s metadata_created field (ISO timestamp).
-    '''
-    st.header("Filter Datasets by Date")
-    start_date = st.date_input("Start date", value=None)
-    end_date = st.date_input("End date", value=None)
-
-    if st.button("Filter by Date"):
-        with st.spinner("Fetching datasets..."):
-            all_data = get_all_packages()
-            datasets = filter_datasets(all_data)
-            filtered = filter_by_date(
-                datasets,
-                start_date.strftime("%Y-%m-%d") if start_date else None,
-                end_date.strftime("%Y-%m-%d") if end_date else None,
-            )
-
-        st.success(f"Found {len(filtered)} datasets in the selected period")
-
-        df = pd.DataFrame(filtered)
-        # Ensure safe columns
-        for col in ["id", "title", "metadata_created"]:
-            if col not in df.columns:
-                df[col] = ""
-        st.dataframe(df[["id", "title", "metadata_created"]])
-        st.download_button(
-            label="Download filtered datasets",
-            data=df.to_csv(index=False),
-            file_name="filtered_datasets.csv",
-            mime="text/csv"
-        )
-
+# --- user Management ---
 with tab5:
-    st.header("User Management")
+    st.markdown("### User Management")
     api_key = st.text_input("Enter your CKAN sysadmin API key", type="password", key="user_api_key")
 
     if st.button("List Users"):
@@ -168,9 +166,9 @@ with tab5:
         else:
             st.error("Please provide an API key.")
 
-
+# --- Metadata extractor ---
 with tab6:
-    st.header("Metadata Extractor")
+    st.markdown("### Metadata Extractor")
     st.markdown("Extract specific metadata fields (e.g., creatorName) from all datasets.")
 
     field = st.text_input("Enter metadata field name", value="creatorName")
@@ -192,9 +190,9 @@ with tab6:
             mime="text/csv"
         )
 
-
+# --- keywords ---
 with tab7:
-    st.header("Tag / Keyword Analysis")
+    st.markdown("### Tag / Keyword Analysis")
     st.markdown("Analyze tag usage across all non-federated datasets.")
 
     if st.button("Run Tag Analysis"):
@@ -227,9 +225,9 @@ with tab7:
             mime="text/csv"
         )
 
-
+# --- Erddap metadata extarctor ---
 with tab8:
-    st.header("ERDDAP Metadata Extractor")
+    st.markdown("### ERDDAP Metadata Extractor")
     st.markdown("Extract CKAN metadata and merge with ERDDAP-required attributes.")
 
     dataset_url = st.text_input("Dataset URL")
@@ -255,30 +253,9 @@ with tab8:
             except Exception as e:
                 st.error(f"Error: {e}")
 
-
-
-# with tab9:
-#     import csv
-#     st.header("Variable Checker")
-#     st.markdown("Extract CSV headers, labels and description from data dictionary ")
-
-#     if st.button("Grab headers!"):
-#         with st.spinner("Fetching CSV resources and data dictionaries..."):
-#             df = build_resource_table()
-
-#         st.success("All done")
-#         st.dataframe(df)
-
-#         st.download_button(
-#             label="Download resource table",
-#             data=df.to_csv(index=False, quoting=csv.QUOTE_MINIMAL),
-#             file_name="variable_standardization.csv",
-#             mime="text/csv"
-#         )
-
-
+# --- Theme metadata ---
 with tab10:
-    st.header("Theme Metadata")
+    st.markdown("### Theme Metadata")
     st.markdown("Retrieve details of CKAN groups (themes/collections).")
 
     groups = list_groups()
@@ -299,9 +276,9 @@ with tab10:
             mime="text/csv"
         )
 
-
+# --- Data Dict Uplaod ---
 with tab11:
-    st.header("Upload Data Dictionary to CKAN")
+    st.markdown("### Upload Data Dictionary to CKAN")
     st.markdown("Upload an Excel data dictionary and push selected fields into CKAN's datastore metadata.")
 
     excel_file = st.file_uploader("Upload Excel file", type=["xlsx"])
@@ -410,11 +387,9 @@ with tab11:
                 # Show CKAN response
                 st.json(result["ckan_response"])
 
-
-
-
+# --- Delete all resources ---
 with tab12:
-    st.header("Remove All Resources from Dataset")
+    st.markdown("### Remove All Resources from Dataset")
     st.warning("⚠️ This will permanently delete ALL resources from the dataset.")
 
     dataset_id = st.text_input("Dataset ID or name")
@@ -431,73 +406,149 @@ with tab12:
         else:
             st.error("Please provide both dataset ID and API key.")
 
-
 # --- Dataset Search by Creation Date ---
 with tab13:
 
-    st.header("Search by Date Created")
-    st.markdown("Great for end of year! 😎")
+    st.markdown("### Search by Date Created")
+    st.markdown("Great for end‑of‑year reporting, onboarding, and curator audits 😎")
 
-    # --- Default date values ---
-    default_start = datetime.date(2025, 4, 1)
-    default_end = datetime.date(2026, 3, 31)
+    # ---------------------------------------------------------
+    # Ensure session state key exists (prevents attribute errors)
+    # ---------------------------------------------------------
+    if "search_results" not in st.session_state:
+        st.session_state.search_results = []
 
-    # --- UI Inputs ---
+    # ---------------------------------------------------------
+    # 1. Load all native organizations (id + title)
+    #    get_native_orgs() returns: [(org_id, org_title), ...]
+    # ---------------------------------------------------------
+
+    org_list = get_native_orgs()
+
+    # Build UI labels (titles only)
+    org_titles = [title for oid, title in org_list]
+
+    # Map title → id for backend filtering
+    org_lookup = {title: oid for oid, title in org_list}
+
+    # ---------------------------------------------------------
+    # 2. Organization multiselect (titles only)
+    # ---------------------------------------------------------
+    st.markdown(" ")
+    selected_org_titles = st.multiselect(
+        "Select organizations (All CanWIN hosted orgs selected by default)",
+        options=org_titles,
+        default=org_titles,   # Default = all native orgs
+        key="t13_orgs"
+    )
+
+    # Convert selected titles → IDs for backend
+    selected_org_ids = [org_lookup[t] for t in selected_org_titles]
+
+    # ---------------------------------------------------------
+    # 3. Type multiselect
+    # ---------------------------------------------------------
+    st.markdown(" ")
+    selected_types = st.multiselect(
+        "Select record types:",
+        options=["dataset", "project", "publication"],
+        default=["dataset", "project", "publication"],
+        key="t13_types"
+    )
+
+    # ---------------------------------------------------------
+    # 4. Date range selection
+    # ---------------------------------------------------------
+    default_start = datetime.date(2022, 1, 1)
+    default_end = datetime.date.today()
+
+    st.markdown(" ")
     col1, col2 = st.columns(2)
     with col1:
         start_date = st.date_input("Start date", value=default_start, key="t13_start")
     with col2:
         end_date = st.date_input("End date", value=default_end, key="t13_end")
 
-    # --- Validate Inputs ---
     if start_date > end_date:
         st.error("Start date must be before end date.")
         st.stop()
 
-    # --- Search Button ---
+    # ---------------------------------------------------------
+    # 5. Search button — uses cached backend search
+    # ---------------------------------------------------------
     if st.button("Search", key="t13_search"):
+        with st.spinner("Searching cached CKAN records…"):
+            st.session_state.search_results = search_datasets_by_date(
+                start_date,
+                end_date,
+                allowed_orgs=selected_org_ids,
+                allowed_types=selected_types
+            )
 
-        with st.spinner("Searching CKAN…"):
-            results = search_datasets_by_date(start_date, end_date)
+            if not st.session_state.search_results:
+                st.warning("No public native records found within this date range.")
 
-        # --- No Results ---
-        if not results:
-            st.warning("No datasets, projects, or publications found in this date range.")
-            st.stop()
+    # ---------------------------------------------------------
+    # 6. Render results (if any)
+    # ---------------------------------------------------------
+    if st.session_state.search_results:
 
-        # --- Results Header ---
-        st.success(f"Found {len(results)} result(s)")
+        results = st.session_state.search_results
 
-        # --- Build table ---
+        # Keep only items marked in_range by backend
+        active_results = [d for d in results if d.get("in_range", False)]
+
+        st.success(f"Found {len(active_results)} record(s) within the selected date window")
+        st.caption(f"Total public native records (before date filtering): {len(results)}")
+
+        # ---------------------------------------------------------
+        # TABLE 1 — Detailed results
+        # ---------------------------------------------------------
         table_rows = []
-        for d in results:
+        for d in active_results:
             name = d.get("name")
-            d_type = d.get("type", "unknown")
-            
-            # 1. Handle the "Created" date based on type
-            if d_type == "dataset":
-                # Use the custom Date field for datasets
-                created_date = d.get("Date") or d.get("metadata_created")
-            else:
-                # Use the system date for publications/projects
-                created_date = d.get("metadata_created")
+            d_type = d.get("type", "unknown").lower()
+            created_date = d.get("display_date_clean", "Unknown")
+            org_title = d.get("organization", {}).get("title", "(No org)")
 
-            # 2. Clean up the date string (e.g., "2026-01-07T18:47:31" --> "2026-01-07")
-            if created_date and "T" in str(created_date):
-                created_date = str(created_date).split("T")[0]
-
-            # 3. Construct the correct URL based on type
-            # ex, publications often use /publication/ instead of /dataset/
-            base_path = "dataset" if d_type == "dataset" else d_type
+            # URL rule: datasets + projects use /dataset/
+            base_path = "dataset" if d_type in ["dataset", "project"] else d_type
             url = f"https://canwin-datahub.ad.umanitoba.ca/data/{base_path}/{name}"
 
             table_rows.append({
                 "Title": d.get("title") or "(No title)",
+                "Organization": org_title,
                 "Type": d_type.capitalize(),
-                "Created": created_date or "Unknown",
+                "Created": created_date,
                 "URL": url
             })
 
-
+        st.markdown(" ")
+        st.markdown("#### Detailed Results")
         st.dataframe(table_rows, use_container_width=True)
 
+        # ---------------------------------------------------------
+        # TABLE 2 — Summary by year
+        # ---------------------------------------------------------
+        st.markdown("#### Summary: Total Count by Year")
+
+        year_counts = {}
+        for d in active_results:
+            year = d.get("extracted_year")
+            if year != "Unknown":
+                year_counts[year] = year_counts.get(year, 0) + 1
+
+        if year_counts:
+            summary_rows = [
+                {"Year": str(yr), "Total Count": year_counts[yr]}
+                for yr in sorted(year_counts.keys())
+            ]
+            st.dataframe(summary_rows, use_container_width=True)
+        else:
+            st.info("No valid year information available.")
+
+        # ---------------------------------------------------------
+        # TABLE 3 — Total count
+        # ---------------------------------------------------------
+        st.markdown("#### Total Count")
+        st.metric("Records in selected period", len(active_results))

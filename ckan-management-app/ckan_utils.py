@@ -3,14 +3,16 @@ import requests
 import json
 import pandas as pd
 import streamlit as st
+import datetime
+from ckanapi import RemoteCKAN
 
 BASE_URL = "https://canwin-datahub.ad.umanitoba.ca/data/api/3/action"
+CKAN_URL = "https://canwin-datahub.ad.umanitoba.ca/data"
 
-
+# Filter Federated Datasets-----------------------------------------------------------------------------------------------------
 def filter_non_federated(datasets):
     """Remove federated datasets (those with 'extras')."""
     return [d for d in datasets if not d.get("extras", {})]
-
 
 # Checking Resources-----------------------------------------------------------------------------------------------------
 def get_all_packages(limit=1000, total=35464):
@@ -29,12 +31,12 @@ def get_all_packages(limit=1000, total=35464):
         canwin_data.extend(filter_non_federated(data))
     return canwin_data
 
-
+# Filter Datasets-----------------------------------------------------------------------------------------------------
 def filter_datasets(canwin_data):
     """Return only datasets, projects, and publications."""
     return [cd for cd in canwin_data if cd.get("type") in ["dataset", "project", "publication"]]
 
-
+# Classify resources -----------------------------------------------------------------------------------------------------
 def classify_resources(canwin_datasets):
     """Classify resources by type and return counts + lists."""
     docs, measured, web, multimedia, unknown = [], [], [], [], []
@@ -64,8 +66,7 @@ def classify_resources(canwin_datasets):
 
     return counts, {"docs": docs, "measured": measured, "web": web, "multimedia": multimedia, "unknown": unknown}
 
-#--------------------------------------------------------------------------------------------------------------------
-
+# Get dataset -----------------------------------------------------------------------------------------------------
 def get_dataset(dataset_id, api_key=None):
     """
     Fetch a CKAN dataset (package_show).
@@ -79,7 +80,7 @@ def get_dataset(dataset_id, api_key=None):
     response.raise_for_status()
     return response.json()["result"]
 
-
+# Search dataset -----------------------------------------------------------------------------------------------------
 def search_datasets(query, rows=10):
     """Search CKAN datasets by keyword, excluding federated ones."""
     url = f"{BASE_URL}/package_search?q={query}&rows={rows}"
@@ -88,6 +89,7 @@ def search_datasets(query, rows=10):
     results = response.json()["result"]["results"]
     return filter_non_federated(results)
 
+# Delete dataset -----------------------------------------------------------------------------------------------------
 def delete_dataset(dataset_id, api_key):
     """Delete a dataset by ID or name. Requires API key."""
     # Optional: fetch dataset first to check if federated
@@ -106,32 +108,6 @@ def delete_dataset(dataset_id, api_key):
     response.raise_for_status()
     return response.json()
 
-
-from datetime import datetime
-def filter_by_date(datasets, start_date=None, end_date=None):
-    """
-    Filter datasets by creation date.
-    Dates should be strings in 'YYYY-MM-DD' format.
-    """
-    filtered = []
-    for d in datasets:
-        created = d.get("metadata_created")
-        if not created:
-            continue
-        created_dt = datetime.fromisoformat(created.replace("Z", ""))  # CKAN returns ISO timestamps
-
-        if start_date:
-            start_dt = datetime.fromisoformat(start_date)
-            if created_dt < start_dt:
-                continue
-        if end_date:
-            end_dt = datetime.fromisoformat(end_date)
-            if created_dt > end_dt:
-                continue
-
-        filtered.append(d)
-    return filtered
-
 # User Management--------------------------------------------------------------------------
 def list_users(api_key, limit=50, offset=0):
     """List CKAN users. Requires sysadmin API key."""
@@ -142,8 +118,7 @@ def list_users(api_key, limit=50, offset=0):
     response.raise_for_status()
     return response.json()["result"]
 
-
-
+# Extract Metadata--------------------------------------------------------------------------
 def extract_metadata(field="creatorName", dataset_type="dataset"):
     """
     Extract specific metadata field (e.g., creatorName) from all non-federated datasets.
@@ -186,7 +161,7 @@ def extract_metadata(field="creatorName", dataset_type="dataset"):
 
     return results
 
-
+# Analyze Keywords --------------------------------------------------------------------------
 from collections import Counter
 def analyze_tags(limit=1000, total=35464):
     """
@@ -209,7 +184,41 @@ def analyze_tags(limit=1000, total=35464):
     return tag_counter, dataset_tags
 
 
+# Get Group Metadata --------------------------------------------------------------------------
+def list_groups():
+    """
+    List all available CKAN groups.
+    """
+    url = f"{BASE_URL}/group_list"
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()["result"]
 
+def get_group_metadata(group_name):
+    """
+    Retrieve metadata for a CKAN group by name.
+    Returns a dictionary of group details.
+    """
+    url = f"{BASE_URL}/group_show?id={group_name}"
+    response = requests.get(url)
+    response.raise_for_status()
+    result = response.json()["result"]
+
+    # Flatten into a DataFrame-friendly dict
+    metadata = {
+        "id": result.get("id"),
+        "name": result.get("name"),
+        "title": result.get("title"),
+        "description": result.get("description"),
+        "created": result.get("created"),
+        "package_count": result.get("package_count"),
+        "image_display_url": result.get("image_display_url"),
+    }
+    return metadata
+# ----------------------------------------------------------------------------------------------------------------
+
+
+# Delete all resources --------------------------------------------------------------------------
 def delete_all_resources(dataset_id, api_key):
     """
     Delete all resources from a CKAN dataset.
@@ -241,86 +250,123 @@ def delete_all_resources(dataset_id, api_key):
     return deleted
 
 
+# Search by Date -------------------------------------------------------------------------------------------------
 
-
-#In the CKAN API world, package_search is essentially a wrapper for a search engine (Solr). 
-# Solr is designed to handle GET requests for queries, and because your parameters (the date range and the three types) are relatively short, 
-# they fit easily within the URL character limit (which is usually around 2,000+ characters).
-# Why stick with GET?
-# Standard Practice: It’s the "native" way to use package_search. Most CKAN documentation and community examples use GET.
-
-@st.cache_data(ttl=3600)  # Caches for 1 hour
-def search_datasets_by_date(start_date, end_date, rows=100):
+# 1. Load all native public records ONCE (cached for 1 hour)
+# ---------------------------------------------------------
+@st.cache_data(ttl=3600)
+def load_all_native_records():
     """
-    Fetch ALL datasets, projects, and publications from CKAN,
-    then filter by metadata_created in Python.
-
-    IMPORTANT POINTS
-    - CKAN instances that use ckanext‑scheming (like CanWIN) silently force type:dataset into every package_search query unless you override it in the q parameter.
-    - q  --->  main query (strongest)
-    - fq --->  filter query (weaker)
-
-    You must put typr into q, not fq
+    Fetch all public, non-federated datasets/projects/publications from CKAN.
+    This is the ONLY function that talks to CKAN.
+    Everything else reuses this cached list.
     """
+    ckan = RemoteCKAN(CKAN_URL)
 
-    api_url = f"{BASE_URL}/package_search"
+    all_items = []
+    page_size = 250
+    start_row = 0
+    fq_expression = "type:(dataset OR publication OR project)"
 
-    # Define our two different date ranges
-    # Note: the Custom 'Date' does not have timestamps, but metadata_created does.
-
-    # 1. Dataset "Date" field uses simple YYYY-MM-DD 
-    custom_date_range = f"Date:[{start_date} TO {end_date}]"
-
-    # 2. System field REQUIRES the full Solr timestamp for Publications/Projects
-    system_date_range = f"metadata_created:[{start_date}T00:00:00Z TO {end_date}T23:59:59Z]"
-
-    # Construct the conditional filter:
-    # (Dataset + custom date) OR (Everything else + system date)
-    combined_fq = (
-        f"((type:dataset AND {custom_date_range}) OR "
-        f"(-type:dataset AND {system_date_range}))"
+    # Stable pagination (prevents skipped datasets)
+    while True:
+        response = ckan.action.package_search(
+            q="*:*",
+            fq=fq_expression,
+            sort="metadata_created asc",
+            start=start_row,
+            rows=page_size
         )
 
-    params = {
-        "q": "(type:dataset OR type:publication OR type:project)",
-        "fq": combined_fq,
-        "rows": rows
-        }
+        results = response.get("results", [])
+        if not results:
+            break
 
-    response = requests.get(api_url, params=params)
-    
-    if response.status_code != 200:
-        st.error(f"Error {response.status_code}: {response.text}")
-        return []
+        all_items.extend(results)
 
-    result = response.json()["result"]["results"]
-    return filter_non_federated(result)
+        # Stop when all results have been retrieved
+        if len(all_items) >= response.get("count", 0):
+            break
 
+        start_row += len(results)
 
+    # Remove federated datasets
+    items = filter_non_federated(all_items)
 
-    # from ckanapi import RemoteCKAN
+    # Keep only public datasets
+    native_public = [pkg for pkg in items if not pkg.get("private", False)]
 
-    # # Initialize connection
-    # ckan = RemoteCKAN('https://canwin-datahub.ad.umanitoba.ca/data')
+    return native_public
 
-    # # Define your time range (ISO 8601 format)
-    # # Use 'NOW' for the current time
-    # start_date = "2025-04-01T00:00:00Z"
-    # end_date = "2026-03-31T00:00:00Z"
+# 2. Extract all organizations from native public records
+# ---------------------------------------------------------
+@st.cache_data(ttl=3600)
+def get_native_orgs():
+    """
+    Return a sorted list of (org_id, org_title) for all native public records.
+    Used to populate the organization multiselect in the UI.
+    """
+    items = load_all_native_records()
 
-    # # We use the 'q' parameter to force CKAN to look for all three types
-    # # Note: 'dataset' is the standard type name for datasets in CKAN
-    # types_query = "(type:dataset OR type:publication OR type:project)"
+    orgs = {}
+    for pkg in items:
+        org = pkg.get("organization")
+        if not org:
+            continue
 
-    # results_dict = ckan.action.package_search(
-    #     q=types_query,
-    #     fq=f"metadata_created:[{start_date} TO {end_date}]",
-    #     rows=200
-    # )
+        oid = org.get("id")
+        title = org.get("title") or org.get("name") or "(No org)"
 
-    # results = results_dict["results"]
-    # results = filter_non_federated(results)
+        orgs[oid] = title
 
-    # for d in results:
-    #     st.write(f"[{d['type'].upper()}]--- {d['title']} ---- Created: {d['metadata_created']}")
+    # Return list of (id, title), sorted alphabetically by title
+    return sorted([(oid, title) for oid, title in orgs.items()],
+                  key=lambda x: x[1].lower())
 
+# 3. Filter by date, org, and type using metadata_created ONLY
+# ---------------------------------------------------------
+@st.cache_data(ttl=3600)
+def search_datasets_by_date(start_date, end_date, allowed_orgs, allowed_types):
+    """
+    Filter the cached native records by:
+      - organization IDs
+      - record types (dataset/project/publication)
+      - metadata_created date range
+    """
+    start_dt = datetime.datetime.combine(start_date, datetime.time.min)
+    end_dt = datetime.datetime.combine(end_date, datetime.time.max)
+
+    items = load_all_native_records()
+    filtered = []
+
+    for pkg in items:
+
+        # Type filter
+        if pkg.get("type") not in allowed_types:
+            continue
+
+        # Organization filter
+        org = pkg.get("organization", {})
+        if not org or org.get("id") not in allowed_orgs:
+            continue
+
+        # Use metadata_created ONLY (ignore "Date" field)
+        ts = pkg.get("metadata_created")
+        if not ts:
+            continue
+
+        try:
+            ts_str = ts.strip().replace("Z", "+00:00")
+            dt = datetime.datetime.fromisoformat(ts_str).replace(tzinfo=None)
+        except Exception:
+            continue
+
+        pkg["display_date_clean"] = dt.strftime("%Y-%m-%d")
+        pkg["extracted_year"] = dt.year
+        pkg["in_range"] = (start_dt <= dt <= end_dt)
+
+        filtered.append(pkg)
+
+    return filtered
+
+# ----------------------------------------------------------------------------------------------------------------

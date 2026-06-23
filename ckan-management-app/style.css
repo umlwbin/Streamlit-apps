@@ -2,7 +2,7 @@
     Widget labels (you already have this)
 --------------------------------------------------------- */
 [data-testid="stWidgetLabel"] p {
-    font-size: 16px !important;
+    font-size: 17px !important;
 }
 
 /* ---------------------------------------------------------
@@ -11,66 +11,66 @@
 [data-testid="stMarkdownContainer"] p,
 [data-testid="stMarkdown"] p,
 .stMarkdown p {
-    font-size: 16px !important;
+    font-size: 17px !important;
 }
 
 /* ---------------------------------------------------------
     Selectbox & Multiselect - dropdown options
 --------------------------------------------------------- */
 div[data-baseweb="select"] div {
-    font-size: 16px !important;
+    font-size: 17px !important;
 }
 
 /* The dropdown menu items */
 ul[role="listbox"] li {
-    font-size: 16px !important;
+    font-size: 17px !important;
 }
 
 /* ---------------------------------------------------------
     Date input text (inside the input box)
 --------------------------------------------------------- */
 input[type="date"] {
-    font-size: 16px !important;
+    font-size: 17px !important;
 }
 
 /* Streamlit wraps date input in a text input — catch that too */
 [data-testid="stDateInput"] input {
-    font-size: 16px !important;
+    font-size: 17px !important;
 }
 
 /* ---------------------------------------------------------
     Date picker popup calendar text
 --------------------------------------------------------- */
 .stDateInput .st-bx {
-    font-size: 16px !important;
+    font-size: 17px !important;
 }
 
 /* ---------------------------------------------------------
     Generic text input fields
 --------------------------------------------------------- */
 input[type="text"] {
-    font-size: 16px !important;
+    font-size: 17px !important;
 }
 
 /* ---------------------------------------------------------
 Multiselect + Selectbox: visible selected items
 --------------------------------------------------------- */
 [data-baseweb="tag"] {
-    font-size: 18px !important;
+    font-size: 17px !important;
 }
 
 /* ---------------------------------------------------------
 Multiselect + Selectbox: dropdown menu options
 --------------------------------------------------------- */
 [data-baseweb="select"] [role="option"] {
-    font-size: 18px !important;
+    font-size: 17px !important;
 }
 
 /* ---------------------------------------------------------
 Multiselect + Selectbox: input text inside the widget
 --------------------------------------------------------- */
 [data-baseweb="select"] input {
-    font-size: 18px !important;
+    font-size: 17px !important;
 }
 
 /* ---------------------------------------------------------

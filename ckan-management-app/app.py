@@ -415,7 +415,7 @@ with tab13:
 
     # First-time initialization
     if "tab13_initialized" not in st.session_state:
-        if st.button("Initialize Search by Date"):
+        if st.button("Start Searching by Date"):
             with st.spinner("Loading CKAN records… this first-time setup may take a moment."):
                 _ = get_native_orgs()   # triggers load_all_native_records() once
                 st.session_state.tab13_initialized = True

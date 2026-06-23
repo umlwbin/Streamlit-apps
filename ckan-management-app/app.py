@@ -26,7 +26,7 @@ st.title("CKAN Management App")
 # ---------------------------------------------------------
 # Increase the size of widget labels
 # ---------------------------------------------------------
-css_path = os.path.join(os.path.dirname(__file__), "styles.css")
+css_path = os.path.join(os.path.dirname(__file__), "style.css")
 with open(css_path) as f:
     st.html(f"<style>{f.read()}</style>")
 

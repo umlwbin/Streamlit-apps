@@ -83,7 +83,6 @@ def get_native_orgs():
 
 # 3. Filter by date, org, and type using metadata_created ONLY
 # ---------------------------------------------------------
-@st.cache_data(ttl=3600)
 def search_datasets_by_date(start_date, end_date, allowed_orgs, allowed_types):
     """
     Filter the cached native records by:

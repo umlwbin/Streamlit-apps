@@ -16,6 +16,7 @@ from search_by_date import get_native_orgs,load_all_native_records, search_datas
 from erddap_metadata_profile import extract_erddap_attributes
 from data_dictionary_uploader import read_excel_dictionary, map_excel_to_ckan, upload_data_dictionary, clean_excel_dictionary
 
+st.set_option("client.showStCacheStatus", False)
 
 # ---------------------------------------------------------
 # Page Config
@@ -215,7 +216,7 @@ with tab7:
         )
 
         # Show dataset-tag mapping
-        st.subheader("Dataset → Tags")
+        st.subheader("Dataset -> Tags")
         dataset_tag_df = pd.DataFrame(dataset_tags, columns=["Dataset Title", "Tags"])
         st.dataframe(dataset_tag_df)
 
@@ -420,7 +421,7 @@ with tab13:
                 _ = get_native_orgs()   # triggers load_all_native_records() once
                 st.session_state.tab13_initialized = True
         else:
-            st.info("Click the button above to load CKAN records.")
+            st.info("Click the button above to load ALL our CKAN records.")
             st.stop()
 
     # ---------------------------------------------------------
@@ -437,11 +438,8 @@ with tab13:
     # Build UI labels (titles only)
     org_titles = [title for oid, title in org_list]
 
-    # Map title → id for backend filtering
+    # Map title -> id for backend filtering
     org_lookup = {title: oid for oid, title in org_list}
-
-
-
 
     # ---------------------------------------------------------
     # 2. Organization multiselect (titles only)
@@ -454,7 +452,7 @@ with tab13:
         key="t13_orgs"
     )
 
-    # Convert selected titles → IDs for backend
+    # Convert selected titles -> IDs for backend
     selected_org_ids = [org_lookup[t] for t in selected_org_titles]
 
     # ---------------------------------------------------------

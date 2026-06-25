@@ -2,14 +2,6 @@ import re
 import unicodedata
 import pandas as pd
 
-from Modules.utils.units import UNIT_MAP
-
-
-
-import pandas as pd
-import re
-import unicodedata
-
 
 # =========================================================
 # UNIT NORMALIZATION HELPERS
@@ -58,7 +50,6 @@ def normalize_unit_string(unit_raw):
 # ---------------------------------------------------------
 # LOAD UNIT MAP FROM GOOGLE SHEET
 # ---------------------------------------------------------
-
 GOOGLE_SHEET_CSV_URL = ("https://docs.google.com/spreadsheets/d/e/2PACX-1vS-NlRtFkD24tm2P6v5WjMioxGqggjb9bzalVsg664tHgWX1IPiLxhSpnySSTEe4i7IbzYkfuKXt9OH/pub?gid=1618419054&single=true&output=csv")
 
 unit_map_dict = None

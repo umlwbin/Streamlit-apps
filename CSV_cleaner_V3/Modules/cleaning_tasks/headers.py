@@ -45,8 +45,6 @@ def normalize_unit_string(unit_raw):
     return u.lower()
 
 
-
-
 # ---------------------------------------------------------
 # LOAD UNIT MAP FROM GOOGLE SHEET
 # ---------------------------------------------------------
@@ -76,8 +74,6 @@ def load_unit_map():
         return unit_map_dict
 
 UNIT_MAP = load_unit_map()
-
-
 
 
 

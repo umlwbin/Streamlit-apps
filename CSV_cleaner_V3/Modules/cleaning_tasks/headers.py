@@ -10,39 +10,6 @@ import pandas as pd
 import re
 import unicodedata
 
-# ---------------------------------------------------------
-# LOAD UNIT MAP FROM GOOGLE SHEET
-# ---------------------------------------------------------
-
-GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS-NlRtFkD24tm2P6v5WjMioxGqggjb9bzalVsg664tHgWX1IPiLxhSpnySSTEe4i7IbzYkfuKXt9OH/pub?gid=1710644105&single=true&output=csv"
-
-unit_map_dict = None
-
-def load_unit_map():
-    global unit_map_dict
-    if unit_map_dict is not None:
-        return unit_map_dict
-
-    try:
-        df = pd.read_csv(GOOGLE_SHEET_CSV_URL) # read google sheet with units
-        df = df.dropna(subset=["raw_unit", "normalized_unit"])  # Required columns: raw_unit, normalized_unit
-
-        # Build unit map dict raw -> normalized
-        unit_map_dict = {
-            str(row["raw_unit"]).strip().lower(): str(row["normalized_unit"]).strip()
-            for _, row in df.iterrows()
-        }
-
-        return unit_map_dict
-
-    except Exception as e:
-        print("Failed to load unit map from Google Sheet:", e)
-        unit_map_dict = {}
-        return unit_map_dict
-
-UNIT_MAP = load_unit_map()
-
-
 
 # =========================================================
 # UNIT NORMALIZATION HELPERS
@@ -83,7 +50,44 @@ def normalize_unit_string(unit_raw):
     # Collapse whitespace
     u = re.sub(r"\s+", " ", u).strip()
 
-    return u
+    return u.lower()
+
+
+
+
+# ---------------------------------------------------------
+# LOAD UNIT MAP FROM GOOGLE SHEET
+# ---------------------------------------------------------
+
+GOOGLE_SHEET_CSV_URL = ("https://docs.google.com/spreadsheets/d/e/2PACX-1vS-NlRtFkD24tm2P6v5WjMioxGqggjb9bzalVsg664tHgWX1IPiLxhSpnySSTEe4i7IbzYkfuKXt9OH/pub?gid=1618419054&single=true&output=csv")
+
+unit_map_dict = None
+def load_unit_map():
+    global unit_map_dict
+    if unit_map_dict is not None:
+        return unit_map_dict
+
+    try:
+        df = pd.read_csv(GOOGLE_SHEET_CSV_URL) # read google sheet with units
+        df = df.dropna(subset=["raw_unit", "normalized_unit"])  # Required columns: raw_unit, normalized_unit
+
+        # Build unit map dict raw -> normalized
+        unit_map_dict = {
+            normalize_unit_string(row["raw_unit"]): str(row["normalized_unit"]).strip()
+            for _, row in df.iterrows()
+        }
+
+        return unit_map_dict
+
+    except Exception as e:
+        print("Failed to load unit map from Google Sheet:", e)
+        unit_map_dict = {}
+        return unit_map_dict
+
+UNIT_MAP = load_unit_map()
+
+
+
 
 
 # =========================================================
@@ -191,14 +195,14 @@ def clean_headers(
             if raw_units:
                 # Normalize raw unit string
                 # 1. Try exact raw lookup first
-                cleaned_units = UNIT_MAP.get(raw_units.lower())
+                cleaned_units = UNIT_MAP.get(normalize_unit_string(raw_units))
 
                 # 2. If not found, normalize the raw unit
                 if cleaned_units is None:
                     normalized = normalize_unit_string(raw_units)
 
                     # 3. Try lookup on normalized form
-                    cleaned_units = UNIT_MAP.get(normalized.lower(), normalized)
+                    cleaned_units = UNIT_MAP.get(normalized, normalized)
 
 
                 # Capture the exact raw_units regardless of case (we want to store this in the metadata table as the original units)

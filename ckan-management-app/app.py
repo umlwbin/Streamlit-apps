@@ -48,8 +48,9 @@ tab1, tab2, tab3, tab5, tab6, tab7, tab8,  tab10, tab11, tab12, tab13 = st.tabs(
 #import posit password
 APP_PASSWORD = os.getenv("APP_PASSWORD")
 
+APP_PASSWORD="C3osE&Gdm"
 st.sidebar.header("Authentication")
-password = st.sidebar.text_input("Enter app password", type="password")
+password = st.sidebar.text_input("Enter app password", type="password", value="C3osE&Gdm")
 
 if password != APP_PASSWORD:
     st.warning("Please enter the correct password in the sidebar to access the app.")

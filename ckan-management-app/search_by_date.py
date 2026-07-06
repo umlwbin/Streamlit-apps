@@ -25,7 +25,10 @@ def load_all_native_records():
     all_items = []
     page_size = 250
     start_row = 0
-    fq_expression = "type:(dataset OR publication OR project)"
+    fq_expression = (
+        "type:(dataset OR publication OR project)"
+        "AND -extras_federated_index_profile:*"  #the federated metadata have this extras value: federated_index_profile; so we are saying “Exclude anything where this extras field exists.”
+    )
 
     # Stable pagination (prevents skipped datasets)
     while True:
@@ -37,25 +40,26 @@ def load_all_native_records():
             rows=page_size
         )
 
-        results = response.get("results", [])
+         # CKAN wraps datasets inside "results", list of datasets
+        results = response.get("results", []) # default to empty
         if not results:
             break
 
-        all_items.extend(results)
+        all_items.extend(results) # creatign a master list of results , append here would produce a list of lists
 
         # Stop when all results have been retrieved
-        if len(all_items) >= response.get("count", 0):
+        if len(all_items) >= response.get("count", 0): # count gives the total # of matched items returned
             break
 
         start_row += len(results)
 
     # Remove federated datasets
-    items = filter_non_federated(all_items)
+    #items = filter_non_federated(all_items)
 
     # Keep only public datasets
-    native_public = [pkg for pkg in items if not pkg.get("private", False)]
+    public_datasets = [pkg for pkg in all_items if not pkg.get("private", False)]
 
-    return native_public
+    return public_datasets
 
 # 2. Extract all organizations from native public records
 # ---------------------------------------------------------

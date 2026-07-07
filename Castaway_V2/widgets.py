@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from state import advance_step, go_to_step, reset_castaway_workflow
 from processing.processing import build_final_dataframe
 
@@ -208,7 +209,8 @@ def select_metadata_step():
         "- yyyy-mm-ddThh:mm:ss.sss\n"
         "- Latitude [degrees_north]\n"
         "- Longitude [degrees_east]\n\n"
-        "These variables are ODV‑required and will not appear in the rename table in step 6."
+        "These variables are ODV‑required and will not appear in the rename table in step 6.\n\n"
+        "**File name** will be converted to **Station** automatically."
     )
     
 
@@ -247,9 +249,9 @@ def add_new_vars_step():
         return
 
     # ---------------------------------------------------------
-    # 1. Ensure Cruise / Station / Type exist by default
+    # 1. Ensure Cruise and Type exist by default
     # ---------------------------------------------------------
-    required = {"Cruise": "", "Station": "", "Type": ""}
+    required = {"Cruise": "", "Type": ""}
 
     if st.session_state.castaway_new_vars is None:
         st.session_state.castaway_new_vars = required.copy()
@@ -268,7 +270,7 @@ def add_new_vars_step():
     # ---------------------------------------------------------
     # 2.  Show Required variables
     # ---------------------------------------------------------
-    for key in ["Cruise", "Station", "Type"]:
+    for key in ["Cruise", "Type"]:
         val = vars_dict.get(key, "")
 
         st.markdown(f"**{key}**")
@@ -449,7 +451,8 @@ def normalize_variables_step():
             n == "yyyy-mm-ddthh:mm:ss.sss" or
             "longitude" in n or
             "latitude" in n or
-            n == "bot. depth [m]"
+            "bot. depth" in n or
+            "file name" in n
         )
 
     editable_cols = [c for c in original_cols if not is_non_editable(c)]
@@ -458,7 +461,6 @@ def normalize_variables_step():
     # ---------------------------------------------------------
     # Build editable table
     # ---------------------------------------------------------
-    import pandas as pd
     table_df = pd.DataFrame({
         "Original Name": editable_cols,
         "New Name": editable_cols.copy()
@@ -468,7 +470,7 @@ def normalize_variables_step():
     st.info("**You can rename any variable in the table below**. \n\nODV-required variables are not editable and have been excluded from the table. \n" 
     "These variables will appear in your final dataset exactly as shown:\n\n"
     "- Cruise\n"
-    "- Station\n"
+    "- Station (We converted the **Filename** column into **Station**)\n"
     "- Type\n"
     "- yyyy-mm-ddThh:mm:ss.sss\n"
     "- Longitude [degrees_east]\n"

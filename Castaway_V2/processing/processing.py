@@ -139,9 +139,6 @@ def build_final_dataframe(
             if "cruise" in lowered:
                 new_cols.append("Cruise"); continue
 
-            if "station" in lowered:
-                new_cols.append("Station"); continue
-
             if "cast time" in lowered:
                 new_cols.append("yyyy-mm-ddThh:mm:ss.sss"); continue
 
@@ -151,7 +148,7 @@ def build_final_dataframe(
             if "latitude" in lowered:
                 new_cols.append("Latitude [degrees_north]"); continue
 
-            if lowered == "bot. depth [m]":
+            if "bot. depth" in lowered:
                 new_cols.append("Bot. Depth [m]"); continue
 
             # ---- User overrides ----
@@ -171,7 +168,7 @@ def build_final_dataframe(
     # --------------------------------------------------------
     # 6A. Collect all columns across all files - we need all files to have the same cols, in order to conactenate
     # --------------------------------------------------------
-    all_columns = set()
+    all_columns = set() #cannot eb duplicated
     for frame in final_frames:
         all_columns.update(frame.columns)
 
@@ -193,8 +190,16 @@ def build_final_dataframe(
     final_df = pd.concat(aligned_frames, ignore_index=True)
 
 
+
     # ===================================================================
-    # STEP 7 - Enforce ODV column order
+    # STEP 7 - Convert "File name" into "Station"
+    # ===================================================================
+    if "File name" in final_df.columns:
+        final_df=final_df.rename(columns={"File name":"Station"})
+
+
+    # ===================================================================
+    # STEP 8 - Enforce ODV column order
     # ===================================================================
     odv_order = [
         "Cruise",
@@ -211,12 +216,7 @@ def build_final_dataframe(
 
     final_df = final_df[present_odv_cols + remaining_cols]
 
-    # ===================================================================
-    # STEP 8 - Move "File name" to the end (optional)
-    # ===================================================================
-    if "File name" in final_df.columns:
-        cols = [c for c in final_df.columns if c != "File name"]
-        cols.append("File name")
-        final_df = final_df[cols]
+
+
 
     return final_df

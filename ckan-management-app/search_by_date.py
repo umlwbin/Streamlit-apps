@@ -26,7 +26,7 @@ def load_all_native_records():
     page_size = 250
     start_row = 0
     fq_expression = (
-        "type:(dataset OR publication OR project)"
+        "type:(dataset OR publication OR project) "
         "AND -extras_federated_index_profile:*"  #the federated metadata have this extras value: federated_index_profile; so we are saying “Exclude anything where this extras field exists.”
     )
 

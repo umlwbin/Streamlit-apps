@@ -12,35 +12,72 @@ def filter_non_federated(datasets):
     """Remove federated datasets (those with 'extras')."""
     return [d for d in datasets if not d.get("extras", {})]
 
-# Checking Resources-----------------------------------------------------------------------------------------------------
-def get_all_packages(limit=1000, total=35464):
-    """Fetch all CKAN packages (datasets, projects, publications).
-    Currently we have 35464 datasets TOTAL. Change this as needed. 1000 is the max amount the api will print at a time, so we use an offset of 1000, to grab every 1000
-    API endpoint
-    """
-    canwin_data = []
-    for offset in range(0, total, limit):
-        url = f"{BASE_URL}/current_package_list_with_resources?limit={limit}&offset={offset}"
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()["result"]
 
-        # Filter out federated datasets (those with 'extras')
-        canwin_data.extend(filter_non_federated(data))
+# Geting all datasets, projects and publications-----------------------------------------------------------------------------------------------------
+def load_native_packages():
+    """Fetch all public, native CKAN packages (datasets, projects, publications)."""
+    
+    canwin_data = []
+    page_size = 250
+    start_row = 0
+
+    fq_expression = (
+        "type:(dataset OR project OR publication) "
+        "AND -extras_federated_index_profile:*"
+    )
+
+    while True:
+        payload = {
+            "q": "*:*",
+            "fq": fq_expression,
+            "start": start_row,
+            "rows": page_size,
+        }
+
+        response = requests.post(f"{BASE_URL}/package_search", json=payload)
+        response.raise_for_status()
+
+        all_data = response.json()
+        result = all_data.get("result", {})
+        results = result.get("results", [])
+
+        if not results:
+            break
+
+        #Remove private data
+        public_data = [pkg for pkg in results if not pkg.get('private', False)]
+
+        canwin_data.extend(public_data)
+
+        start_row += page_size
+        if start_row >= result.get("count", 0):
+            break
+
     return canwin_data
 
-# Filter Datasets-----------------------------------------------------------------------------------------------------
-def filter_datasets(canwin_data):
-    """Return only datasets, projects, and publications."""
-    return [cd for cd in canwin_data if cd.get("type") in ["dataset", "project", "publication"]]
+# Geting all resources-----------------------------------------------------------------------------------------------------
+def get_package_resources(canwin_data):
+
+    datasets = canwin_data
+    full_packages = []
+
+    for pkg in datasets:
+        name = pkg["name"]
+        url = f"{BASE_URL}/package_show?id={name}"
+        response = requests.get(url)
+        response.raise_for_status()
+        resource_metadata = response.json()["result"]
+        full_packages.append(resource_metadata)
+
+    return full_packages
 
 # Classify resources -----------------------------------------------------------------------------------------------------
-def classify_resources(canwin_datasets):
+def classify_resources(full_packages):
     """Classify resources by type and return counts + lists."""
     docs, measured, web, multimedia, unknown = [], [], [], [], []
     counts = {"docs": 0, "measured": 0, "web": 0, "multimedia": 0, "unknown": 0}
 
-    for dataset in canwin_datasets:
+    for dataset in full_packages:
         for res in dataset.get("resources", []):
             r_title = res.get("name")
             r_type = res.get("format", "").upper()
@@ -62,7 +99,35 @@ def classify_resources(canwin_datasets):
                 unknown.append((r_title, r_type, r_url))
                 counts["unknown"] += 1
 
-    return counts, {"docs": docs, "measured": measured, "web": web, "multimedia": multimedia, "unknown": unknown}
+    return counts, {
+        "docs": docs,
+        "measured": measured,
+        "web": web,
+        "multimedia": multimedia,
+        "unknown": unknown
+    }
+
+
+
+# Search dataset -----------------------------------------------------------------------------------------------------
+def search_datasets(query, rows=10):
+    """Search CKAN datasets by keyword, excluding federated ones."""
+    # url = f"{BASE_URL}/package_search?q={query}&rows={rows}"
+    # response = requests.get(url)
+    # response.raise_for_status()
+    # results = response.json()["result"]["results"]
+    # return filter_non_federated(results)
+
+    url = f"{BASE_URL}/package_search"
+    payload={
+        "q":query,
+        "rows":rows
+    }
+    response = requests.post(url, json=payload)
+    response.raise_for_status()
+    results = response.json()["result"]["results"]
+    return filter_non_federated(results)
+
 
 # Get dataset -----------------------------------------------------------------------------------------------------
 def get_dataset(dataset_id, api_key=None):
@@ -78,33 +143,27 @@ def get_dataset(dataset_id, api_key=None):
     response.raise_for_status()
     return response.json()["result"]
 
-# Search dataset -----------------------------------------------------------------------------------------------------
-def search_datasets(query, rows=10):
-    """Search CKAN datasets by keyword, excluding federated ones."""
-    url = f"{BASE_URL}/package_search?q={query}&rows={rows}"
-    response = requests.get(url)
-    response.raise_for_status()
-    results = response.json()["result"]["results"]
-    return filter_non_federated(results)
 
 # Delete dataset -----------------------------------------------------------------------------------------------------
 def delete_dataset(dataset_id, api_key):
     """Delete a dataset by ID or name. Requires API key."""
-    # Optional: fetch dataset first to check if federated
-    check_url = f"{BASE_URL}/package_show?id={dataset_id}"
-    check_resp = requests.get(check_url)
-    check_resp.raise_for_status()
-    dataset = check_resp.json()["result"]
-
+    
+    # Fetch dataset and check if federated first
+    url = f"{BASE_URL}/package_show?id={dataset_id}"
+    response = requests.get(url)
+    response.raise_for_status()
+    dataset = response.json()["result"]
     if dataset.get("extras", {}):
         raise ValueError("This dataset is federated and cannot be deleted.")
-
+    
+    #Delete dataset
     url = f"{BASE_URL}/dataset_purge"
     headers = {"Authorization": api_key, "Content-Type": "application/json"}
     payload = {"id": dataset_id}
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()
     return response.json()
+
 
 # User Management--------------------------------------------------------------------------
 def list_users(api_key, limit=50, offset=0):
@@ -119,16 +178,17 @@ def list_users(api_key, limit=50, offset=0):
 # Extract Metadata--------------------------------------------------------------------------
 def extract_metadata(field="creatorName", dataset_type="dataset"):
     """
-    Extract specific metadata field (e.g., creatorName) from all non-federated datasets.
+    Extract any metadata field from all non-federated datasets.
     Returns a list of tuples (value, dataset_url).
     """
-    # Get list of all dataset IDs
+
     package_url = f"{BASE_URL}/package_list"
     response = requests.get(package_url)
     response.raise_for_status()
     dataset_ids = response.json()["result"]
 
     results = []
+
     for d in dataset_ids:
         metadata_url = f"{BASE_URL}/package_show?id={d}"
         page_url = f"https://canwin-datahub.ad.umanitoba.ca/data/dataset/{d}"
@@ -146,18 +206,33 @@ def extract_metadata(field="creatorName", dataset_type="dataset"):
             continue
 
         # Extract field if present
-        if field in metadata:
-            field_value = metadata[field]
-            # Handle case where field is a list of dicts (like creatorName)
-            if isinstance(field_value, list):
-                for entry in field_value:
-                    author = entry.get("author")
-                    if author:
-                        results.append((author, page_url))
-            else:
-                results.append((field_value, page_url))
+        if field not in metadata:
+            continue
+
+        value = metadata[field]
+
+        # Case 1: simple value
+        if isinstance(value, (str, int, float)):
+            results.append((value, page_url))
+
+        # Case 2: list of strings
+        elif isinstance(value, list) and all(isinstance(v, str) for v in value):
+            results.append((json.dumps(value, indent=2), page_url))
+
+        # Case 3: list of dicts
+        elif isinstance(value, list) and all(isinstance(v, dict) for v in value):
+            results.append((json.dumps(value, indent=2), page_url))
+
+        # Case 4: dict
+        elif isinstance(value, dict):
+            results.append((json.dumps(value, indent=2), page_url))
+
+        # Fallback: convert anything else to JSON
+        else:
+            results.append((json.dumps(value, indent=2), page_url))
 
     return results
+
 
 # Analyze Keywords --------------------------------------------------------------------------
 from collections import Counter
@@ -166,8 +241,7 @@ def analyze_tags(limit=1000, total=35464):
     Fetch all non-federated datasets and analyze tag usage.
     Returns a Counter of tag frequencies and a list of (dataset, tags).
     """
-    all_data = get_all_packages(limit=limit, total=total)
-    datasets = filter_datasets(all_data)
+    datasets = load_native_packages()
 
     tag_counter = Counter()
     dataset_tags = []

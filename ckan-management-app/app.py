@@ -7,7 +7,7 @@ import pandas as pd
 sys.path.append(os.path.dirname(__file__))
 
 from ckan_utils import (
-    get_all_packages, filter_datasets, classify_resources, search_datasets,
+    load_native_packages, get_package_resources, classify_resources, search_datasets,
     delete_dataset, list_users, extract_metadata,
     analyze_tags, get_group_metadata, list_groups, delete_all_resources
 )
@@ -49,7 +49,7 @@ tab1, tab2, tab3, tab5, tab6, tab7, tab8,  tab10, tab11, tab12, tab13 = st.tabs(
 APP_PASSWORD = os.getenv("APP_PASSWORD")
 
 st.sidebar.header("Authentication")
-password = st.sidebar.text_input("Enter app password", type="password")
+password = st.sidebar.text_input("Enter app password", type="password",)
 
 if password != APP_PASSWORD:
     st.warning("Please enter the correct password in the sidebar to access the app.")
@@ -65,9 +65,9 @@ with tab1:
     st.markdown("### Resource Checker")
     if st.button("Run CKAN Resource Check"):
         with st.spinner("Fetching data from CKAN..."):
-            all_data = get_all_packages()
-            datasets = filter_datasets(all_data)
-            counts, classified = classify_resources(datasets)
+            canwin_data = load_native_packages()
+            full_packages=get_package_resources(canwin_data)
+            counts, classified = classify_resources(full_packages)
 
         st.success("Data fetched and classified!")
 
@@ -158,6 +158,8 @@ with tab5:
 with tab6:
     st.markdown("### Metadata Extractor")
     st.markdown("Extract specific metadata fields (e.g., creatorName) from all datasets.")
+    st.info('Please check for the exact metadata field. For ex, go to a dataset page → **Export metadata** → **JSON**\n\n' \
+    'For list of strings like _tags_ or list of dictionaries like _creatorName_ or _contributors_, open the CSV in a JSON compatible editor like VSCode.')
 
     field = st.text_input("Enter metadata field name", value="creatorName")
     dataset_type = st.selectbox("Dataset type", ["dataset", "project", "publication"])
@@ -181,33 +183,33 @@ with tab6:
 # --- keywords ---
 with tab7:
     st.markdown("### Tag / Keyword Analysis")
-    st.markdown("Analyze tag usage across all non-federated datasets.")
+    st.markdown("Analyze keyword usage across all non-federated datasets.")
 
-    if st.button("Run Tag Analysis"):
-        with st.spinner("Fetching and analyzing tags..."):
+    if st.button("Run Keyword Analysis"):
+        with st.spinner("Fetching and analyzing keywords..."):
             tag_counter, dataset_tags = analyze_tags()
 
-        st.success("Tag analysis complete!")
+        st.success("Keyword analysis complete!")
 
         # Show top tags
-        st.subheader("Top Tags")
+        st.subheader("Top Keyword")
         top_tags = pd.DataFrame(tag_counter.most_common(20), columns=["Tag", "Count"])
         st.dataframe(top_tags)
 
         st.download_button(
-            label="Download full tag frequency CSV",
+            label="Download full keyword frequency CSV",
             data=pd.DataFrame(tag_counter.items(), columns=["Tag", "Count"]).to_csv(index=False),
             file_name="tag_frequency.csv",
             mime="text/csv"
         )
 
         # Show dataset-tag mapping
-        st.subheader("Dataset -> Tags")
-        dataset_tag_df = pd.DataFrame(dataset_tags, columns=["Dataset Title", "Tags"])
+        st.subheader("Dataset -> Keywords")
+        dataset_tag_df = pd.DataFrame(dataset_tags, columns=["Dataset Title", "Keywords"])
         st.dataframe(dataset_tag_df)
 
         st.download_button(
-            label="Download dataset-tag mapping CSV",
+            label="Download dataset-keyword mapping CSV",
             data=dataset_tag_df.to_csv(index=False),
             file_name="dataset_tags.csv",
             mime="text/csv"

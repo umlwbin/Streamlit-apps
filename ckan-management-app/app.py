@@ -66,8 +66,7 @@ with tab1:
     if st.button("Run CKAN Resource Check"):
         with st.spinner("Fetching data from CKAN..."):
             canwin_data = load_native_packages()
-            full_packages=get_package_resources(canwin_data)
-            counts, classified = classify_resources(full_packages)
+            counts, classified = classify_resources(canwin_data)
 
         st.success("Data fetched and classified!")
 

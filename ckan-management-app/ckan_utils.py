@@ -55,29 +55,14 @@ def load_native_packages():
 
     return canwin_data
 
-# Geting all resources-----------------------------------------------------------------------------------------------------
-def get_package_resources(canwin_data):
-
-    datasets = canwin_data
-    full_packages = []
-
-    for pkg in datasets:
-        name = pkg["name"]
-        url = f"{BASE_URL}/package_show?id={name}"
-        response = requests.get(url)
-        response.raise_for_status()
-        resource_metadata = response.json()["result"]
-        full_packages.append(resource_metadata)
-
-    return full_packages
 
 # Classify resources -----------------------------------------------------------------------------------------------------
-def classify_resources(full_packages):
+def classify_resources(canwin_data):
     """Classify resources by type and return counts + lists."""
     docs, measured, web, multimedia, unknown = [], [], [], [], []
     counts = {"docs": 0, "measured": 0, "web": 0, "multimedia": 0, "unknown": 0}
 
-    for dataset in full_packages:
+    for dataset in canwin_data:
         for res in dataset.get("resources", []):
             r_title = res.get("name")
             r_type = res.get("format", "").upper()

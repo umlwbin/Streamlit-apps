@@ -7,7 +7,7 @@ import pandas as pd
 sys.path.append(os.path.dirname(__file__))
 
 from ckan_utils import (
-    load_native_packages, get_package_resources, classify_resources, search_datasets,
+    load_native_packages, classify_resources, search_datasets,
     delete_dataset, list_users, extract_metadata,
     analyze_tags, get_group_metadata, list_groups, delete_all_resources
 )

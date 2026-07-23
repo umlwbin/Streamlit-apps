@@ -49,7 +49,7 @@ tab1, tab2, tab3, tab5, tab6, tab7, tab8,  tab10, tab11, tab12, tab13 = st.tabs(
 APP_PASSWORD = os.getenv("APP_PASSWORD")
 
 st.sidebar.header("Authentication")
-password = st.sidebar.text_input("Enter app password", type="password",)
+password = st.sidebar.text_input("Enter app password", type="password")
 
 if password != APP_PASSWORD:
     st.warning("Please enter the correct password in the sidebar to access the app.")
@@ -306,40 +306,38 @@ with tab11:
             "info.notes": ["description"],
             "info.units": ["units"],
             "info.media_type": ["media"],
-            "info.result_value_type": ["result value type"],
-            "info.statistic_applied": ["statistic applied"]
+            "info.result_value_type": ["result"],
+            "info.statistic_applied": ["statistic"]
         }
 
-        if "column_mapping" not in st.session_state:
-            st.session_state["column_mapping"] = {}
+        # use st.form here because Forms freeze the UI until the user clicks a button (so streamlit doesnt rerun everytime)
+        with st.form("dd_mapping_form"):
 
-        if "auto_mapped" not in st.session_state:
-            # Auto-select columns based on partial matches
-            for ckan_key, patterns in auto_map_rules.items():
-                selected = "-- None --"
-                for col in excel_columns:
-                    col_l = col.lower()
-                    if any(p in col_l for p in patterns):
-                        selected = col
-                        break
-                st.session_state["column_mapping"][ckan_key] = selected
+            # Auto-map only once
+            if "column_mapping" not in st.session_state:
+                st.session_state["column_mapping"] = {}
 
-            st.session_state["auto_mapped"] = True
+            if "auto_mapped" not in st.session_state:
+                for ckan_key, patterns in auto_map_rules.items():
+                    selected = "-- None --"
+                    for col in excel_columns:
+                        col_l = col.lower()
+                        if any(p in col_l for p in patterns):
+                            selected = col
+                            break
+                    st.session_state["column_mapping"][ckan_key] = selected
 
+                st.session_state["auto_mapped"] = True
 
-        mapping_updates = {}
+            mapping_updates = {}
 
-        for ckan_key, label in ckan_fields.items():
-            selected = st.selectbox(
-                f"Select Excel column for {label}",
-                ["-- None --"] + excel_columns,
-                index=(["-- None --"] + excel_columns).index(st.session_state["column_mapping"][ckan_key]),
-                key=f"map_{ckan_key}"
-            )
-            mapping_updates[ckan_key] = selected
+            for ckan_key, label in ckan_fields.items():
+                selected = st.selectbox(f"Select Excel column for {label}", ["-- None --"] + excel_columns,
+                    index=(["-- None --"] + excel_columns).index(st.session_state["column_mapping"][ckan_key]),
+                    key=f"map_{ckan_key}")
+                mapping_updates[ckan_key] = selected
 
-        # Update session_state after widgets are created
-        st.session_state["column_mapping"].update(mapping_updates)
+            submitted = st.form_submit_button("Apply Mapping")
 
 
         st.info("""
@@ -348,13 +346,17 @@ with tab11:
         This is how CKAN knows which metadata belongs to which variable.
         """)
 
-        # Step 2: User clicks "Map Columns"
-        if st.button("Map Columns"):
+        # Step 2: User clicks "Apply Mapping"
+        # After form submission, update mapping and show preview
+        if submitted:
+            st.session_state["column_mapping"].update(mapping_updates)
+
             mapped = map_excel_to_ckan(df, st.session_state["column_mapping"])
             st.session_state["mapped"] = mapped
 
             st.subheader("Mapped CKAN Fields")
             st.json(mapped)
+
 
         # Step 3: Upload to CKAN
         if st.button("Upload to CKAN"):
@@ -383,6 +385,7 @@ with tab11:
 
                 # Show CKAN response
                 st.json(result["ckan_response"])
+
 
 # --- Delete all resources ---
 with tab12:

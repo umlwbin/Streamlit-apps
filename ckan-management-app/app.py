@@ -310,19 +310,22 @@ with tab11:
             "info.statistic_applied": ["statistic applied"]
         }
 
-        # Initialize mapping if not present
         if "column_mapping" not in st.session_state:
             st.session_state["column_mapping"] = {}
 
-        # Auto-select columns based on partial matches
-        for ckan_key, patterns in auto_map_rules.items():
-            selected = "-- None --"
-            for col in excel_columns:
-                col_l = col.lower()
-                if any(p in col_l for p in patterns):
-                    selected = col
-                    break
-            st.session_state["column_mapping"][ckan_key] = selected
+        if "auto_mapped" not in st.session_state:
+            # Auto-select columns based on partial matches
+            for ckan_key, patterns in auto_map_rules.items():
+                selected = "-- None --"
+                for col in excel_columns:
+                    col_l = col.lower()
+                    if any(p in col_l for p in patterns):
+                        selected = col
+                        break
+                st.session_state["column_mapping"][ckan_key] = selected
+
+            st.session_state["auto_mapped"] = True
+
 
         mapping_updates = {}
 

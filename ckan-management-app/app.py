@@ -324,14 +324,19 @@ with tab11:
                     break
             st.session_state["column_mapping"][ckan_key] = selected
 
-                
+        mapping_updates = {}
+
         for ckan_key, label in ckan_fields.items():
-            st.session_state["column_mapping"][ckan_key] = st.selectbox(
-                f"Select Excel column for **{label}**",
+            selected = st.selectbox(
+                f"Select Excel column for {label}",
                 ["-- None --"] + excel_columns,
                 index=(["-- None --"] + excel_columns).index(st.session_state["column_mapping"][ckan_key]),
                 key=f"map_{ckan_key}"
             )
+            mapping_updates[ckan_key] = selected
+
+        # Update session_state after widgets are created
+        st.session_state["column_mapping"].update(mapping_updates)
 
 
         st.info("""

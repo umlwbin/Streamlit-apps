@@ -33,19 +33,23 @@ session_initializer.init_session_state()
 # ---------------------------------------------------------
 st.html("""
 <style>
-    /* 1. Targets standard inputs and selectbox labels */
+    /* 1. Standard inputs and selectbox labels */
     div[data-testid="stTextInput"] label p,
     div[data-testid="stSelectbox"] label p,
-    
-    /* 2. Targets the main radio button group header label */
+
+    /* 2. Radio group header labels */
     div[data-testid="stRadio"] [data-testid="stWidgetLabel"] p,
-    
-    /* 3. Targets standard body text blocks created via st.markdown */
-    div[data-testid="stMarkdownContainer"] p {
+
+    /* 3. Markdown text */
+    div[data-testid="stMarkdownContainer"] p,
+
+    /* 4. Caption text */
+    div[data-testid="stCaptionContainer"] p {
         font-size: 18px !important;
     }
 </style>
 """)
+
 
 # ---------------------------------------------------------
 # TAB STYLING
@@ -277,11 +281,8 @@ def run_csv_curation_studio():
                 st.markdown("")
                 st.markdown("##### Metadata Output")
 
-                # Tasks whose metadata applies to all files
-                global_metadata_tasks = [
-                    "Clean column headers",
-                    "Tidy Data Checker"
-                ]
+                # Tasks whose metadata table applies to all files
+                global_metadata_tasks = ["Clean column headers", "Tidy Data Checker", "Rename columns"]
 
                 # Track which global tasks we've already shown
                 shown_global = set()

@@ -65,7 +65,6 @@ def load_unit_map():
             normalize_unit_string(row["raw_unit"]): str(row["normalized_unit"]).strip()
             for _, row in df.iterrows()
         }
-
         return unit_map_dict
 
     except Exception as e:
@@ -130,9 +129,10 @@ def clean_headers(
             return content.strip() # return units
 
         # Fallback: UNIT_MAP search
-        lower = text.lower() #the UNIT_MAP units are added in lower case tobe safe.
+        # Token-based fallback
+        tokens = re.split(r"[^a-zA-Z0-9]+", text.lower())
         for raw_unit in UNIT_MAP:
-            if raw_unit in lower:
+            if raw_unit in tokens:
                 return raw_unit
 
         return None
@@ -160,7 +160,6 @@ def clean_headers(
             fallback = "unnamed_column"
             cleaned.append(fallback)
             metadata[raw] = {
-                "variable": fallback,
                 "units_raw": None,
                 "units_clean": None,
                 "cleaned_header": fallback,
@@ -178,19 +177,17 @@ def clean_headers(
             raw_units = None if no_units_in_header else detect_units(new)
             cleaned_units = None
             units_raw_original = None
+            
 
             if raw_units:
-                # Normalize raw unit string
-                # 1. Try exact raw lookup first
-                cleaned_units = UNIT_MAP.get(normalize_unit_string(raw_units))
+                normalized = normalize_unit_string(raw_units).lower()
 
-                # 2. If not found, normalize the raw unit
+                # 1. Try lookup using normalized raw unit
+                cleaned_units = UNIT_MAP.get(normalized)
+
+                # 2. Fallback: use normalized itself
                 if cleaned_units is None:
-                    normalized = normalize_unit_string(raw_units)
-
-                    # 3. Try lookup on normalized form
-                    cleaned_units = UNIT_MAP.get(normalized, normalized)
-
+                    cleaned_units = normalized
 
                 # Capture the exact raw_units regardless of case (we want to store this in the metadata table as the original units)
                 match = re.search(re.escape(raw_units), new, flags=re.IGNORECASE)
@@ -246,21 +243,20 @@ def clean_headers(
 
             cleaned.append(header)
 
+            # The metadata dict looks like: "{ Temp (°C)": {"variable": "temp", "units_raw": "C", "units_clean": "degC", "cleaned_header": "temp [degC]"} , ... },
             metadata[raw] = {
-                "variable": variable_clean,
+                "cleaned_header": header,
                 "units_raw": units_raw_original,
                 "units_clean": cleaned_units,
-                "cleaned_header": header,
             }
 
         except Exception:
             # If anything fails, preserve original header
             cleaned.append(raw)
             metadata[raw] = {
-                "variable": raw,
+                "cleaned_header": raw,
                 "units_raw": None,
                 "units_clean": None,
-                "cleaned_header": raw,
             }
     # -----------------------------------------------------
     # 3d. ENSURE UNIQUENESS
@@ -280,11 +276,12 @@ def clean_headers(
     # -----------------------------------------------------
     # 4. BUILD METADATA TABLE
     # -----------------------------------------------------
+    # When you convert a dict of dicts into a DataFrame, the outer dictionary keys automatically become the index
     metadata_df = (
         pd.DataFrame(metadata)
         .transpose()
         .reset_index()
-        .rename(columns={"index": "original_header"})
+        .rename(columns={"index": "original_header"}) # turns the keys into the “original_header” column
     )
 
     # -----------------------------------------------------

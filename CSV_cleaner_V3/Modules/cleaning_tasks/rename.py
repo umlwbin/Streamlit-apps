@@ -49,6 +49,7 @@ def rename_columns(
     except Exception:
         raise ValueError("All standardized_names must be convertible to strings.")
 
+    # Make a copy!
     cleaned_df = df.copy()
 
     # -----------------------------------------------------
@@ -57,7 +58,11 @@ def rename_columns(
 
     if len(cleaned_df.columns) != len(standardized_names):
         # soft validation is handled in the widget; If mismatch --> return unchanged.
-        return cleaned_df
+        metadata_df = pd.DataFrame({
+                    "original_header": cleaned_df.columns,
+                    "renamed_header": cleaned_df.columns
+                })
+        return cleaned_df, metadata_df
 
     # -----------------------------------------------------
     # 3. CORE PROCESSING
@@ -67,6 +72,13 @@ def rename_columns(
     cleaned_df.columns = safe_names
 
     # -----------------------------------------------------
-    # 4. RETURN
+    # 4. BUILD METADATA TABLE
     # -----------------------------------------------------
-    return cleaned_df
+    metadata_df=pd.DataFrame({
+            "original_header":df.columns,
+            "renamed_headers": safe_names
+        })
+    # -----------------------------------------------------
+    # 5. RETURN
+    # -----------------------------------------------------
+    return cleaned_df, metadata_df

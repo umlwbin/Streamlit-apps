@@ -32,50 +32,43 @@ def headers_widgets(df=None, show_button=True):
     # ---------------------------------------------------------
     # SECTION: Naming Style
     # ---------------------------------------------------------
-    naming_style = st.radio(
-        "Choose a naming style for cleaned headers",
-        ["snake_case", "camelCase", "Title Case"],
-        key="header_style"
-    )
+    naming_style = st.radio("Choose a naming style for cleaned headers", ["snake_case", "camelCase", "Title Case"],key="header_style")
 
     # ---------------------------------------------------------
     # SECTION: Unit Handling
     # ---------------------------------------------------------
     st.write("#### Unit Handling")
 
-    # Curator-friendly explanation
-
     st.info("• If your dataset includes bracketed units inside the column names (e.g., "
         "`Temperature (°C)` or `Flow [m³/s]`), the cleaner can extract and "
         "normalize them. \n\n"
         "• If your units aren’t written in brackets, " 
         "the cleaner will attempt to recognize and standardize them using our internal unit map.\n\n"
-        "• If your dataset does **NOT** include units in headers, "
+        "• If your dataset does **NOT** include units in headers, or you do not want any unit handling, "
         "enable the option below.")
 
-    no_units_in_header = st.checkbox(
-        "My dataset does NOT include units in the column names",
-        value=False,
-        key="no_units_in_header"
-    )
+    no_units_in_header = st.checkbox( "My dataset does NOT include units in the column names", value=False, key="no_units_in_header")
 
-    # If curator says “no units in header”, disable unit preservation
+    # If user says “no units in header”, disable unit preservation
     if no_units_in_header:
         preserve_units = False
         st.info(
             "Unit handling disabled because you indicated that your dataset "
-            "does not include units in the column names."
-        )
+            "does not include units in the column names.")
     else:
-        # Curator chooses whether to keep or strip units
-        preserve_units = (
-            st.radio(
-                "**How should units be handled?**",
-                ["Preserve units", "Strip units"],
-                key="header_units"
-            ) == "Preserve units"
-        )
+        # user chooses whether to keep or strip units
+        preserve_units = (st.radio("**How should units be handled?**",["Strip units","Preserve units"],key="header_units") == "Preserve units")
 
+        st.info(
+            "For maximum interoperability, we recommed keeping column headers free of units (**Strip units** above) so "
+            "headers can remain simple and machine‑friendly while the generated metadata table "
+            "preserves full unit information. Ideally, add units to a **data dictionary**. ")
+
+        st.info(
+            "If the automated header cleaning didn’t produce the exact names you want, use the **Rename Columns** task to manually edit your headers. " \
+            "It also produces a metadata table so you can easily copy the final variable names into your data dictionary. \n\n" \
+            "**Be sure to download the metadata table below if you need the unit info before selecting another task** "
+        )
     # ---------------------------------------------------------
     # Build settings dict
     # ---------------------------------------------------------

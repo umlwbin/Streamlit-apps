@@ -1,6 +1,7 @@
 import re
 import unicodedata
 import pandas as pd
+import streamlit as st
 
 
 # =========================================================
@@ -48,7 +49,9 @@ def normalize_unit_string(unit_raw):
 # ---------------------------------------------------------
 # LOAD UNIT MAP FROM GOOGLE SHEET
 # ---------------------------------------------------------
-GOOGLE_SHEET_CSV_URL = ("https://docs.google.com/spreadsheets/d/e/2PACX-1vS-NlRtFkD24tm2P6v5WjMioxGqggjb9bzalVsg664tHgWX1IPiLxhSpnySSTEe4i7IbzYkfuKXt9OH/pub?gid=1618419054&single=true&output=csv")
+#GOOGLE_SHEET_CSV_URL = ("https://docs.google.com/spreadsheets/d/e/2PACX-1vS-NlRtFkD24tm2P6v5WjMioxGqggjb9bzalVsg664tHgWX1IPiLxhSpnySSTEe4i7IbzYkfuKXt9OH/pub?gid=1618419054&single=true&output=csv")
+
+GOOGLE_SHEET_CSV_URL = ("https://docs.google.com/spreadsheets/d/e/2PACX-1vS-NlRtFkD24tm2P6v5WjMioxGqggjb9bzalVsg664tHgWX1IPiLxhSpnySSTEe4i7IbzYkfuKXt9OH/pub?gid=1132759519&single=true&output=csv")
 
 unit_map_dict = None
 def load_unit_map():
@@ -58,13 +61,29 @@ def load_unit_map():
 
     try:
         df = pd.read_csv(GOOGLE_SHEET_CSV_URL) # read google sheet with units
+
         df = df.dropna(subset=["raw_unit", "normalized_unit"])  # Required columns: raw_unit, normalized_unit
 
         # Build unit map dict raw -> normalized
-        unit_map_dict = {
-            normalize_unit_string(row["raw_unit"]): str(row["normalized_unit"]).strip()
-            for _, row in df.iterrows()
-        }
+        unit_map = {}
+
+        for _, row in df.iterrows():
+            normalized_unit = str(row["normalized_unit"]).strip()
+
+            # We have multiple variations of the same unit on the same row in Unit Map separated by commas.
+            # They shoudl all be mapped to the same normalized value, as in the Unit Map. 
+            raw_unit_cell=normalize_unit_string(str(row["raw_unit"])) # normalize the entire cell first
+            raw_variants = raw_unit_cell.split(",")  # Split raw_unit on commas
+
+            for raw in raw_variants: 
+                raw = raw.strip()
+                if not raw:
+                    continue
+
+                normalized_raw = normalize_unit_string(raw) # noramlize each variant, just in case. 
+                unit_map[normalized_raw] = normalized_unit
+
+        unit_map_dict = unit_map  
         return unit_map_dict
 
     except Exception as e:

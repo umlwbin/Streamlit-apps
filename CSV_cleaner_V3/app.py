@@ -16,11 +16,7 @@ from Modules.task_orchestration.allowed_tasks import get_allowed_tasks
 # ---------------------------------------------------------
 # PAGE CONFIG
 # ---------------------------------------------------------
-st.set_page_config(
-    page_title="CSV Curation Studio",
-    page_icon="🔖",
-    layout="wide"
-)
+st.set_page_config( page_title="CSV Curation Studio", page_icon="🔖", layout="wide")
 
 # ---------------------------------------------------------
 # INITIALIZE SESSION
@@ -139,7 +135,7 @@ def run_csv_curation_studio():
                             st.session_state.selected_task = current_task
 
                         # 2. Representative DataFrame for widgets (first uploaded file)
-                        df_for_widget = next(iter(st.session_state.current_data.values()))
+                        df_for_widget = next(iter(st.session_state.current_data.values())) #next(inter()) quickly points to and grabs the first in the dict, less space used
 
                         # ---------------------------------------------------------
                         # WIDGETS

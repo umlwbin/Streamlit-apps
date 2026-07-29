@@ -9,12 +9,12 @@ File Upload and Initialization Module
 ====================================
 
 This module handles all logic for safely loading user‑uploaded CSV/TXT files.
-This module does **not** perform any cleaning or transformation. It only
+This module does NOT perform any cleaning or transformation. It only
 prepares files so that the task widgets and processing functions can operate
 safely and consistently.
 
 ---------------------------------------------------------------------------
-Core Responsibilities
+What it does:
 ---------------------------------------------------------------------------
 
 1. Reset Session State on New Upload
@@ -36,7 +36,7 @@ Core Responsibilities
 
 3. Load Files Safely
    ------------------
-   Files are loaded using a forgiving parsing strategy:
+   Files are loaded using a robust strategy:
        • Python engine for maximum flexibility
        • dtype=str to preserve all values exactly as written
        • fallback to manual splitting if parsing fails
@@ -46,20 +46,12 @@ Core Responsibilities
 4. Initialize Row Maps
    --------------------
    Every file receives a `row_map` that records the original row numbers from
-   the uploaded file. This map is preserved across all transformations and is
-   essential for:
-       • metadata extraction
-       • header merging
-       • provenance tracking
-       • reversible operations
+   the uploaded file. This map is preserved across all transformations.
 
 5. Normalize Empty Columns
    ------------------------
-   Completely empty columns (common in CSV exports) are filled with empty
-   strings to avoid:
-       • dtype inconsistencies
-       • PyArrow failures
-       • accidental column drops
+   Completely empty columns are filled with empty
+   strings to avoid accidental column drops
 
 6. Promote Header Row (Rectangular Files Only)
    -------------------------------------------
@@ -69,9 +61,9 @@ Core Responsibilities
        • duplicate names are made unique
        • the row map is updated accordingly
 
-   If metadata *is* detected:
+   If metadata is detected:
        • generic column names (`col_0`, `col_1`, …) are assigned
-       • header promotion is deferred to a dedicated widget
+       • header promotion is deferred to a specific widget
 
 7. Store Files in Session State
    -----------------------------
@@ -83,9 +75,6 @@ Core Responsibilities
        • redo_stack         (redo)
        • non_rectangular_files
        • row_map
-
-   These structures are used by all downstream widgets and tasks.
-
 """
 
 
@@ -98,7 +87,7 @@ import state.session_initializer as session_initializer
 
 
 # ---------------------------------------------------------
-# STEP 0: Helper - Make column names unique (safe for PyArrow)
+# STEP 0: Helper - Make column names unique
 # ---------------------------------------------------------
 def make_unique_columns(cols):
     seen = {}
@@ -122,9 +111,6 @@ import re
 def detect_metadata_rows(text, sep=","):
     """
     Detect whether metadata rows exist above the true header row.
-
-    This version contains no helper functions - everything is written inline
-    with clear comments so beginners can follow the logic.
     """
 
     # ------------------------------------------------------------
@@ -132,9 +118,9 @@ def detect_metadata_rows(text, sep=","):
     # ------------------------------------------------------------
     # Use csv.reader instead of split(',') so that quoted commas (e.g., "APHA, AWWA, WPCF") stay inside a single cell.
     # using split(','), those would incorrectly become 3 cells.
-    raw_lines = text.splitlines()
-    reader = csv.reader(raw_lines, delimiter=sep)
-    split_lines = [row for row in reader]
+    raw_lines = text.splitlines() # get all the lines
+    reader = csv.reader(raw_lines, delimiter=sep) 
+    split_lines = [row for row in reader] # list of list of rows
 
     # If the file is empty, we cannot detect anything
     if not split_lines:
@@ -162,10 +148,8 @@ def detect_metadata_rows(text, sep=","):
     for i, row in enumerate(split_lines):
 
         # -----------------------------
-        # 4A - Check row width
+        # 4A - Check row width : If the row is much narrower than the widest row,it's probably metadata or junk.
         # -----------------------------
-        # If the row is much narrower than the widest row,
-        # it's probably metadata or junk.
         width = len(row)
         if width < HEADER_THRESHOLD * max_width:
             continue
@@ -187,7 +171,7 @@ def detect_metadata_rows(text, sep=","):
         #   - is not empty
         #   - does not start with a number
         #   - is not a date
-        #   - is not a sample number (SN...)
+        #   - is not a serial number (SN)
         header_like_count = 0
 
         for cell in row:
@@ -205,7 +189,7 @@ def detect_metadata_rows(text, sep=","):
             if re.match(r"^\d{4}-\d{2}-\d{2}", cell_stripped):
                 continue
 
-            # If it contains "SN", it's likely a sample number
+            # If it contains "SN", it's likely a serial number
             if "SN" in cell_stripped.upper():
                 continue
 
@@ -228,19 +212,6 @@ def detect_metadata_rows(text, sep=","):
     has_metadata = header_index not in (0, None)
 
     return has_metadata, header_index
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -277,12 +248,12 @@ def fileuploadfunc():
 
         for file in uploaded_files:
             filename = file.name
-            raw_bytes = file.read().decode("utf-8", errors="replace")
+            text_content = file.read().decode("utf-8", errors="replace") # decoded raw bytes
 
             # -------------------------------------------------
             # STEP 1: Metadata detection
             # -------------------------------------------------
-            has_metadata, header_index = detect_metadata_rows(raw_bytes, sep=",")
+            has_metadata, header_index = detect_metadata_rows(text_content, sep=",")
 
             if has_metadata:
                 st.session_state.non_rectangular_files.add(filename)
@@ -292,28 +263,25 @@ def fileuploadfunc():
             # -------------------------------------------------
             try:
                 df = pd.read_csv(
-                    StringIO(raw_bytes),
+                    StringIO(text_content), #converts back the raw string into a file object taht can be read by pandas
                     header=None,
                     sep=",",
                     engine="python",
                     dtype=str
                 )
             except Exception:
-                rows = raw_bytes.splitlines()
+                rows = text_content.splitlines()
                 df = pd.DataFrame([r.split(",") for r in rows])
 
             # -------------------------------------------------
             # STEP 3: Initialize row_map BEFORE modifications
             # -------------------------------------------------
-            st.session_state.row_map[filename] = list(range(1, len(df) + 1))
+            st.session_state.row_map[filename] = list(range(1, len(df) + 1)) # contains the original row numbers starting at 1, before we make any changes to the file.
 
             # -------------------------------------------------
             # STEP 4: Fix empty columns
             # -------------------------------------------------
-            empty_cols = df.columns[
-                df.isna().all() |
-                (df.apply(lambda col: col.astype(str).str.strip() == "").all())
-            ]
+            empty_cols = df.columns[df.isna().all() | (df.apply(lambda col: col.astype(str).str.strip() == "").all()) ]
             for idx in empty_cols:
                 df[idx] = df[idx].fillna("")
 

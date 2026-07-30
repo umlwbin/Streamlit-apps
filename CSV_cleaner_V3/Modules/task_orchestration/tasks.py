@@ -19,6 +19,7 @@ from Modules.cleaning_tasks.split_cols import split_column
 from Modules.cleaning_tasks.tidy_data import basic_cleaning
 from Modules.cleaning_tasks.merge_ymd import merge_ymd
 from Modules.cleaning_tasks.remove_rows import remove_rows
+from Modules.cleaning_tasks.clean_column_values import clean_column_values
 
 
 # ---------------------------------------------------------
@@ -33,6 +34,7 @@ TASKS = {
     "Add Result Value Qualifiers (RVQs)":apply_rvq_rules,
     "Assign and Standardize Data Types": assign_datatype,
     "Clean column headers":clean_headers,
+    "Clean column values":clean_column_values,
     "Convert DateTime column to ISO format":convert_to_iso,
     "Merge multiple files":merge_files,
     "Merge year, month, day columns":merge_ymd,

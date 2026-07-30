@@ -19,6 +19,7 @@ from Modules.task_widgets.split_cols_widgets import split_column_widget
 from Modules.task_widgets.tidy_data_widgets import tidy_data_widgets
 from Modules.task_widgets.merge_ymd_widgets import merge_ymd_widgets
 from Modules.task_widgets.remove_rows_widgets import remove_rows_widgets
+from Modules.task_widgets.clean_column_values_widgets import clean_column_values_widgets
 
 
 # ---------------------------------------------------------
@@ -33,6 +34,7 @@ WIDGETS = {
     "Add Result Value Qualifiers (RVQs)":add_rvqs_widget,
     "Assign and Standardize Data Types": assign_datatype_widgets,
     "Clean column headers":headers_widgets,
+    "Clean column values":clean_column_values_widgets,
     "Convert DateTime column to ISO format":iso_widgets,
     "Merge multiple files":merge_widgets,
     "Merge year, month, day columns":merge_ymd_widgets,

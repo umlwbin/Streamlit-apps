@@ -26,13 +26,13 @@ It supports:
     # ---------------------------------------------------------
     files = st.session_state.current_data
 
-    # # Ignore previously merged files (they contain a 'source_file' column)
-    # # This prevents accidental re-merging of already merged output.
-    # files = {
-    #     name: df
-    #     for name, df in files.items()
-    #     if "source_file" not in df.columns
-    # }
+    # Ignore previously merged files (they contain a 'source_file' column)
+    # This prevents accidental re-merging of already merged output.
+    files = {
+        name: df
+        for name, df in files.items()
+        if "source_file" not in df.columns
+    }
 
     # ---------------------------------------------------------
     # If only one file, nothing to merge

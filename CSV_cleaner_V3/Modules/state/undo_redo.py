@@ -2,20 +2,21 @@ import streamlit as st
 import pandas as pd
 
 # =========================================================
-# FAST + SAFE DATAFRAME COPY (used for Undo/Redo snapshots)
+# DATAFRAME COPY (This is a faster version which helps when the csv files are really large)
+# For future, maybe another library can be used that is faster than Pandas
 # =========================================================
-# Why this exists:
-#   Pandas' normal df.copy() performs a *full deep copy* of every
-#   internal data block. This is very slow on large CSV files and undo/redo require taking snapshots often.
+# Idea behing fast_copy():
+#   Pandas' normal df.copy() performs a full deep copy of every internal data block. -> lots of overhead
+#   This is very slow on large CSV files and undo/redo require taking snapshots often.
 #
 # What this function does:
 #   1. Makes a *shallow* copy of the DataFrame wrapper; This is instant (no data duplicated yet)
-#   2. Deep-copies ONLY the underlying BlockManager
+#   2. Deep-copies ONLY the underlying data block
 #      - This duplicates the actual column data safely
 #      - But avoids Pandas' expensive full-copy overhead
 
 # =========================================================
-def _fast_deepcopy_df(df: pd.DataFrame) -> pd.DataFrame:
+def fast_copy(df: pd.DataFrame) -> pd.DataFrame:
     df_copy = df.copy(deep=False)              # cheap wrapper copy
     df_copy._mgr = df._mgr.copy(deep=True)    # deep copy underlying blocks
     return df_copy
@@ -24,10 +25,10 @@ def _fast_deepcopy_df(df: pd.DataFrame) -> pd.DataFrame:
 # =========================================================
 # Helper: Build a complete file-state snapshot
 # =========================================================
-def _get_state(filename):
+def get_state(filename):
     """Return a full snapshot of the file state (df + row_map)."""
     return {
-        "df": _fast_deepcopy_df(st.session_state.current_data[filename]),
+        "df": fast_copy(st.session_state.current_data[filename]),
         "row_map": st.session_state.row_map[filename].copy(),
     }
 
@@ -35,7 +36,7 @@ def _get_state(filename):
 # =========================================================
 # Helper: Restore a file-state snapshot
 # =========================================================
-def _restore_state(filename, state):
+def restore_state(filename, state):
     """Restore df + row_map from a saved snapshot."""
     st.session_state.current_data[filename] = state["df"]
     st.session_state.row_map[filename] = state["row_map"]
@@ -48,9 +49,7 @@ def reset_all_files():
     for filename in st.session_state.original_data:
 
         # Restore original DataFrame (fast deep copy)
-        st.session_state.current_data[filename] = _fast_deepcopy_df(
-            st.session_state.original_data[filename]
-        )
+        st.session_state.current_data[filename] = fast_copy(st.session_state.original_data[filename])
 
         # Reset row_map to 1-based index
         n = len(st.session_state.original_data[filename])
@@ -79,11 +78,11 @@ def undo_last_task():
         if st.session_state.history_stack[filename]:
 
             # Save current state to redo stack
-            st.session_state.redo_stack[filename].append(_get_state(filename))
+            st.session_state.redo_stack[filename].append(get_state(filename))
 
             # Restore previous state
             prev_state = st.session_state.history_stack[filename].pop()
-            _restore_state(filename, prev_state)
+            restore_state(filename, prev_state)
 
             # Update task history
             if st.session_state.task_history[filename]:
@@ -99,11 +98,11 @@ def redo_last_task():
         if st.session_state.redo_stack[filename]:
 
             # Save current state to undo stack
-            st.session_state.history_stack[filename].append(_get_state(filename))
+            st.session_state.history_stack[filename].append(get_state(filename))
 
             # Restore redo state
             next_state = st.session_state.redo_stack[filename].pop()
-            _restore_state(filename, next_state)
+            restore_state(filename, next_state)
 
 
 # =========================================================

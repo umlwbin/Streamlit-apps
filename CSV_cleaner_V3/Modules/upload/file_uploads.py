@@ -13,68 +13,16 @@ This module does NOT perform any cleaning or transformation. It only
 prepares files so that the task widgets and processing functions can operate
 safely and consistently.
 
----------------------------------------------------------------------------
 What it does:
----------------------------------------------------------------------------
-
-1. Reset Session State on New Upload
-   ---------------------------------
-   When the user uploads new files, all workflow‑related session state is
-   cleared and reinitialized. This ensures that:
-       • previous task history does not leak into new uploads
-       • undo/redo stacks start clean
-       • row maps and metadata flags are rebuilt from scratch
-
+1. Reset Session State on New Upload - When the user uploads new files, all workflow‑related session state is
+   cleared and reinitialized.
 2. Detect Metadata BEFORE Parsing
-   -------------------------------
-   Many scientific CSVs contain metadata rows above the true header. To avoid
-   misinterpreting metadata as data, the module:
-       • scans raw text line‑by‑line
-       • identifies the first “wide enough” row (likely header)
-       • flags files where metadata is present
-       • avoids header promotion for non‑rectangular files
-
 3. Load Files Safely
-   ------------------
-   Files are loaded using a robust strategy:
-       • Python engine for maximum flexibility
-       • dtype=str to preserve all values exactly as written
-       • fallback to manual splitting if parsing fails
-
-   This ensures that even messy or irregular CSVs load without crashing.
-
-4. Initialize Row Maps
-   --------------------
-   Every file receives a `row_map` that records the original row numbers from
+4. Initialize Row Maps - Every file receives a `row_map` that records the original row numbers from
    the uploaded file. This map is preserved across all transformations.
-
-5. Normalize Empty Columns
-   ------------------------
-   Completely empty columns are filled with empty
-   strings to avoid accidental column drops
-
+5. Normalize Empty Columns - Completely empty columns are filled with empty strings to avoid accidental column drops
 6. Promote Header Row (Rectangular Files Only)
-   -------------------------------------------
-   If no metadata is detected:
-       • the first row becomes the header
-       • empty header cells are replaced with `unnamed_i`
-       • duplicate names are made unique
-       • the row map is updated accordingly
-
-   If metadata is detected:
-       • generic column names (`col_0`, `col_1`, …) are assigned
-       • header promotion is deferred to a specific widget
-
 7. Store Files in Session State
-   -----------------------------
-   For each file, the module initializes:
-       • original_data      (immutable reference)
-       • current_data       (mutable working copy)
-       • task_history       (per‑file task log)
-       • history_stack      (undo)
-       • redo_stack         (redo)
-       • non_rectangular_files
-       • row_map
 """
 
 
@@ -167,11 +115,7 @@ def detect_metadata_rows(text, sep=","):
         # -----------------------------
         # 4C - Check how "header-like" the cells are
         # -----------------------------
-        # A header cell usually:
-        #   - is not empty
-        #   - does not start with a number
-        #   - is not a date
-        #   - is not a serial number (SN)
+        # A header cell usually: is not empty, does not start with a number, is not a date, is not a serial number (SN)
         header_like_count = 0
 
         for cell in row:
@@ -240,8 +184,7 @@ def fileuploadfunc():
         "Add files",
         accept_multiple_files=True,
         type="csv",
-        on_change=newUpload,
-        key=f"uploader_{st.session_state.uploader_key}"
+        key="uploader"
     )
 
     if uploaded_files and not st.session_state.files_processed:

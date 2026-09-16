@@ -3,8 +3,7 @@ import streamlit as st
 def merge_widgets(df):
     """
     Widget for merging multiple uploaded files into one.
-
-    Supports:
+It supports:
         - ensuring at least two files exist
         - detecting column mismatches
         - showing detailed differences
@@ -20,7 +19,6 @@ def merge_widgets(df):
         or None until user confirms.
     """
 
-    st.write("#### Merge Multiple Files")
     st.caption("Combine all uploaded files into a single dataset.")
 
     # ---------------------------------------------------------
@@ -28,13 +26,13 @@ def merge_widgets(df):
     # ---------------------------------------------------------
     files = st.session_state.current_data
 
-    # Ignore previously merged files (they contain a 'source_file' column)
-    # This prevents accidental re-merging of already merged output.
-    files = {
-        name: df
-        for name, df in files.items()
-        if "source_file" not in df.columns
-    }
+    # # Ignore previously merged files (they contain a 'source_file' column)
+    # # This prevents accidental re-merging of already merged output.
+    # files = {
+    #     name: df
+    #     for name, df in files.items()
+    #     if "source_file" not in df.columns
+    # }
 
     # ---------------------------------------------------------
     # If only one file, nothing to merge

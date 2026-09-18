@@ -108,86 +108,86 @@ def download_output():
 # ---------------------------------------------------------
 # EXCEL DOWNLOADS
 # ---------------------------------------------------------
-def to_excel_with_formatting(df, freeze_header=False):
-    """
-    Convert a DataFrame to an Excel file with:
-        - bold headers
-        - shaded header row
-        - highlighted datetime columns
-        - auto column widths
-        - optional frozen header row
-    """
+# def to_excel_with_formatting(df, freeze_header=False):
+#     """
+#     Convert a DataFrame to an Excel file with:
+#         - bold headers
+#         - shaded header row
+#         - highlighted datetime columns
+#         - auto column widths
+#         - optional frozen header row
+#     """
 
-    output = io.BytesIO()
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Cleaned Data"
+#     output = io.BytesIO()
+#     wb = Workbook()
+#     ws = wb.active
+#     ws.title = "Cleaned Data"
 
-    # Identify datetime columns
-    datetime_cols = [
-        col for col in df.columns
-        if pd.api.types.is_datetime64_any_dtype(df[col])
-    ]
+#     # Identify datetime columns
+#     datetime_cols = [
+#         col for col in df.columns
+#         if pd.api.types.is_datetime64_any_dtype(df[col])
+#     ]
 
-    # Styles
-    header_font = Font(bold=True)
-    header_fill = PatternFill("solid", fgColor="DDDDDD")
-    datetime_fill = PatternFill("solid", fgColor="FFF2CC")
+#     # Styles
+#     header_font = Font(bold=True)
+#     header_fill = PatternFill("solid", fgColor="DDDDDD")
+#     datetime_fill = PatternFill("solid", fgColor="FFF2CC")
 
-    # Write headers
-    for col_num, title in enumerate(df.columns, 1):
-        cell = ws.cell(row=1, column=col_num, value=title)
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center")
-        cell.fill = header_fill
+#     # Write headers
+#     for col_num, title in enumerate(df.columns, 1):
+#         cell = ws.cell(row=1, column=col_num, value=title)
+#         cell.font = header_font
+#         cell.alignment = Alignment(horizontal="center")
+#         cell.fill = header_fill
 
-    # Write data rows
-    for row_num, row in enumerate(df.itertuples(index=False), 2):
-        for col_num, value in enumerate(row, 1):
-            if pd.isna(value):
-                value = None
-            cell = ws.cell(row=row_num, column=col_num, value=value)
-            if df.columns[col_num - 1] in datetime_cols:
-                cell.fill = datetime_fill
+#     # Write data rows
+#     for row_num, row in enumerate(df.itertuples(index=False), 2):
+#         for col_num, value in enumerate(row, 1):
+#             if pd.isna(value):
+#                 value = None
+#             cell = ws.cell(row=row_num, column=col_num, value=value)
+#             if df.columns[col_num - 1] in datetime_cols:
+#                 cell.fill = datetime_fill
 
-    # Auto column widths
-    for column_cells in ws.columns:
-        max_len = max(
-            len(str(cell.value)) if cell.value is not None else 0
-            for cell in column_cells
-        )
-        ws.column_dimensions[column_cells[0].column_letter].width = max_len + 2
+#     # Auto column widths
+#     for column_cells in ws.columns:
+#         max_len = max(
+#             len(str(cell.value)) if cell.value is not None else 0
+#             for cell in column_cells
+#         )
+#         ws.column_dimensions[column_cells[0].column_letter].width = max_len + 2
 
-    # Freeze header row
-    if freeze_header:
-        ws.freeze_panes = "A2"
+#     # Freeze header row
+#     if freeze_header:
+#         ws.freeze_panes = "A2"
 
-    wb.save(output)
-    output.seek(0)
-    return output
+#     wb.save(output)
+#     output.seek(0)
+#     return output
 
 
-def excel_download():
-    """
-    Excel download is only available when exactly one file exists.
-    """
-    if len(st.session_state.current_data) != 1:
-        return
+# def excel_download():
+#     """
+#     Excel download is only available when exactly one file exists.
+#     """
+#     if len(st.session_state.current_data) != 1:
+#         return
 
-    filename, df = next(iter(st.session_state.current_data.items()))
-    base, _ = os.path.splitext(filename)
+#     filename, df = next(iter(st.session_state.current_data.items()))
+#     base, _ = os.path.splitext(filename)
 
-    st.markdown(" ")
-    st.markdown("###### 📑 EXCEL")
+#     st.markdown(" ")
+#     st.markdown("###### 📑 EXCEL")
 
-    freeze = st.checkbox("Freeze header row in Excel")
+#     freeze = st.checkbox("Freeze header row in Excel")
 
-    excel_data = to_excel_with_formatting(df, freeze_header=freeze)
+#     excel_data = to_excel_with_formatting(df, freeze_header=freeze)
 
-    st.download_button(
-        label="⬇️ Download Excel File with Formatting",
-        data=excel_data,
-        file_name=f"{base}_cleaned.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        icon=":material/download:"
-    )
+#     st.download_button(
+#         label="⬇️ Download Excel File with Formatting",
+#         data=excel_data,
+#         file_name=f"{base}_cleaned.xlsx",
+#         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+#         icon=":material/download:"
+#     )

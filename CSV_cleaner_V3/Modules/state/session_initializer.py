@@ -3,14 +3,13 @@ import streamlit as st
 def init_session_state():
     default_values = {
         # File data
-        "original_data": {},      # filename ---> original df
-        "current_data": {},       # filename ---> cleaned df
-        "row_map": {},            # filename ---> row_map list
+        "original_data": {},      # filename -> original df
+        "current_data": {},       # filename -> cleaned df
+        "row_map": {},            # filename -> row_map list
 
-        # Undo/redo
-        "history_stack": {},      # filename ---> list of snapshots
-        "redo_stack": {},         # filename ---> list of snapshots
-        "task_history": {},       # filename ---> list of task names
+        # Global Undo/Redo Timeline Stacks
+        "history_stack": [],      # List of complete state snapshots
+        "redo_stack": [],         # List of complete state snapshots
 
         # Upload state
         "uploader_key": 0,
@@ -19,18 +18,24 @@ def init_session_state():
         "non_rectangular_files": set(),
         "last_uploaded_files": None,
 
-
-        # Summaries
+        # Summaries & Metadata
         "all_summaries": {},
+        "metadata_outputs": {},   
         "supplementary_outputs": {},
 
         # Task flags
         "task_applied": False,
         "merge_header_rows_submitted": False,
 
-        #cache
-        "task_cache":{},
+        # Caching
+        "task_cache": {},
         "preview_cache": {},
+
+        # Cache control keys
+        "clear_selector_flag": False,
+        "selector_index_counter": 0,
+        "history_step_active": False, 
+
     }
 
     for key, value in default_values.items():

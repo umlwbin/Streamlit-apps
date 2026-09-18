@@ -1,159 +1,154 @@
 import streamlit as st
-import pandas as pd
 
-# =========================================================
-# DATAFRAME COPY (This is a faster version which helps when the csv files are really large)
-# For future, maybe another library can be used that is faster than Pandas
-# =========================================================
-# Idea behing fast_copy():
-#   Pandas' normal df.copy() performs a full deep copy of every internal data block. -> lots of overhead
-#   This is very slow on large CSV files and undo/redo require taking snapshots often.
-#
-# What this function does:
-#   1. Makes a *shallow* copy of the DataFrame wrapper; This is instant (no data duplicated yet)
-#   2. Deep-copies ONLY the underlying data block
-#      - This duplicates the actual column data safely
-#      - But avoids Pandas' expensive full-copy overhead
+'''
+See docs/state_bundles.md to read more on the state architecture and flow. Very important for this section.
+Contains descriptions of the session state varibales and how they are modified across the different modules. 
+'''
 
-# =========================================================
-def fast_copy(df: pd.DataFrame) -> pd.DataFrame:
-    df_copy = df.copy(deep=False)              # cheap wrapper copy
-    df_copy._mgr = df._mgr.copy(deep=True)    # deep copy underlying blocks
-    return df_copy
-
-
-# =========================================================
-# Helper: Build a complete file-state snapshot
-# =========================================================
-def get_state(filename):
-    """Return a full snapshot of the file state (df + row_map)."""
+# ---------------------------------------------------------
+# FULL STATE SNAPSHOT
+# ---------------------------------------------------------
+def capture_snapshot() -> dict:
+    """Capture a complete state bundle."""
     return {
-        "df": fast_copy(st.session_state.current_data[filename]),
-        "row_map": st.session_state.row_map[filename].copy(),
+        # --- Core file state ---
+        "current_data": {fname: df.copy(deep=True) for fname, df in st.session_state.current_data.items()},  # [deep-copy] see docs/deep_copy.md
+        "row_map": {fname: rm.copy() for fname, rm in st.session_state.row_map.items()},
+        "metadata_outputs": {
+            fname: {task: md.copy() for task, md in tasks.items()}
+            for fname, tasks in st.session_state.get("metadata_outputs", {}).items()
+        },
+
+        # --- UI state that must be restored for redo to work ---
+        "task_applied": st.session_state.get("task_applied", False),
+        "selector_index_counter": st.session_state.get("selector_index_counter", 0),
+        "clear_selector_flag": st.session_state.get("clear_selector_flag", False),
+        "last_uploaded_files": st.session_state.get("last_uploaded_files", None),
+        "files_processed": st.session_state.get("files_processed", False),
+
+
+        # --- Preview + history flags ---
+        "preview_cache": {},  # always reset on restore
+        "history_step_active": False,  # always false when snapshotting
     }
 
 
-# =========================================================
-# Helper: Restore a file-state snapshot
-# =========================================================
-def restore_state(filename, state):
-    """Restore df + row_map from a saved snapshot."""
-    st.session_state.current_data[filename] = state["df"]
-    st.session_state.row_map[filename] = state["row_map"]
+# ---------------------------------------------------------
+# RESTORE SNAPSHOT
+# ---------------------------------------------------------
+def restore_snapshot(snapshot: dict):
+    """Restore the entire application state exactly as it was."""
+    # --- Core file state ---
+    st.session_state.current_data = {fname: df.copy(deep=True) for fname, df in snapshot["current_data"].items()}
+    st.session_state.row_map = {fname: rm.copy() for fname, rm in snapshot["row_map"].items()}
+    st.session_state.metadata_outputs = snapshot["metadata_outputs"]
 
 
-# =========================================================
-# Reset all files to their original state
-# =========================================================
-def reset_all_files():
-    for filename in st.session_state.original_data:
+    # --- UI state ---
+    st.session_state.task_applied = snapshot["task_applied"]
+    st.session_state.selector_index_counter = snapshot["selector_index_counter"]
+    st.session_state.clear_selector_flag = snapshot["clear_selector_flag"]
+    st.session_state.last_uploaded_files = snapshot["last_uploaded_files"]
+    st.session_state.files_processed = snapshot["files_processed"]
 
-        # Restore original DataFrame (fast deep copy)
-        st.session_state.current_data[filename] = fast_copy(st.session_state.original_data[filename])
 
-        # Reset row_map to 1-based index
-        n = len(st.session_state.original_data[filename])
-        st.session_state.row_map[filename] = list(range(1, n + 1))
-
-        # Reset history
-        st.session_state.task_history[filename] = []
-        st.session_state.history_stack[filename] = []
-        st.session_state.redo_stack[filename] = []
-
-    # Reset flags + metadata
-    st.session_state.task_applied = False
-    st.session_state.metadata_outputs = {}
-    st.session_state.supplementary_outputs = {}
-
-    # Clear caches
+    # --- Preview + history flags ---
     st.session_state.preview_cache = {}
+    st.session_state.history_step_active = True  # tells app.py to skip task execution
+
+    # CRITICAL: prevent file_uploads from re-processing and overwriting restored state. 
+    st.session_state.files_processed = True
 
 
-# =========================================================
-# Undo last task
-# =========================================================
+
+# ---------------------------------------------------------
+# COMMIT NEW ACTION
+# ---------------------------------------------------------
+def commit_new_action():
+    """
+    This function saves the current state as a checkpoint before running a new task, so undo can return to this point.
+    It’s basically the “save point” before the app changes anything.
+    """
+    st.session_state.history_stack.append(capture_snapshot())
+    st.session_state.redo_stack = []
+
+
+# ---------------------------------------------------------
+# UNDO
+# ---------------------------------------------------------
 def undo_last_task():
-    for filename in st.session_state.current_data:
+    """Move one step backward in history."""
+    if st.session_state.history_stack:  # Is there at least one snapshot to undo? (This is before the pop)
+        previous_snapshot = st.session_state.history_stack.pop()
 
-        if st.session_state.history_stack[filename]:
+        # Save current state to redo stack
+        st.session_state.redo_stack.append(capture_snapshot())
 
-            # Save current state to redo stack
-            st.session_state.redo_stack[filename].append(get_state(filename))
+        # Restore previous state
+        restore_snapshot(previous_snapshot)
 
-            # Restore previous state
-            prev_state = st.session_state.history_stack[filename].pop()
-            restore_state(filename, prev_state)
+        st.session_state.clear_selector_flag = True
+        st.session_state.preview_cache = {}
+        st.session_state.task_applied = len(st.session_state.history_stack) > 0  # Now that we popped a snapshot, does the restored state still contain tasks, or are we back to the beginning?
 
-            # Update task history
-            if st.session_state.task_history[filename]:
-                st.session_state.task_history[filename].pop()
+        st.rerun()
 
 
-# =========================================================
-# Redo last undone task
-# =========================================================
+# ---------------------------------------------------------
+# REDO
+# ---------------------------------------------------------
 def redo_last_task():
-    for filename in st.session_state.current_data:
+    """Move one step forward in history."""
+    if st.session_state.redo_stack:
+        next_snapshot = st.session_state.redo_stack.pop()
 
-        if st.session_state.redo_stack[filename]:
+        # Save current state back to undo stack
+        st.session_state.history_stack.append(capture_snapshot())
 
-            # Save current state to undo stack
-            st.session_state.history_stack[filename].append(get_state(filename))
+        # Restore forward state
+        restore_snapshot(next_snapshot)
 
-            # Restore redo state
-            next_state = st.session_state.redo_stack[filename].pop()
-            restore_state(filename, next_state)
+        st.session_state.clear_selector_flag = True
+        st.session_state.preview_cache = {}
+        st.session_state.task_applied = True
+
+        st.rerun()
 
 
-# =========================================================
-# Restart app
-# =========================================================
+# ---------------------------------------------------------
+# RESET TO ORIGINAL FILES
+# ---------------------------------------------------------
+def reset_all_files():
+    """Reset everything back to the pristine raw files."""
+    if st.session_state.original_data:
+        commit_new_action()
+
+        st.session_state.current_data = {fname: df.copy(deep=True) for fname, df in st.session_state.original_data.items()}
+        st.session_state.row_map = {fname: list(range(1, len(df) + 1)) for fname, df in st.session_state.original_data.items()}
+        st.session_state.metadata_outputs = {}
+        st.session_state.task_applied = False
+
+        st.rerun()
+
+
+# ---------------------------------------------------------
+# FULL APPLICATION RESTART
+# ---------------------------------------------------------
 def restart_app():
-    """
-    Completely reset the application state:
-    - Remove all loaded files
-    - Clear all DataFrames and row_maps
-    - Clear all history stacks and summaries
-    - Reset task flags
-    - Remove all widget states so UI fully resets
-    """
-
-    # File-related states
+    """Completely purge the application context and reset uploader."""
     st.session_state.original_data = {}
     st.session_state.current_data = {}
     st.session_state.row_map = {}
-
-    # History
-    st.session_state.history_stack = {}
-    st.session_state.redo_stack = {}
-    st.session_state.task_history = {}
-
-    # Metadata
-    st.session_state.all_summaries = {}
-    st.session_state.supplementary_outputs = {}
+    st.session_state.history_stack = []
+    st.session_state.redo_stack = []
     st.session_state.metadata_outputs = {}
-
-    # Flags
     st.session_state.task_applied = False
-    st.session_state.merge_header_rows_submitted = False
-
-    # UI selections
-    st.session_state.selected_task = None
-    st.session_state.selected_file = None
-
-    # Reset file upload widget
-    st.session_state.uploader_key += 1
-
-    # Clear caches
     st.session_state.preview_cache = {}
 
-    # -----------------------------------------------------
-    # Remove all widget keys so UI fully resets
-    # -----------------------------------------------------
-    keys_to_clear = [
-        k for k in st.session_state.keys()
-        if k not in ["uploader_key"]  # keep uploader_key
-    ]
+    # Force uploader widget to reset
+    st.session_state.uploader_key = st.session_state.get("uploader_key", 0) + 1
 
+    # Clear everything except uploader key
+    keys_to_clear = [k for k in st.session_state.keys() if k != "uploader_key"]
     for k in keys_to_clear:
         st.session_state.pop(k, None)

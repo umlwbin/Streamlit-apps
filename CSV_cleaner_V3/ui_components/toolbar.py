@@ -2,7 +2,7 @@ import streamlit as st
 from Modules.state.undo_redo import reset_all_files, undo_last_task, redo_last_task
 
 def toolbar():
-
+    # Keep your custom CSS styling intact
     st.markdown("""
         <style>
         .toolbar {
@@ -21,19 +21,31 @@ def toolbar():
         </style>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1, 1])
+    col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("🔄 Reset All Files", key="reset_toolbar"):
-            reset_all_files()
-            st.toast("All files reset.", icon="🔁")
+        # Check if edits have been made before allowing a reset
+        is_reset_disabled = not st.session_state.get("task_applied", False)
+        if st.button("🔄 Reset All Files", key="reset_toolbar", disabled=is_reset_disabled):
+            reset_all_files()  # This function internally triggers a clean rerun
+            st.toast("All files reset to original.", icon="🔁")
 
     with col2:
-        if st.button("↩️ Undo", key="undo_toolbar"):
-            undo_last_task()
-            st.toast("Undo successful.", icon="✅")
+        # Dynamically count remaining history steps
+        history_len = len(st.session_state.get("history_stack", []))
+        is_undo_disabled = history_len == 0
+        undo_label = f"↩️ Undo ({history_len})" if history_len > 0 else "↩️ Undo"
+        
+        if st.button(undo_label, key="undo_toolbar", disabled=is_undo_disabled):
+            undo_last_task()  # This function internally triggers a clean rerun
+            st.toast("Undo successful.", icon="↩️")
 
     with col3:
-        if st.button("↪️ Redo", key="redo_toolbar"):
-            redo_last_task()
-            st.toast("Redo successful.", icon="✅")
+        # Dynamically count remaining redo layers
+        redo_len = len(st.session_state.get("redo_stack", []))
+        is_redo_disabled = redo_len == 0
+        redo_label = f"↪️ Redo ({redo_len})" if redo_len > 0 else "↪️ Redo"
+        
+        if st.button(redo_label, key="redo_toolbar", disabled=is_redo_disabled):
+            redo_last_task()  # This function internally triggers a clean rerun
+            st.toast("Redo successful.", icon="↪️")

@@ -5,7 +5,7 @@ from Modules.task_widgets.assign_datatype_widgets import assign_datatype_widgets
 from Modules.task_widgets.iso_widgets import iso_widgets
 from Modules.task_widgets.merge_date_time_widgets import merge_date_time_widgets
 from Modules.task_widgets.add_rvqs_widgets import add_rvqs_widget
-from Modules.task_widgets.merge_files_widgets import merge_widgets
+from Modules.task_widgets.merge_files_widgets import merge_files_widgets
 from Modules.task_widgets.headers_widgets import headers_widgets
 from Modules.task_widgets.merge_header_rows_widgets import merge_header_rows_widget
 from Modules.task_widgets.parse_dates_widgets import parse_dates_widgets
@@ -36,7 +36,7 @@ WIDGETS = {
     "Clean column headers":headers_widgets,
     "Clean column values":clean_column_values_widgets,
     "Convert DateTime column to ISO format":iso_widgets,
-    "Merge multiple files":merge_widgets,
+    "Merge multiple files":merge_files_widgets,
     "Merge year, month, day columns":merge_ymd_widgets,
     "Merge date and time columns":merge_date_time_widgets,
     "Parse Date":parse_dates_widgets,

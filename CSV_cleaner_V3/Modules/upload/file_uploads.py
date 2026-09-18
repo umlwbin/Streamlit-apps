@@ -5,24 +5,7 @@ import sys
 from io import StringIO
 
 """
-File Upload and Initialization Module
-====================================
-
-This module handles all logic for safely loading user‑uploaded CSV/TXT files.
-This module does NOT perform any cleaning or transformation. It only
-prepares files so that the task widgets and processing functions can operate
-safely and consistently.
-
-What it does:
-1. Reset Session State on New Upload - When the user uploads new files, all workflow‑related session state is
-   cleared and reinitialized.
-2. Detect Metadata BEFORE Parsing
-3. Load Files Safely
-4. Initialize Row Maps - Every file receives a `row_map` that records the original row numbers from
-   the uploaded file. This map is preserved across all transformations.
-5. Normalize Empty Columns - Completely empty columns are filled with empty strings to avoid accidental column drops
-6. Promote Header Row (Rectangular Files Only)
-7. Store Files in Session State
+see docs/file_upload for a description of this module
 """
 
 
@@ -165,6 +148,7 @@ def detect_metadata_rows(text, sep=","):
 def fileuploadfunc():
     st.markdown("#### ⏫ Upload CSV or TXT File(s)")
 
+# Triggered cleanly when the clear/upload context fires
     def newUpload():
         session_initializer.reset_widget_flags()
         st.session_state.files_processed = False
@@ -172,22 +156,33 @@ def fileuploadfunc():
 
         st.session_state.original_data = {}
         st.session_state.current_data = {}
-        st.session_state.task_history = {}
-        st.session_state.history_stack = {}
-        st.session_state.redo_stack = {}
         st.session_state.non_rectangular_files = set()
         st.session_state.row_map = {}
         st.session_state.task_cache = {}
+        st.session_state.preview_cache = {}
+        
+        # Initialize global undo/redo stacks
+        st.session_state.history_stack = []
+        st.session_state.redo_stack = []
 
+
+    # Get the current dynamic index integer out of the state dictionary
+    current_key_index = st.session_state.get("uploader_key", 0)
 
     uploaded_files = st.file_uploader(
         "Add files",
         accept_multiple_files=True,
         type="csv",
-        key="uploader"
+        key=f"uploader_{current_key_index}",
+        on_change=lambda: None if st.session_state.get("history_step_active") else newUpload()
     )
 
+
     if uploaded_files and not st.session_state.files_processed:
+
+        # Ensure timelines are prepared before loading files
+        st.session_state.history_stack = []
+        st.session_state.redo_stack = []
 
         for file in uploaded_files:
             filename = file.name
@@ -249,20 +244,8 @@ def fileuploadfunc():
             # -------------------------------------------------
             st.session_state.original_data[filename] = df.copy()
             st.session_state.current_data[filename] = df.copy()
-            st.session_state.task_history[filename] = []
-            st.session_state.history_stack[filename] = []
-            st.session_state.redo_stack[filename] = []
-
-        # -------------------------------------------------
-        # Ensure undo/redo structures exist for all files
-        # -------------------------------------------------
-        for fname in st.session_state.current_data:
-            st.session_state.row_map.setdefault(fname, [])
-            st.session_state.history_stack.setdefault(fname, [])
-            st.session_state.redo_stack.setdefault(fname, [])
-            st.session_state.task_history.setdefault(fname, [])
 
         st.session_state.files_processed = True
-        st.success("Files uploaded and initialized.")
+        st.success("Files uploaded and initialized successfully.")
 
     return uploaded_files or []

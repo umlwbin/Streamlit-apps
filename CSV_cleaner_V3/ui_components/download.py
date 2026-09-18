@@ -37,7 +37,7 @@ def download_output():
     st.markdown("##### 📑 CSV")
 
     # -----------------------------------------------------
-    # Detect merged output (one-liner)
+    # Detect merged output
     # -----------------------------------------------------
     merged_name = next((name for name in current_files if name.lower().startswith("merged")), None)
 

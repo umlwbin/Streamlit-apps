@@ -148,7 +148,9 @@ def detect_metadata_rows(text, sep=","):
 def fileuploadfunc():
     st.markdown("#### ⏫ Upload CSV or TXT File(s)")
 
-# Triggered cleanly when the clear/upload context fires
+    # ---------------------------------------------------------
+    # Reset state when new files are uploaded
+    # ---------------------------------------------------------
     def newUpload():
         session_initializer.reset_widget_flags()
         st.session_state.files_processed = False
@@ -160,15 +162,15 @@ def fileuploadfunc():
         st.session_state.row_map = {}
         st.session_state.task_cache = {}
         st.session_state.preview_cache = {}
-        
-        # Initialize global undo/redo stacks
+
         st.session_state.history_stack = []
         st.session_state.redo_stack = []
 
-
-    # Get the current dynamic index integer out of the state dictionary
     current_key_index = st.session_state.get("uploader_key", 0)
 
+    # ---------------------------------------------------------
+    # File uploader widget
+    # ---------------------------------------------------------
     uploaded_files = st.file_uploader(
         "Add files",
         accept_multiple_files=True,
@@ -177,31 +179,44 @@ def fileuploadfunc():
         on_change=lambda: None if st.session_state.get("history_step_active") else newUpload()
     )
 
-
+    # ---------------------------------------------------------
+    # Only process files when:
+    #   - files exist
+    #   - processing hasn't already happened
+    # ---------------------------------------------------------
     if uploaded_files and not st.session_state.files_processed:
 
-        # Ensure timelines are prepared before loading files
+        # ---------------------------------------------------------
+        # Show progress bar only for 3+ files
+        # ---------------------------------------------------------
+        use_progress = len(uploaded_files) >= 3
+
+        if use_progress:
+            status = st.status("⏳ Loading your files…")
+            progress = st.progress(0)
+            total = len(uploaded_files)
+
         st.session_state.history_stack = []
         st.session_state.redo_stack = []
 
-        for file in uploaded_files:
-            filename = file.name
-            text_content = file.read().decode("utf-8", errors="replace") # decoded raw bytes
+        # ---------------------------------------------------------
+        # HEAVY PROCESSING LOOP
+        # ---------------------------------------------------------
+        for idx, file in enumerate(uploaded_files, start=1):
 
-            # -------------------------------------------------
+            filename = file.name
+            text_content = file.read().decode("utf-8", errors="replace")
+
             # STEP 1: Metadata detection
-            # -------------------------------------------------
             has_metadata, header_index = detect_metadata_rows(text_content, sep=",")
 
             if has_metadata:
                 st.session_state.non_rectangular_files.add(filename)
 
-            # -------------------------------------------------
             # STEP 2: Load file safely
-            # -------------------------------------------------
             try:
                 df = pd.read_csv(
-                    StringIO(text_content), #converts back the raw string into a file object taht can be read by pandas
+                    StringIO(text_content),
                     header=None,
                     sep=",",
                     engine="python",
@@ -211,41 +226,51 @@ def fileuploadfunc():
                 rows = text_content.splitlines()
                 df = pd.DataFrame([r.split(",") for r in rows])
 
-            # -------------------------------------------------
             # STEP 3: Initialize row_map BEFORE modifications
-            # -------------------------------------------------
-            st.session_state.row_map[filename] = list(range(1, len(df) + 1)) # contains the original row numbers starting at 1, before we make any changes to the file.
+            st.session_state.row_map[filename] = list(range(1, len(df) + 1))
 
-            # -------------------------------------------------
             # STEP 4: Fix empty columns
-            # -------------------------------------------------
-            empty_cols = df.columns[df.isna().all() | (df.apply(lambda col: col.astype(str).str.strip() == "").all()) ]
-            for idx in empty_cols:
-                df[idx] = df[idx].fillna("")
+            empty_cols = df.columns[
+                df.isna().all() |
+                (df.apply(lambda col: col.astype(str).str.strip() == "").all())
+            ]
+            for idx2 in empty_cols:
+                df[idx2] = df[idx2].fillna("")
 
-            # -------------------------------------------------
             # STEP 5: Promote header for rectangular files only
-            # -------------------------------------------------
             if not has_metadata:
                 header = df.iloc[0].astype(str).tolist()
-                header = [h if str(h).strip() != "" else f"unnamed_{i}" for i, h in enumerate(header)]
+                header = [
+                    h if str(h).strip() != "" else f"unnamed_{i}"
+                    for i, h in enumerate(header)
+                ]
                 header = make_unique_columns(header)
 
                 df.columns = header
                 df = df[1:].reset_index(drop=True)
 
                 st.session_state.row_map[filename] = st.session_state.row_map[filename][1:]
-
             else:
                 df.columns = [f"col_{i}" for i in range(df.shape[1])]
 
-            # -------------------------------------------------
             # STEP 6: Store file
-            # -------------------------------------------------
             st.session_state.original_data[filename] = df.copy()
             st.session_state.current_data[filename] = df.copy()
 
+            # ---------------------------------------------------------
+            # Update progress bar
+            # ---------------------------------------------------------
+            if use_progress:
+                progress.progress(idx / total)
+
+        # ---------------------------------------------------------
+        # Mark processing complete
+        # ---------------------------------------------------------
         st.session_state.files_processed = True
-        st.success("Files uploaded and initialized successfully.")
+
+        if use_progress:
+            status.update(label="✅ Files uploaded and initialized successfully.", state="complete")
+        else:
+            st.success("Files uploaded and initialized successfully.")
 
     return uploaded_files or []

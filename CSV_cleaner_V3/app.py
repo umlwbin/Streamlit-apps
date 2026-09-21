@@ -92,10 +92,10 @@ def run_csv_curation_studio():
     # -----------------------------------------------------
     with tab1:
 
-        # 1. Always render the uploader widget so it stays visible on screen
+        # Always render the uploader widget so it stays visible on screen
         uploaded_files = file_uploads.fileuploadfunc()
 
-        # 2. Handle metadata resets ONLY if the user actually changed the uploaded files
+        # Handle metadata resets ONLY if the user actually changed the uploaded files
         if not st.session_state.get("history_step_active", False):  # Only run this block if we are NOT currently performing undo or redo. When undo/redo is happening, do not treat anything as a new upload.
             if uploaded_files != st.session_state.get("last_uploaded_files"): # Did the user actually upload new files? If they differ, then it was a real uplaod event and we can reset
                 st.session_state.metadata_outputs = {}

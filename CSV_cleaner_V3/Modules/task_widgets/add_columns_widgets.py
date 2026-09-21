@@ -4,19 +4,6 @@ import streamlit as st
 # STEP 1 - Choose number of fields to add
 # ---------------------------------------------------------
 def how_many_vars_widget(df):
-    """
-    Widget for adding new columns to a dataset.
-
-    Returns
-    -------
-    dict or None
-        {
-            "variable_names": [...],
-            "values": [...],
-            "columns": [...]
-        }
-        or None if the user has not completed the widget.
-    """
 
     cols = df.columns
 
@@ -24,13 +11,7 @@ def how_many_vars_widget(df):
     def reset_step():
         st.session_state.addColsStep2_active = False
 
-    var_num = st.number_input(
-        "Number of fields to add",
-        min_value=1,
-        value=1,
-        on_change=reset_step,
-        key="addcols_num"
-    )
+    var_num = st.number_input( "Number of fields to add", min_value=1, value=1, on_change=reset_step, key="addcols_num" )
 
     # Step 1 button - activates Step 2
     if st.button("Next", key="addcols_step1"):
@@ -50,16 +31,6 @@ def how_many_vars_widget(df):
 def fields_to_add_widgets(cols, var_num):
     """
     Widget for entering details of new columns.
-
-    Returns
-    -------
-    dict or None
-        {
-            "variable_names": [...],
-            "values": [...],
-            "columns": [...]
-        }
-        or None if the user has not completed the widget.
     """
 
     st.markdown("######")
@@ -68,6 +39,8 @@ def fields_to_add_widgets(cols, var_num):
     st.markdown("• Enter the value for that column")
     st.markdown(f"• Enter the column number (1 to {len(cols)+1}). The default is at the end of the data table.")
     st.markdown("")
+
+    st.info("If a selected column already exists in a file, it will be left unchanged. If it does not exist, it will be added with blank values so all files share the same column names.")
 
     variable_names = []
     variable_values = []

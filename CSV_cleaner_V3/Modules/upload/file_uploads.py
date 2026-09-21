@@ -196,6 +196,7 @@ def fileuploadfunc():
             progress = st.progress(0)
             total = len(uploaded_files)
 
+        # Ensure timelines are prepared before loading files
         st.session_state.history_stack = []
         st.session_state.redo_stack = []
 
@@ -205,7 +206,7 @@ def fileuploadfunc():
         for idx, file in enumerate(uploaded_files, start=1):
 
             filename = file.name
-            text_content = file.read().decode("utf-8", errors="replace")
+            text_content = file.read().decode("utf-8", errors="replace") # decoded raw bytes
 
             # STEP 1: Metadata detection
             has_metadata, header_index = detect_metadata_rows(text_content, sep=",")
@@ -216,7 +217,7 @@ def fileuploadfunc():
             # STEP 2: Load file safely
             try:
                 df = pd.read_csv(
-                    StringIO(text_content),
+                    StringIO(text_content), # converts back the raw string into a file object taht can be read by pandas
                     header=None,
                     sep=",",
                     engine="python",
@@ -227,7 +228,7 @@ def fileuploadfunc():
                 df = pd.DataFrame([r.split(",") for r in rows])
 
             # STEP 3: Initialize row_map BEFORE modifications
-            st.session_state.row_map[filename] = list(range(1, len(df) + 1))
+            st.session_state.row_map[filename] = list(range(1, len(df) + 1)) # contains the original row numbers starting at 1, before we make any changes to the file.
 
             # STEP 4: Fix empty columns
             empty_cols = df.columns[

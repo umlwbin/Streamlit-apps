@@ -7,19 +7,11 @@ def add_cols(df: pd.DataFrame, *, variable_names, values, columns, **kwargs):
 
     Parameters
     ----------
-    df : pd.DataFrame
-        The input dataframe.
-    variable_names : list[str]
-        Names of the new columns to add.
-    values : list[Any]
-        Values for each new column. Single values will broadcast.
-    columns : list[int]
-        1-based positions where each new column should be inserted.
+    df : pd.DataFrame - The input dataframe.
+    variable_names : list[str] - Names of the new columns to add.
+    values : list[Any] - Values for each new column. Single values will broadcast.
+    columns : list[int] - 1-based positions where each new column should be inserted.
 
-    Returns
-    -------
-    cleaned_df : pd.DataFrame
-        The updated dataframe.
     """
 
     # -----------------------------------------------------
@@ -58,15 +50,16 @@ def add_cols(df: pd.DataFrame, *, variable_names, values, columns, **kwargs):
 
     for name, value, pos in zip(variable_names, values, columns):
 
-        # Prevent duplicates
+        # -------------------------------------------------
+        # If column already exists --> leave it untouched
+        # -------------------------------------------------
         if name in cleaned_df.columns:
-            raise ValueError(
-                f"Column '{name}' already exists. "
-                "Column names must be unique.")
+            continue
 
-        # Insert the column (convert 1-based to 0-based)
+        # -------------------------------------------------
+        # If column does not exist --> add it
+        # -------------------------------------------------
         cleaned_df.insert(pos - 1, name, value)
-
     # -----------------------------------------------------
     # 3. RETURN STANDARDIZED OUTPUT
     # -----------------------------------------------------

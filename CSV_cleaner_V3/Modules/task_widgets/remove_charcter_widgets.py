@@ -1,0 +1,66 @@
+import pandas as pd
+
+def add_cols(df: pd.DataFrame, *, variable_names, values, columns, **kwargs):
+
+    """
+    Add one or more new columns to a DataFrame at user-selected positions.
+
+    Parameters
+    ----------
+    df : pd.DataFrame - The input dataframe.
+    variable_names : list[str] - Names of the new columns to add.
+    values : list[Any] - Values for each new column. Single values will broadcast.
+    columns : list[int] - 1-based positions where each new column should be inserted.
+
+    """
+
+    # -----------------------------------------------------
+    # 1. VALIDATION (raise errors)
+    # -----------------------------------------------------
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("Input must be a pandas DataFrame.")
+
+    if not (len(variable_names) == len(values) == len(columns)):
+        raise ValueError("The number of variable names, values, and positions must match.")
+
+    # Validate each name
+    for name in variable_names:
+        if not name or name.strip() == "":
+            raise ValueError("Column names cannot be empty.")
+
+    # Validate positions
+    for pos in columns:
+        if pos < 1 or pos > len(df.columns) + 1:
+            raise ValueError(
+                f"Invalid insert position {pos}. "
+                f"Valid range is 1 to {len(df.columns) + 1}."
+            )
+
+    # Validate list-valued inputs
+    for name, value in zip(variable_names, values):
+        if isinstance(value, list) and len(value) != len(df):
+            raise ValueError(
+                f"Column '{name}' has a list of {len(value)} values, "
+                f"but the dataframe has {len(df)} rows.")
+
+    # -----------------------------------------------------
+    # 2. CORE PROCESSING LOGIC
+    # -----------------------------------------------------
+    cleaned_df = df.copy()
+
+    for name, value, pos in zip(variable_names, values, columns):
+
+        # -------------------------------------------------
+        # If column already exists --> leave it untouched
+        # -------------------------------------------------
+        if name in cleaned_df.columns:
+            continue
+
+        # -------------------------------------------------
+        # If column does not exist --> add it
+        # -------------------------------------------------
+        cleaned_df.insert(pos - 1, name, value)
+    # -----------------------------------------------------
+    # 3. RETURN STANDARDIZED OUTPUT
+    # -----------------------------------------------------
+    return cleaned_df

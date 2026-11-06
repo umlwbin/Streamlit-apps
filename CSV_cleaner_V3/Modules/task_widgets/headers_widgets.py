@@ -39,11 +39,7 @@ def headers_widgets(df=None, show_button=True):
     # ---------------------------------------------------------
     st.write("#### Unit Handling")
 
-    st.info("• If your dataset includes bracketed units inside the column names, e.g., "
-        "`Temperature (°C)/[°C]`, the cleaner can extract and "
-        "normalize them. \n\n"
-        "• If your units aren’t written in brackets, " 
-        "the cleaner will attempt to recognize and standardize them using an internal unit map.\n\n"
+    st.info("• This function will search for units based on our internal units map.\n\n"
         "• If your dataset does **NOT** include units in headers, or you do not want any unit handling, "
         "enable the option below.")
 
@@ -52,9 +48,7 @@ def headers_widgets(df=None, show_button=True):
     # If user says “no units in header”, disable unit preservation
     if no_units_in_header:
         preserve_units = False
-        st.info(
-            "Unit handling disabled because you indicated that your dataset "
-            "does not include units in the column names.")
+        st.info("Unit handling disabled because you indicated that your dataset does not include units in the column names.")
     else:
         # user chooses whether to keep or strip units
         preserve_units = (st.radio("**How should units be handled?**",["Strip units","Preserve units"],key="header_units") == "Preserve units")

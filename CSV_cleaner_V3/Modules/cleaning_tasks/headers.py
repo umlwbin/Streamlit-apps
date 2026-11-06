@@ -8,42 +8,15 @@ import streamlit as st
 # UNIT NORMALIZATION HELPERS
 # =========================================================
 def normalize_unit_string(unit_raw):
-    """
-    Normalize a raw unit string into ASCII-safe, CF-style format:
-        - remove unicode
-        - replace slashes with spaces
-        - convert superscripts to ASCII
-        - ensure negative exponents use '-'
-        - collapse whitespace
-    """
+
     if not unit_raw:
-        return None
+        return ""
 
-    # ASCII normalize (strip accents, unicode)
-    u = unicodedata.normalize("NFKD", unit_raw)
-    u = u.encode("ascii", "ignore").decode("ascii")
-
-    # Replace slashes with spaces
-    u = u.replace("/", " ")
-
-    # Replace caret exponents like m^2 or m^-2
-    u = re.sub(r"\^(-?\d+)", r"\1", u)
-
-    # Replace unicode superscripts
-    superscript_map = {
-        "⁻": "-",
-        "⁺": "+",
-        "¹": "1",
-        "²": "2",
-        "³": "3",
-    }
-    for k, v in superscript_map.items():
-        u = u.replace(k, v)
-
-    # Collapse whitespace
-    u = re.sub(r"\s+", " ", u).strip()
-
-    return u.lower()
+    return (
+        str(unit_raw)
+        .strip()
+        .lower()
+    )
 
 
 # ---------------------------------------------------------
@@ -68,7 +41,7 @@ def load_unit_map():
         unit_map = {}
 
         for _, row in df.iterrows():
-            normalized_unit = str(row["normalized_unit"]).strip()
+            normalized_unit = (str(row["normalized_unit"]).strip())
 
             # We have multiple variations of the same unit on the same row in Unit Map separated by commas.
             # They shoudl all be mapped to the same normalized value, as in the Unit Map. 
@@ -95,6 +68,14 @@ UNIT_MAP = load_unit_map()
 
 
 
+# Longest matches first
+UNIT_KEYS = sorted(
+    UNIT_MAP.keys(),
+    key=len,
+    reverse=True
+)
+
+
 # =========================================================
 # MAIN CLEANING FUNCTION
 # =========================================================
@@ -107,13 +88,16 @@ def clean_headers(
     **kwargs
 ):
     """
-    Clean and standardize messy scientific column headers while extracting metadata.
-        - extracts units from headers
-        - normalizes units to CF-style ASCII
-        - cleans variable names into snake_case / camelCase / Title Case
-        - reattaches units as: variable_name (units)
-        - returns a metadata table describing the transformation
+    Clean scientific column headers using a curated Unit Map.
 
+    Process:
+        - finds units using spreadsheet lookups only!
+        - removes units from variable names
+        - standardizes variable naming style
+        - optionally reattaches normalized units
+        - returns metadata describing the transformation
+
+    The Unit Map is the single source of truth. No unit guessing done. 
     Returns:
         cleaned_df, metadata_df
     """
@@ -131,30 +115,24 @@ def clean_headers(
     # 2. CORE PROCESSING LOGIC
     # -----------------------------------------------------
 
-    # These units are ambiguous because they could possibly be apart of the variable name 
-    # (they are too short essentially; not unique enough to be clearly identified as units)
-    AMBIGUOUS_UNITS = {"m", "g", "s", "%", "h", "l"}
-
-
     # -----------------------------------------------------
     # UNIT DETECTION HELPER
     # -----------------------------------------------------
     def detect_units(text):
-        # Find bracketed units first
-        bracket_match = re.findall(r"\[(.*?)\]|\((.*?)\)", text) # checks for content in () or [] - this is assumed to be the units (returns a list of tuples). eg, [("m/s", "")]
+        """
+        Detect units using ONLY values from the Unit Map.
 
-        if bracket_match:
-            content = next(filter(None, bracket_match[0])) # filters out the non empty string or any falsey value out of the first tuple. next() takes the first item from the filtered results. 
-            return content.strip() # return units
+        Returns:
+            raw_unit_found, normalized_unit
+        """
 
-        # Fallback: UNIT_MAP search
-        # Token-based fallback
-        tokens = re.split(r"[^a-zA-Z0-9]+", text.lower())
-        for raw_unit in UNIT_MAP:
-            if raw_unit in tokens:
-                return raw_unit
+        text_lower = text.lower()
 
-        return None
+        for raw_unit in UNIT_KEYS:
+            if text_lower.endswith(raw_unit):
+                return raw_unit, UNIT_MAP[raw_unit]
+
+        return None, None
 
     # -----------------------------------------------------
     # VARIABLE NAME CLEANING HELPER
@@ -186,37 +164,27 @@ def clean_headers(
             continue
 
         try:
-            # ASCII normalize
-            new = unicodedata.normalize("NFKD", raw) # This breaks apart characters into their simplest ASCII‑friendly components.
-            new = new.encode("ascii", "ignore").decode("ascii") # Ignore any character that can't be represented in ASCII, thn decode back from byte sting to regular python string
+            new = str(raw).strip()
 
             # -----------------------------
             # UNIT EXTRACTION
             # -----------------------------
-            raw_units = None if no_units_in_header else detect_units(new)
+            raw_units = None
             cleaned_units = None
             units_raw_original = None
-            
 
-            if raw_units:
-                normalized = normalize_unit_string(raw_units).lower()
+            if not no_units_in_header:
+                raw_units, cleaned_units = detect_units(new)
 
-                # 1. Try lookup using normalized raw unit
-                cleaned_units = UNIT_MAP.get(normalized)
+                if raw_units:
+                    units_raw_original = raw_units
 
-                # 2. Fallback: use normalized itself
-                if cleaned_units is None:
-                    cleaned_units = normalized
-
-                # Capture the exact raw_units regardless of case (we want to store this in the metadata table as the original units)
-                match = re.search(re.escape(raw_units), new, flags=re.IGNORECASE)
-                if match:
-                    units_raw_original = match.group(0) #group(0) returns teh the full matched substring
 
             # Remove units from variable name
             variable = new
             if raw_units:
-                variable = re.sub(re.escape(raw_units), "", variable, flags=re.IGNORECASE) # Find all instances of the exact raw_units in variable (case insensitive)
+                variable = re.sub(re.escape(raw_units), "", variable, flags=re.IGNORECASE)
+
 
             # Remove any left over bracketed content or just the empty brackets themselves
             variable = re.sub(r"\[[^\]]*\]|\([^\)]*\)", "", variable)
@@ -225,21 +193,12 @@ def clean_headers(
             # Clean variable name
             variable_clean = clean_variable_name(variable)
 
-            # Ambiguous unit suffixes - check if the last token matches an ambiguous unit e.g., _g, 
-            if not no_units_in_header and cleaned_units is None:
-                tokens = variable_clean.split("_")
-                last = tokens[-1]
-                if last in AMBIGUOUS_UNITS:
-                    cleaned_units = last
-                    variable_clean = "_".join(tokens[:-1])
-
-
             # -----------------------------
             # FINAL HEADER ASSEMBLY
             # -----------------------------
-            # HEre we are putting the units in square bracktes as it is more machine compatible
+            # HEre we are putting the units in round bracktes
             if preserve_units and cleaned_units:
-                header = f"{variable_clean} [{cleaned_units}]"
+                header = f"{variable_clean} ({cleaned_units})"
             else:
                 header = variable_clean
 
@@ -248,12 +207,12 @@ def clean_headers(
                 parts = variable_clean.split("_")
                 header = parts[0] + "".join(p.capitalize() for p in parts[1:])
                 if preserve_units and cleaned_units:
-                    header = f"{header} [{cleaned_units}]"
+                    header = f"{header} ({cleaned_units})"
 
             elif naming_style == "Title Case":
                 header = " ".join(p.capitalize() for p in variable_clean.split("_"))
                 if preserve_units and cleaned_units:
-                    header = f"{header} [{cleaned_units}]"
+                    header = f"{header} ({cleaned_units})"
 
 
             # Fallback for empty header

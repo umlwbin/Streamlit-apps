@@ -22,8 +22,6 @@ def normalize_unit_string(unit_raw):
 # ---------------------------------------------------------
 # LOAD UNIT MAP FROM GOOGLE SHEET
 # ---------------------------------------------------------
-#GOOGLE_SHEET_CSV_URL = ("https://docs.google.com/spreadsheets/d/e/2PACX-1vS-NlRtFkD24tm2P6v5WjMioxGqggjb9bzalVsg664tHgWX1IPiLxhSpnySSTEe4i7IbzYkfuKXt9OH/pub?gid=1618419054&single=true&output=csv")
-
 GOOGLE_SHEET_CSV_URL = ("https://docs.google.com/spreadsheets/d/e/2PACX-1vS-NlRtFkD24tm2P6v5WjMioxGqggjb9bzalVsg664tHgWX1IPiLxhSpnySSTEe4i7IbzYkfuKXt9OH/pub?gid=1132759519&single=true&output=csv")
 
 unit_map_dict = None
@@ -66,64 +64,64 @@ def load_unit_map():
 
 UNIT_MAP = load_unit_map()
 
-
-
 # Longest matches first
-UNIT_KEYS = sorted(
-    UNIT_MAP.keys(),
-    key=len,
-    reverse=True
-)
+UNIT_KEYS = sorted(UNIT_MAP.keys(),key=len,reverse=True)
+
+# Add any other special charcaters we want to replace with something specific. That we dont want to remove. 
+SPECIAL_CHAR_MAP = {
+    "%": "percent",
+    "µ": "u",
+    "μ": "u",  # Greek mu
+    "°": "deg",
+}
 
 
-# =========================================================
-# MAIN CLEANING FUNCTION
-# =========================================================
 def clean_headers(
     df: pd.DataFrame,
     *,
-    naming_style="snake_case",
-    preserve_units=True,
-    no_units_in_header=False,
+    header_handling="Move units to metadata table (recommended)",
     **kwargs
 ):
     """
-    Clean scientific column headers using a curated Unit Map.
+    Clean scientific column headers.
 
-    Process:
-        - finds units using spreadsheet lookups only!
-        - removes units from variable names
-        - standardizes variable naming style
-        - optionally reattaches normalized units
-        - returns metadata describing the transformation
+    Options:
+        Keep units in headers
+            - removes problematic characters
+            - converts headers to snake_case
+            - preserves units as part of the header text
 
-    The Unit Map is the single source of truth. No unit guessing done. 
+        Move units to metadata table
+            - detects units using Unit Map
+            - strips units from headers
+            - stores units in metadata output
+
     Returns:
         cleaned_df, metadata_df
     """
 
     # -----------------------------------------------------
-    # 1. VALIDATION - Hard Errors
+    # VALIDATION
     # -----------------------------------------------------
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Input must be a pandas DataFrame.")
 
-    if naming_style not in {"snake_case", "camelCase", "Title Case"}:
-        raise ValueError("naming_style must be one of: 'snake_case', 'camelCase', 'Title Case'.")
+    if header_handling not in {
+        "Keep units in headers",
+        "Move units to metadata table (recommended)",
+    }:
+        raise ValueError(
+            "header_handling must be either "
+            "'Keep units in headers' or "
+            "'Move units to metadata table (recommended)'."
+        )
 
     # -----------------------------------------------------
-    # 2. CORE PROCESSING LOGIC
-    # -----------------------------------------------------
-
-    # -----------------------------------------------------
-    # UNIT DETECTION HELPER
+    # UNIT DETECTION
     # -----------------------------------------------------
     def detect_units(text):
         """
-        Detect units using ONLY values from the Unit Map.
-
-        Returns:
-            raw_unit_found, normalized_unit
+        Detect units using only the Unit Map.
         """
 
         text_lower = text.lower()
@@ -135,93 +133,92 @@ def clean_headers(
         return None, None
 
     # -----------------------------------------------------
-    # VARIABLE NAME CLEANING HELPER
+    # HEADER CLEANING
     # -----------------------------------------------------
     def clean_variable_name(name):
+
+        # Preserve a few scientific symbols
+        for symbol, replacement in SPECIAL_CHAR_MAP.items():
+            name = name.replace(symbol, f"_{replacement}_")
+
         name = name.lower()
+
+        # Everything else becomes underscore
         name = re.sub(r"[^a-z0-9]+", "_", name)
-        name = re.sub(r"_+", "_", name).strip("_")
-        return name
+
+        # Collapse duplicate underscores
+        name = re.sub(r"_+", "_", name)
+
+        return name.strip("_")
 
     # -----------------------------------------------------
-    # BEGIN PROCESSING EACH HEADER
+    # PROCESS HEADERS
     # -----------------------------------------------------
     original = list(df.columns)
+
     cleaned = []
     metadata = {}
 
     for raw in original:
 
-        # Handle empty headers
+        # Empty column names
         if not isinstance(raw, str) or raw.strip() == "":
-            fallback = "unnamed_column"
-            cleaned.append(fallback)
+
+            header = "unnamed_column"
+
+            cleaned.append(header)
+
             metadata[raw] = {
+                "cleaned_header": header,
                 "units_raw": None,
                 "units_clean": None,
-                "cleaned_header": fallback,
             }
             continue
 
         try:
+
             new = str(raw).strip()
 
-            # -----------------------------
-            # UNIT EXTRACTION
-            # -----------------------------
             raw_units = None
             cleaned_units = None
             units_raw_original = None
 
-            if not no_units_in_header:
+            variable = new
+
+            # -----------------------------------------
+            # MOVE UNITS TO METADATA
+            # -----------------------------------------
+            if header_handling == "Move units to metadata table (recommended)":
+
                 raw_units, cleaned_units = detect_units(new)
 
                 if raw_units:
                     units_raw_original = raw_units
 
+                    variable = re.sub(
+                        re.escape(raw_units),
+                        "",
+                        variable,
+                        flags=re.IGNORECASE,
+                    )
 
-            # Remove units from variable name
-            variable = new
-            if raw_units:
-                variable = re.sub(re.escape(raw_units), "", variable, flags=re.IGNORECASE)
+                # remove leftover brackets
+                variable = re.sub(
+                    r"\[[^\]]*\]|\([^\)]*\)",
+                    "",
+                    variable,
+                )
 
+            # -----------------------------------------
+            # CLEAN HEADER
+            # -----------------------------------------
+            header = clean_variable_name(variable)
 
-            # Remove any left over bracketed content or just the empty brackets themselves
-            variable = re.sub(r"\[[^\]]*\]|\([^\)]*\)", "", variable)
-            variable = variable.strip().rstrip(",")
-
-            # Clean variable name
-            variable_clean = clean_variable_name(variable)
-
-            # -----------------------------
-            # FINAL HEADER ASSEMBLY
-            # -----------------------------
-            # HEre we are putting the units in round bracktes
-            if preserve_units and cleaned_units:
-                header = f"{variable_clean} ({cleaned_units})"
-            else:
-                header = variable_clean
-
-            # Naming style
-            if naming_style == "camelCase":
-                parts = variable_clean.split("_")
-                header = parts[0] + "".join(p.capitalize() for p in parts[1:])
-                if preserve_units and cleaned_units:
-                    header = f"{header} ({cleaned_units})"
-
-            elif naming_style == "Title Case":
-                header = " ".join(p.capitalize() for p in variable_clean.split("_"))
-                if preserve_units and cleaned_units:
-                    header = f"{header} ({cleaned_units})"
-
-
-            # Fallback for empty header
-            if header == "":
+            if not header:
                 header = "unnamed_column"
 
             cleaned.append(header)
 
-            # The metadata dict looks like: "{ Temp (°C)": {"variable": "temp", "units_raw": "C", "units_clean": "degC", "cleaned_header": "temp [degC]"} , ... },
             metadata[raw] = {
                 "cleaned_header": header,
                 "units_raw": units_raw_original,
@@ -229,43 +226,46 @@ def clean_headers(
             }
 
         except Exception:
-            # If anything fails, preserve original header
+
             cleaned.append(raw)
+
             metadata[raw] = {
                 "cleaned_header": raw,
                 "units_raw": None,
                 "units_clean": None,
             }
+
     # -----------------------------------------------------
-    # 3d. ENSURE UNIQUENESS
+    # ENSURE UNIQUE NAMES
     # -----------------------------------------------------
     final = []
     seen = {}
+
     for name in cleaned:
         if name not in seen:
             seen[name] = 1
             final.append(name)
+
         else:
+
             seen[name] += 1
             final.append(f"{name}_{seen[name]}")
-    
-    
-    
+
     # -----------------------------------------------------
-    # 4. BUILD METADATA TABLE
+    # METADATA TABLE
     # -----------------------------------------------------
-    # When you convert a dict of dicts into a DataFrame, the outer dictionary keys automatically become the index
     metadata_df = (
         pd.DataFrame(metadata)
         .transpose()
         .reset_index()
-        .rename(columns={"index": "original_header"}) # turns the keys into the “original_header” column
+        .rename(columns={"index": "original_header"})
     )
 
     # -----------------------------------------------------
-    # 5. RETURN
+    # OUTPUT
     # -----------------------------------------------------
     cleaned_df = df.copy()
+
     cleaned_df.columns = final
 
     return cleaned_df, metadata_df

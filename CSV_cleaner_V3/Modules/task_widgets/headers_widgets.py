@@ -13,11 +13,7 @@ def headers_widgets(df=None, show_button=True):
         If False, return settings immediately (used inside tidy-data widget).
 
     Returns:
-        {
-            "naming_style": ...,
-            "preserve_units": ...,
-            "no_units_in_header": ...
-        }
+        {"header_handling":...}
         or None until the curator confirms.
     """
 
@@ -25,48 +21,26 @@ def headers_widgets(df=None, show_button=True):
     # SECTION: Intro
     # ---------------------------------------------------------
     st.write("#### Header Cleaning Settings")
-    big_caption(
-        "Choose how your column names should be cleaned and whether units "
-        "should be preserved.")
+    st.info("This function will clean your headers by removing problematic special characters and converting them to `snake_case`. " \
+    "\n\nIt can also identify and remove units and move them to a metadata table, keeping your headers simple and understandable.")
+
+    st.info("If header cleaning does not produce the exact names you want, "
+    "use the **Rename Columns** task to manually edit your headers.")
+
 
     # ---------------------------------------------------------
-    # SECTION: Naming Style
+    # SECTION: Header Style
     # ---------------------------------------------------------
-    naming_style = st.radio("Choose a naming style for cleaned headers", ["snake_case", "camelCase", "Title Case"],key="header_style")
+    header_handling = st.radio("Select an option", ["Keep units in headers", "Move units to metadata table (recommended)"],key="header_style")
 
-    # ---------------------------------------------------------
-    # SECTION: Unit Handling
-    # ---------------------------------------------------------
-    st.write("#### Unit Handling")
+    if header_handling=="Move units to metadata table (recommended)":
+        st.info("**Remember to download the metadata table before selecting another task!**")
 
-    st.info("• This function will search for units based on our internal units map.\n\n"
-        "• If your dataset does **NOT** include units in headers, or you do not want any unit handling, "
-        "enable the option below.")
 
-    no_units_in_header = st.checkbox( "My dataset does NOT include units in the column names", value=False, key="no_units_in_header")
-
-    # If user says “no units in header”, disable unit preservation
-    if no_units_in_header:
-        preserve_units = False
-        st.info("Unit handling disabled because you indicated that your dataset does not include units in the column names.")
-    else:
-        # user chooses whether to keep or strip units
-        preserve_units = (st.radio("**How should units be handled?**",["Strip units","Preserve units"],key="header_units") == "Preserve units")
-
-        big_caption('Striping units keep headers clean. You can add the units to a data dictionary.')
-
-        st.info(
-            "If header cleaning did not produce the exact names you want, use the **Rename Columns** task to manually edit your headers. \n\n" \
-            "**To retain variable and unit provenance, download the metadata table produced below before selecting another task.** "
-        )
     # ---------------------------------------------------------
     # Build settings dict
     # ---------------------------------------------------------
-    settings = {
-        "naming_style": naming_style,
-        "preserve_units": preserve_units,
-        "no_units_in_header": no_units_in_header,
-    }
+    settings = {"header_handling": header_handling}
 
     # ---------------------------------------------------------
     # EXECUTE-ONCE TRIGGER (only when show_button=True)

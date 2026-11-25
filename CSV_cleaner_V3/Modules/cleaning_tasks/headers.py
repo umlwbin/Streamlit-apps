@@ -119,18 +119,28 @@ def clean_headers(
     # -----------------------------------------------------
     # UNIT DETECTION
     # -----------------------------------------------------
+
     def detect_units(text):
         """
-        Detect units using only the Unit Map.
+        Detect units using the Unit Map.
         """
 
-        text_lower = text.lower()
+        text_lower = text.lower().strip()
 
-        for raw_unit in UNIT_KEYS:
-            if text_lower.endswith(raw_unit):
-                return raw_unit, UNIT_MAP[raw_unit]
+        for raw_unit in UNIT_KEYS: # We're looking if the units are at the end (just raw), or if they are bracketed at the end as well. Just so we're not grabbing random letters in a parameter word as a unit. 
+
+            candidates = [
+                raw_unit,
+                f"[{raw_unit}]",
+                f"({raw_unit})",
+            ]
+
+            for candidate in candidates:
+                if text_lower.endswith(candidate.lower()):
+                    return candidate, UNIT_MAP[raw_unit]
 
         return None, None
+    
 
     # -----------------------------------------------------
     # HEADER CLEANING
@@ -193,7 +203,7 @@ def clean_headers(
                 raw_units, cleaned_units = detect_units(new)
 
                 if raw_units:
-                    units_raw_original = raw_units
+                    units_raw_original = raw_units.strip("[]()") # so it doesnt keep the brackets
 
                     variable = re.sub(
                         re.escape(raw_units),

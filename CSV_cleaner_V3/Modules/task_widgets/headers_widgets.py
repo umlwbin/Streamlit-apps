@@ -21,11 +21,11 @@ def headers_widgets(df=None, show_button=True):
     # SECTION: Intro
     # ---------------------------------------------------------
     st.write("#### Header Cleaning Settings")
-    st.info("This function will clean your headers by removing problematic special characters and converting them to `snake_case`. " \
-    "\n\nIt can also identify and remove units and move them to a metadata table, keeping your headers simple and understandable.")
+    st.info("This function removes problematic special characters and converts headers to `snake_case`. " \
+    "\n\nIt can also identify and move units to a metadata table, keeping your headers simple and understandable.")
 
-    st.info("If header cleaning does not produce the exact names you want, "
-    "use the **Rename Columns** task to manually edit your headers.")
+    st.info("If header cleaning does not produce the desired names, "
+    "use **Rename Columns** to manually edit your headers.")
 
 
     # ---------------------------------------------------------
